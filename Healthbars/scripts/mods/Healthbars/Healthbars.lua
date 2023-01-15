@@ -3,14 +3,30 @@
 -- Author: raindish
 local mod = get_mod("Healthbars")
 
+local show = {}
+
+local function get_toggles()
+	for i = 1, #mod.tags do
+		local tag = mod.tags[i]
+		local key = "show_" .. tag
+		local state = mod:get(key)
+		show[tag] = state
+	end
+end
+
+get_toggles()
+
+mod.on_setting_changed = function()
+	get_toggles()
+end
+
 local function should_enable_healthbar(unit)
 	local unit_data_extension = ScriptUnit.extension(unit, "unit_data_system")
 	local breed = unit_data_extension:breed()
 	local tags = breed.tags
 
 	for tag, enabled in pairs(tags) do
-		local key = "show_" .. tag
-		if enabled and mod:get(key) then
+		if enabled and show[tag] then
 			return true
 		end
 	end

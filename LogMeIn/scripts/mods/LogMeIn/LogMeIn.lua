@@ -3,25 +3,33 @@
 -- Author: raindish
 local mod = get_mod("LogMeIn")
 
-_G._LogMeIn_first_load = _G.first_load == nil and true or _G.first_load
+local state = mod:persistent_table("state")
+
+state.first_load = state.first_load
+
+if state.first_load == nil then
+	state.first_load = true
+end
+
+local function cancel()
+	state.first_load = false
+	mod.cancel_auto_character_select = function() end
+end
 
 mod:hook_safe(TitleView, "on_enter", function(self)
-    self:_continue()
+	self:_continue()
 end)
 
 mod:hook_safe("MainMenuView", "_set_waiting_for_characters", function(self, waiting)
-    if _G._LogMeIn_first_load and not waiting then
-        _G._LogMeIn_first_load = false
-        self:_on_play_pressed()
-    end
+	if state.first_load and not waiting then
+		cancel()
+		self:_on_play_pressed()
+	end
 end)
 
 mod.cancel_auto_character_select = function()
-    if _G._LogMeIn_first_load then
-        _G._LogMeIn_first_load = false
-        mod:notify("Automatic character selection cancelled")
-    end
-
-    mod.cancel_auto_character_select = function()
-    end
+	if state.first_load then
+		mod:notify("Automatic character selection cancelled")
+		cancel()
+	end
 end
