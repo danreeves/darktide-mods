@@ -58,6 +58,7 @@ mod:hook(
 		self.last_damaging_unit = HealthExtension.last_damaging_unit
 		self.last_hit_zone_name = HealthExtension.last_hit_zone_name
 		self.last_hit_was_critical = HealthExtension.last_hit_was_critical
+		self.was_hit_by_critical_hit_this_render_frame = HealthExtension.was_hit_by_critical_hit_this_render_frame
 
 		return func(self, extension_init_context, unit, extension_init_data, game_session, game_object_id, owner_id)
 	end
