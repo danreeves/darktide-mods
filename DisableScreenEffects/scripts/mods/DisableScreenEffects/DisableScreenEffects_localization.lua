@@ -34,7 +34,7 @@ local localization = {
 		en = "Disable player stun distortion light",
 	},
 	[mod.screenspace_effects[2]] = {
-		en = "Disable stun distortion heaby",
+		en = "Disable player stun distortion heavy",
 	},
 	[mod.screenspace_effects[3]] = {
 		en = "Disable blood splatter",
