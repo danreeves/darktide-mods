@@ -2,9 +2,11 @@
 
 ### Installation
 
-<img src="https://raw.githubusercontent.com/danreeves/darktide-mods/main/.github/how-to-download.png"
-alt="How to download"
-style="height:300px; float:right;" />
+<img
+	src=".github/how-to-download.png"
+	alt="How to download"
+	style="height:300px; float:right;"
+	/>
 
 Download the zip and then drag the folders of the mods you want into your `mods` directory
 
