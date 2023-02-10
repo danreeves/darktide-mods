@@ -11,7 +11,7 @@
 
 Download the zip and then drag the folders of the mods you want into your `mods` directory
 
-<div style="clear:both"/>
+<hr>
 
 ## Log Me In
 
