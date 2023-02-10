@@ -1,7 +1,5 @@
 # raindish's darktide mods
 
-### Installation
-
 [Download](https://github.com/danreeves/darktide-mods/archive/refs/heads/main.zip) the zip and then drag the folders of the mods you want into your `mods` directory
 
 <hr>
