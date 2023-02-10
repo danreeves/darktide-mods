@@ -2,6 +2,7 @@
 
 ### Installation
 
+<div>
 <img
 	src=".github/how-to-download.png"
 	alt="How to download"
@@ -9,8 +10,8 @@
 	align="right"
 	/>
 
-Download the zip and then drag the folders of the mods you want into your `mods` directory
-
+<p>Download the zip and then drag the folders of the mods you want into your `mods` directory</p>
+</div>
 <hr>
 
 ## Log Me In
