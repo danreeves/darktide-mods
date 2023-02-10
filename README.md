@@ -5,7 +5,8 @@
 <img
 	src=".github/how-to-download.png"
 	alt="How to download"
-	style="height:300px; float:right;"
+	height="300"
+	align="right"
 	/>
 
 Download the zip and then drag the folders of the mods you want into your `mods` directory
