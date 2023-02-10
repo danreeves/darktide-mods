@@ -2,16 +2,8 @@
 
 ### Installation
 
-<div>
-<img
-	src=".github/how-to-download.png"
-	alt="How to download"
-	height="300"
-	align="right"
-	/>
+[Download](https://github.com/danreeves/darktide-mods/archive/refs/heads/main.zip) the zip and then drag the folders of the mods you want into your `mods` directory
 
-<p>Download the zip and then drag the folders of the mods you want into your `mods` directory</p>
-</div>
 <hr>
 
 ## Log Me In
