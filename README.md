@@ -32,3 +32,7 @@ View Premium Cosmetics on your current character
 ## Disable Screen Effects
 
 Makes all the screen effects toggleable off (defaults to turning everything off)
+
+## Don't Start Empty Games
+
+Return to the hub if the countdown reaches 1 second and you have no teammates
