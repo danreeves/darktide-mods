@@ -157,6 +157,32 @@ function mod.export_files()
 
 	preprocess(weapon_templates)
 
+	local WeaponUnlockSettings = require("scripts/settings/weapon_unlock_settings")
+	local ArchetypeSpecializations = require(
+		"scripts/settings/ability/archetype_specializations/archetype_specializations"
+	)
+	local specialization_to_archetype = {}
+	for archetype, specializations in pairs(ArchetypeSpecializations) do
+		for specialization, _ in pairs(specializations) do
+			specialization_to_archetype[specialization] = archetype
+		end
+	end
+
+	-- These are missing in the game code (because they are granted by the server/you start with them?)
+	WeaponUnlockSettings.veteran_2[1] = {
+		"content/items/weapons/player/ranged/autopistol_p1_m1",
+		"content/items/weapons/player/ranged/lasgun_p1_m2",
+	}
+	WeaponUnlockSettings.zealot_2[1] = {
+		"content/items/weapons/player/ranged/autopistol_p1_m1",
+		"content/items/weapons/player/melee/combatsword_p1_m1",
+		"content/items/weapons/player/melee/combataxe_p1_m2",
+	}
+	WeaponUnlockSettings.psyker_2[1] = {
+		"content/items/weapons/player/ranged/autopistol_p1_m1",
+		"content/items/weapons/player/melee/combatsword_p1_m1",
+	}
+
 	local item_master_list = {}
 	local cached_items = Managers.backend.interfaces.master_data:items_cache():get_cached()
 	local allowed_item_types = { "WEAPON_MELEE", "WEAPON_RANGED", "GADGET", "TRAIT", "PERK", "WEAPON_SKIN" }
@@ -187,8 +213,41 @@ function mod.export_files()
 		if table.array_contains(allowed_item_types, item.item_type) then
 			if not is_npc then
 				local tbl = mod.copy_keys(item, allowed_item_keys)
+
 				tbl.id = id
 				tbl.preview_image = id:gsub("/", "-")
+
+				local archetypes = {}
+				for specialization, unlock_settings in pairs(WeaponUnlockSettings) do
+					for level, items in ipairs(unlock_settings) do
+						for _, item in ipairs(items) do
+							if item == id then
+								archetypes[#archetypes + 1] = specialization_to_archetype[specialization]
+							end
+						end
+					end
+				end
+				tbl.archetypes = archetypes
+
+				-- If a specialization has a weapon as a unique weapon its archetypes should only include that
+				for spec_id, specialization in pairs(ArchetypeSpecializations) do
+					if specialization.unique_weapons then
+						for i, unique_weapon in ipairs(specialization.unique_weapons) do
+							if id == unique_weapon.item then
+								tbl.archetypes = { specialization.archetype }
+							end
+						end
+					end
+				end
+
+				if #tbl.archetypes < 1 and item.archetypes and #item.archetypes then
+					tbl.archetypes = item.archetypes
+				end
+
+				if #tbl.archetypes < 1 then
+					tbl.archetypes = nil
+				end
+
 				table.insert(item_master_list, tbl)
 			end
 		end
