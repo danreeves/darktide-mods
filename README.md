@@ -1,9 +1,5 @@
 # raindish's darktide mods
 
-[Download](https://github.com/danreeves/darktide-mods/archive/refs/heads/main.zip) the zip and then drag the folders of the mods you want into your `mods` directory
-
-<hr>
-
 ## Log Me In
 
 Automatically hits space for you at the title screen and automatically selects your current character
