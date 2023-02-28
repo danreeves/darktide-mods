@@ -14,30 +14,38 @@ mod.screenspace_effects = {
 local function localize(name)
 	return {
 		en = string.format("Disable %s", string.gsub(name, "_", " ")),
+		["zh-cn"] = string.format("禁用 %s", string.gsub(name, "_", " ")),
 	}
 end
 
 local localization = {
 	mod_description = {
 		en = "Makes all screen effects toggleable",
+		["zh-cn"] = "允许开关所有屏幕特效",
 	},
 	disable_plasmagun = {
 		en = "Disable plasmagun overheat",
+		["zh-cn"] = "禁用等离子枪过热效果",
 	},
 	chaos_daemonhost_ambience = {
 		en = "Disable Daemonhost effects",
+		["zh-cn"] = "禁用恶魔宿主效果",
 	},
 	[mod.screenspace_effects[4]] = {
 		en = "Disable corruptor effects",
+		["zh-cn"] = "禁用腐化效果",
 	},
 	[mod.screenspace_effects[1]] = {
 		en = "Disable player stun distortion light",
+		["zh-cn"] = "禁用玩家轻度眩晕效果",
 	},
 	[mod.screenspace_effects[2]] = {
 		en = "Disable player stun distortion heavy",
+		["zh-cn"] = "禁用玩家重度眩晕效果",
 	},
 	[mod.screenspace_effects[3]] = {
 		en = "Disable blood splatter",
+		["zh-cn"] = "禁用血液飞溅",
 	},
 }
 
