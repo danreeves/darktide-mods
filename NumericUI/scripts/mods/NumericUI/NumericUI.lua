@@ -206,6 +206,7 @@ mod:hook_require(team_hud_def_path, function(instance)
 	end
 end)
 
+local TEAM_PANEL_DEF_PATH = "scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions"
 local function hud_init_with_features(
 	func,
 	self,
@@ -216,8 +217,10 @@ local function hud_init_with_features(
 	definition_path,
 	definition_settings
 )
-	definition_settings.feature_list.health_text = mod:get("health_text")
-	definition_settings.feature_list.toughness_text = mod:get("toughness_text")
+	if definition_path == TEAM_PANEL_DEF_PATH then
+		definition_settings.feature_list.health_text = mod:get("health_text")
+		definition_settings.feature_list.toughness_text = mod:get("toughness_text")
+	end
 	definition_settings.feature_list.level = mod:get("level")
 
 	return func(self, parent, draw_layer, start_scale, data, definition_path, definition_settings)
