@@ -3,7 +3,7 @@
 -- Author: raindish
 local mod = get_mod("PreviewCosmetics")
 
-mod:hook("StoreItemDetailView", "_spawn_profile", function(func, self, original_profile, item)
+local function get_player_profile_with_item(item)
 	local UISettings = mod:original_require("scripts/settings/ui/ui_settings")
 	local MasterItems = mod:original_require("scripts/backend/master_items")
 
@@ -45,9 +45,31 @@ mod:hook("StoreItemDetailView", "_spawn_profile", function(func, self, original_
 		end
 	end
 
+	return wrong_breed, dummy_profile
+end
+
+mod:hook("StoreItemDetailView", "_spawn_profile", function(func, self, original_profile, item)
+	local wrong_breed, profile = get_player_profile_with_item(item)
+
 	if wrong_breed then
 		return func(self, original_profile, item)
 	else
-		return func(self, dummy_profile, item)
+		return func(self, profile, item)
 	end
+end)
+
+mod:hook("StoreItemDetailView", "_get_generic_profile_from_item", function(func, self, item)
+	local wrong_breed, profile = get_player_profile_with_item(item)
+
+	if wrong_breed then
+		return func(self, item)
+	end
+
+	return profile
+end)
+
+mod:hook("CosmeticsInspectView", "init", function(func, self, settings, context)
+	context.preview_with_gear = true
+	func(self, settings, context)
+	self._camera_zoomed_in = false
 end)
