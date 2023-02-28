@@ -1,18 +1,22 @@
 local mod = get_mod("Healthbars")
+local Breeds = require("scripts/settings/breed/breeds")
 
 local widgets = {}
 
-for i = 1, #mod.tags do
-	local default_value = true
-	-- Default to false for trash and monsters
-	if i == 1 or i == 2 or i == 5 then
-		default_value = false
+for breed_name, breed in pairs(Breeds) do
+	if breed_name ~= "chaos_spawn" and breed_name ~= "chaos_plague_ogryn_sprayer" then
+		if breed.tags.minion then
+			local default_value = false
+			if breed.tags.elite or breed.tags.special then
+				default_value = true
+			end
+			widgets[#widgets + 1] = {
+				setting_id = breed_name,
+				type = "checkbox",
+				default_value = default_value,
+			}
+		end
 	end
-	widgets[i] = {
-		setting_id = "show_" .. mod.tags[i],
-		type = "checkbox",
-		default_value = default_value,
-	}
 end
 
 return {
