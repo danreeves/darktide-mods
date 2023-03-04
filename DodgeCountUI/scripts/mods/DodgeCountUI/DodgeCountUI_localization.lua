@@ -1,5 +1,5 @@
 return {
 	mod_description = {
-		en = "MinionStatus description",
+		en = " DodgeCountUI description",
 	},
 }

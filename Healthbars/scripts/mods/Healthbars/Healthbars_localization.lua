@@ -36,7 +36,11 @@ local tags = {
 }
 
 for key, value in pairs(tags) do
-	setmetatable(value, {__index = function () return value.en end})
+	setmetatable(value, {
+		__index = function()
+			return value.en
+		end,
+	})
 end
 
 local function get_tag(breed, locale)

@@ -1,7 +1,7 @@
-local mod = get_mod("DontStartEmptyGames")
+local mod = get_mod("DodgeCountUI")
 
 return {
-	name = "Don't Start Empty Games",
+	name = "DodgeCountUI",
 	description = mod:localize("mod_description"),
 	is_togglable = true,
 }

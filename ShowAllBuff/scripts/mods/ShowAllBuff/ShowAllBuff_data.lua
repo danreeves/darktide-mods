@@ -1,7 +1,7 @@
-local mod = get_mod("DontStartEmptyGames")
+local mod = get_mod("ShowAllBuff")
 
 return {
-	name = "Don't Start Empty Games",
+	name = "ShowAllBuff",
 	description = mod:localize("mod_description"),
 	is_togglable = true,
 }
