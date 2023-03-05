@@ -137,7 +137,15 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 			gameplay_t
 		)
 
-		self._widgets_by_name.dodge_count.content.text = string.format("%d/%d", current_dodges, num_efficient_dodges)
+		if num_efficient_dodges == math.huge then
+			self._widgets_by_name.dodge_count.content.text = tostring(current_dodges)
+		else
+			self._widgets_by_name.dodge_count.content.text = string.format(
+				"%d/%d",
+				current_dodges,
+				num_efficient_dodges
+			)
+		end
 
 		if current_dodges >= num_efficient_dodges then
 			style.text.text_color = color_inefficient
