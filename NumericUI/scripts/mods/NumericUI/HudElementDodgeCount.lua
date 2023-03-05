@@ -157,10 +157,10 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 
 		if mod:get("debug_dodge_count") then
 			self._widgets_by_name.debug_dodge_count.content.text = string.format(
-				"%d/%d/%d\nmodifier: x%.2f\ncooldown: %.2fs\ndodging: %s",
+				"%d/%s/%s\nmodifier: x%.2f\ncooldown: %.2fs\ndodging: %s",
 				current_dodges,
-				num_efficient_dodges,
-				dr_limit + num_efficient_dodges,
+				num_efficient_dodges == math.huge and "inf" or tostring(num_efficient_dodges),
+				num_efficient_dodges == math.huge and "inf" or tostring(dr_limit + num_efficient_dodges),
 				distance_modifier,
 				cooldown > 0 and cooldown or 0,
 				tostring(movement_state_component.is_dodging)
