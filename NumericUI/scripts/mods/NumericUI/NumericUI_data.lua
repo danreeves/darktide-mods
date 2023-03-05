@@ -29,6 +29,35 @@ return {
 				type = "checkbox",
 				default_value = true,
 			},
+
+			{
+				setting_id = "ammo_as_percent",
+				type = "checkbox",
+				default_value = false,
+			},
+
+			{
+				setting_id = "dodge_count",
+				type = "checkbox",
+				default_value = true,
+			},
+
+			{
+				setting_id = "debug_dodge_count",
+				type = "checkbox",
+				default_value = false,
+			},
+
+			{
+				setting_id = "ability_cooldown_format",
+				type = "dropdown",
+				default_value = "time",
+				options = {
+					{ text = "timer", value = "time" },
+					{ text = "percent", value = "percent" },
+					{ text = "none", value = "none" },
+				},
+			},
 		},
 	},
 }

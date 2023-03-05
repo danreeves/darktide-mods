@@ -19,4 +19,25 @@ return {
 		en = "Show ammo text",
 		["zh-cn"] = "显示弹药量",
 	},
+	ammo_as_percent = {
+		en = "Show ammo as percent",
+	},
+	dodge_count = {
+		en = "Show dodge count",
+	},
+	debug_dodge_count = {
+		en = "Show debug dodge info",
+	},
+	ability_cooldown_format = {
+		en = "Ability cooldown format",
+	},
+	percent = {
+		en = "Percent",
+	},
+	timer = {
+		en = "Timer",
+	},
+	none = {
+		en = "None",
+	},
 }

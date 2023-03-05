@@ -102,8 +102,8 @@ mod:hook(_G, "require", function(func, path, ...)
 					vertical_alignment = "center",
 					horizontal_alignment = "left",
 					color = Color.online_green(255, true),
-					offset = { -145, 0, 0 },
-					size = { 135, 135 },
+					offset = { -75, 0, 0 },
+					size = { 100, 100 },
 				},
 			},
 			{
