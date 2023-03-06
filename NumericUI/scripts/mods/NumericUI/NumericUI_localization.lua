@@ -19,6 +19,9 @@ return {
 		en = "Show ammo text",
 		["zh-cn"] = "显示弹药量",
 	},
+	max_ammo_text = {
+		en = "Show maximum ammo text",
+	},
 	ammo_as_percent = {
 		en = "Show ammo as percent",
 	},
