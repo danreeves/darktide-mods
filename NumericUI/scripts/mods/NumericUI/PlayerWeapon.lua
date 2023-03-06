@@ -36,6 +36,7 @@ ammo_spare_text_style.offset = {
 	0,
 	7
 }
+
 ammo_spare_text_style.text_horizontal_alignment = "right"
 ammo_spare_text_style.text_vertical_alignment = "top"
 ammo_spare_text_style.vertical_alignment = "center"
@@ -130,7 +131,7 @@ mod:hook_require(player_weapon_hud_def_path, function(instance)
 				pass_type = "text",
 				value = "",
 				style = table.merge({
-					index = 3
+					index = 4
 				}, ammo_max_text_style)
 			},
 		}, "background")
@@ -162,8 +163,8 @@ local function update_max_ammo(func, self, dt, t, ui_renderer, render_settings, 
 
 			if widget then
 				if self._uses_ammo and not self._infinite_ammo then  
-					local display_texts = "\n /" .. slot_component.max_ammunition_reserve
-					local key = "ammo_max" --.. i
+					local display_texts = "\n    /" .. slot_component.max_ammunition_reserve
+					local key = "ammo_max"
 					widget.content[key] = display_texts or ""
 
 				else
