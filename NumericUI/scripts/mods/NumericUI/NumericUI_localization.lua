@@ -22,6 +22,9 @@ return {
 	max_ammo_text = {
 		en = "Show maximum ammo text",
 	},
+	self_ammo_status = {
+		en = "Show icon representation of your ammo",
+	},
 	ammo_as_percent = {
 		en = "Show ammo as percent",
 	},

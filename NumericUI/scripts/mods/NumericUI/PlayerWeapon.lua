@@ -10,6 +10,9 @@ local UIHudSettings = mod:original_require("scripts/settings/ui/ui_hud_settings"
 local UIFontSettings = mod:original_require("scripts/managers/ui/ui_font_settings")
 local UIHudSettings = mod:original_require("scripts/settings/ui/ui_hud_settings")
 local HudElementPlayerWeaponSettings = mod:original_require("scripts/ui/hud/elements/player_weapon/hud_element_player_weapon_settings")
+local HudElementTeamPlayerPanelSettings = mod:original_require(
+	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings"
+)
 
 local ammo_text_style = {
 	line_spacing = 0.9,
@@ -30,6 +33,7 @@ local ammo_text_style = {
 	drop_shadow = false,
 	clip_ammo = true
 }
+
 local ammo_spare_text_style = table.clone(ammo_text_style)
 ammo_spare_text_style.offset = {
 	0,
@@ -64,6 +68,28 @@ local backup = nil
 mod:hook_require(player_weapon_hud_def_path, function(instance)
 	if backup == nil then
 		backup = instance.widget_definitions
+	end
+
+	if mod:get("self_ammo_status") then
+		instance.widget_definitions.self_ammo_status = UIWidget.create_definition({
+			{
+				value_id = "ammo_icon",
+				style_id = "ammo_icon",
+				pass_type = "texture",
+				visible = false,
+				value = "content/ui/materials/hud/icons/party_ammo",
+				color = nil,
+				style = {
+					vertical_alignment = "top",
+					horizontal_alignment = "left",
+					size = HudElementTeamPlayerPanelSettings.ammo_size,
+					index = 3,
+					offset = {-130,12,12}
+				}
+			}
+		}, "weapon")
+	else
+		instance.widget_definitions.self_ammo_status = nil
 	end
 
 	if mod:get("max_ammo_text") then
@@ -152,6 +178,8 @@ local function weapon_init_with_max_ammo(func, self, parent, draw_layer, start_s
 end
 
 
+local ammo_status = 3
+local weapon_ammo_fraction = 1
 local function update_max_ammo(func, self, dt, t, ui_renderer, render_settings, input_service)
 	func(self, dt, t, ui_renderer, render_settings, input_service)
 
@@ -167,6 +195,51 @@ local function update_max_ammo(func, self, dt, t, ui_renderer, render_settings, 
 					local key = "ammo_max"
 					widget.content[key] = display_texts or ""
 
+					
+					if mod:get("self_ammo_status") then
+						local icon_widget = self._widgets_by_name.self_ammo_status
+						if icon_widget then
+							local max_clip = slot_component.max_ammunition_clip or 0
+							local max_reserve = slot_component.max_ammunition_reserve or 0
+							local current_clip = slot_component.current_ammunition_clip or 0
+							local current_reserve = slot_component.current_ammunition_reserve or 0
+							
+							local total_current_ammo = current_clip + current_reserve
+							local total_max_ammo = max_clip + max_reserve
+							local color = nil
+
+							if total_max_ammo > 0 then
+								weapon_ammo_fraction = total_current_ammo / total_max_ammo
+							end
+
+
+							if weapon_ammo_fraction > 0.66 then
+								icon_widget.content.visible = false
+								icon_widget.content.texture = nil
+
+							elseif weapon_ammo_fraction > 0.33 then
+								color = UIHudSettings.color_tint_ammo_low
+								icon_widget.content.visible = true
+
+							elseif weapon_ammo_fraction > 0 then
+								color = UIHudSettings.color_tint_ammo_medium
+								icon_widget.content.visible = true
+
+							else
+								color = UIHudSettings.color_tint_ammo_high
+								icon_widget.content.visible = true
+
+							end
+							
+							if icon_widget.style["ammo_icon"].color == color then
+								icon_widget.dirty = false
+							else
+								icon_widget.style["ammo_icon"].color = color
+								icon_widget.dirty = true
+							end
+						end
+					end
+
 				else
 					widget.content.text = ""
 
@@ -177,4 +250,5 @@ local function update_max_ammo(func, self, dt, t, ui_renderer, render_settings, 
 		end
 	end
 end
+
 mod:hook("HudElementPlayerWeapon", "update", update_max_ammo)
