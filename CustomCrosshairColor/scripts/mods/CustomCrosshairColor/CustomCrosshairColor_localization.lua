@@ -7,18 +7,23 @@ mod.fields = { "r", "g", "b" }
 local translations = {
 	mod_description = {
 		en = "Set your crosshair and hitmarkers to custom colors",
+		["zh-cn"] = "自定义准星和击中标记的颜色",
 	},
 	crosshair_opacity = {
 		en = "Crosshair opacity",
+		["zh-cn"] = "准星不透明度",
 	},
 	crosshair_r = {
 		en = "Crosshair R",
+		["zh-cn"] = "准星红色",
 	},
 	crosshair_g = {
 		en = "Crosshair G",
+		["zh-cn"] = "准星绿色",
 	},
 	crosshair_b = {
 		en = "Crosshair B",
+		["zh-cn"] = "准星蓝色",
 	},
 }
 
