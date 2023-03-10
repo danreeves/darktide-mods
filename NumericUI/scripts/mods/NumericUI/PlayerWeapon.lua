@@ -197,7 +197,7 @@ local function update_max_ammo(func, self, dt, t, ui_renderer, render_settings, 
 					local display_texts = "/" .. slot_component.max_ammunition_reserve
 					local key = "ammo_max"
 					widget.content[key] = display_texts or ""
-					widget.style[key].offset = {32,25,9}
+					widget.style[key].offset = {34,25,9}
 					
 					if mod:get("self_ammo_status") and slot_component.max_ammunition_reserve > 10 then
 
