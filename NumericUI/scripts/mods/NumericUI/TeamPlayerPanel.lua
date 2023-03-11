@@ -1,8 +1,7 @@
 local mod = get_mod("NumericUI")
 local backups = mod:persistent_table("team_hud_backups")
-backups.team_hud_definitions = require(
-	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions"
-)
+backups.team_hud_definitions = backups.team_hud_definitions
+	or require("scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local HudElementTeamPlayerPanelSettings = require(
 	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings"
@@ -57,7 +56,8 @@ mod:hook_require(team_hud_def_path, function(instance)
 			},
 		}, "bar")
 	else
-		instance.widget_definitions.coherency_indicator = backups.team_hud_definitions.coherency_indicator
+		instance.widget_definitions.coherency_indicator =
+			backups.team_hud_definitions.widget_definitions.coherency_indicator
 	end
 
 	if mod:get("ammo_text") then
