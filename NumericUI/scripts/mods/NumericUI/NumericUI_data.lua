@@ -43,6 +43,18 @@ return {
 			},
 
 			{
+				setting_id = "dodges_count_up",
+				type = "checkbox",
+				default_value = false,
+			},
+
+			{
+				setting_id = "show_dodge_count_for_infinite_dodge",
+				type = "checkbox",
+				default_value = false,
+			},
+
+			{
 				setting_id = "debug_dodge_count",
 				type = "checkbox",
 				default_value = false,
@@ -57,6 +69,12 @@ return {
 					{ text = "percent", value = "percent" },
 					{ text = "none", value = "none" },
 				},
+			},
+
+			{
+				setting_id = "disable_ability_background_progress",
+				type = "checkbox",
+				default_value = true,
 			},
 		},
 	},

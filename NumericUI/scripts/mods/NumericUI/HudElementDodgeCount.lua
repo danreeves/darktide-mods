@@ -78,6 +78,7 @@ end
 local function _calculate_dodge_diminishing_return(
 	dodge_character_state_component,
 	movement_state_component,
+	slide_state_component,
 	weapon_dodge_template,
 	buff_extension,
 	t
@@ -90,10 +91,15 @@ local function _calculate_dodge_diminishing_return(
 
 	local consecutive_dodges = math.min(dodge_character_state_component.consecutive_dodges, dr_limit + dr_start)
 
-	if
-		dodge_character_state_component.consecutive_dodges_cooldown < t
-		and movement_state_component.is_dodging == false
-	then
+	local is_sliding = movement_state_component.method == "sliding"
+	local was_in_dodge_before_slide = slide_state_component.was_in_dodge_cooldown
+	local is_dodging = movement_state_component.is_dodging == true
+	local is_cooled_down = dodge_character_state_component.consecutive_dodges_cooldown < t
+	if is_cooled_down and not is_dodging then
+		consecutive_dodges = 0
+	end
+
+	if is_cooled_down and not was_in_dodge_before_slide and is_sliding then
 		consecutive_dodges = 0
 	end
 
@@ -103,7 +109,7 @@ local function _calculate_dodge_diminishing_return(
 	local diminishing_return = base
 		+ dr_distance_modifier * (1 - math.clamp(consecutive_dodges - dr_start, 0, dr_limit) / dr_limit)
 
-	return consecutive_dodges, dr_start, dr_limit, diminishing_return
+	return consecutive_dodges, math.floor(dr_start), math.floor(dr_limit), diminishing_return
 end
 
 HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings, input_service)
@@ -125,6 +131,7 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 	if unit_data_extension and weapon_extension and buff_extension then
 		local dodge_state_component = unit_data_extension:read_component("dodge_character_state")
 		local movement_state_component = unit_data_extension:read_component("movement_state")
+		local slide_state_component = unit_data_extension:read_component("slide_character_state")
 		local weapon_dodge_template = weapon_extension:dodge_template()
 		local gameplay_t = Managers.time:time("gameplay")
 		local cooldown = dodge_state_component.consecutive_dodges_cooldown - gameplay_t
@@ -132,17 +139,22 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 		local current_dodges, num_efficient_dodges, dr_limit, distance_modifier = _calculate_dodge_diminishing_return(
 			dodge_state_component,
 			movement_state_component,
+			slide_state_component,
 			weapon_dodge_template,
 			buff_extension,
 			gameplay_t
 		)
 
 		if num_efficient_dodges == math.huge then
-			self._widgets_by_name.dodge_count.content.text = tostring(current_dodges)
+			if mod:get("show_dodge_count_for_infinite_dodge") then
+				self._widgets_by_name.dodge_count.content.text = tostring(current_dodges)
+			end
 		else
+			local display_dodges = mod:get("dodges_count_up") and current_dodges
+				or (num_efficient_dodges - current_dodges)
 			self._widgets_by_name.dodge_count.content.text = string.format(
 				"%d/%d",
-				current_dodges,
+				display_dodges,
 				num_efficient_dodges
 			)
 		end
@@ -157,13 +169,14 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 
 		if mod:get("debug_dodge_count") then
 			self._widgets_by_name.debug_dodge_count.content.text = string.format(
-				"%d/%s/%s\nmodifier: x%.2f\ncooldown: %.2fs\ndodging: %s",
+				"%d/%s/%s\nmodifier: x%.2f\ncooldown: %.2fs\ndodging: %s\nsliding: %s",
 				current_dodges,
 				num_efficient_dodges == math.huge and "inf" or tostring(num_efficient_dodges),
 				num_efficient_dodges == math.huge and "inf" or tostring(dr_limit + num_efficient_dodges),
 				distance_modifier,
 				cooldown > 0 and cooldown or 0,
-				tostring(movement_state_component.is_dodging)
+				tostring(movement_state_component.is_dodging),
+				tostring(movement_state_component.method == "sliding")
 			)
 		end
 	end

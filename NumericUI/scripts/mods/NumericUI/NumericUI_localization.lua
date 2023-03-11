@@ -47,4 +47,13 @@ return {
 		en = "None",
 		["zh-cn"] = "不显示",
 	},
+	dodges_count_up = {
+		en = "Dodges count up",
+	},
+	show_dodge_count_for_infinite_dodge = {
+		en = "Show dodge count for infinite dodge weapons",
+	},
+	disable_ability_background_progress = {
+		en = "Disable ability background progress",
+	},
 }

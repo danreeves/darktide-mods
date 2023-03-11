@@ -60,7 +60,11 @@ mod:hook_safe("HudElementPlayerAbility", "update", function(self)
 				local ability_state_component = unit_data_extension:read_component("combat_ability")
 				local time = Managers.time:time("gameplay")
 				local time_remaining = ability_state_component.cooldown - time
-				text_widget.content.text = string.format("%ds", time_remaining)
+				if time_remaining <= 1 then
+					text_widget.content.text = string.format("%.1fs", time_remaining)
+				else
+					text_widget.content.text = string.format("%ds", time_remaining)
+				end
 			else
 				text_widget.content.text = " "
 			end
@@ -68,7 +72,9 @@ mod:hook_safe("HudElementPlayerAbility", "update", function(self)
 		text_widget.dirty = true
 	end
 
-	if progress < 1.0 then
-		ability_widget.content.duration_progress = 0.0
+	if mod:get("disable_ability_background_progress") then
+		if progress < 1.0 then
+			ability_widget.content.duration_progress = 0.0
+		end
 	end
 end)
