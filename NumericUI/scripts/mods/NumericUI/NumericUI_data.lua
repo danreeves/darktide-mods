@@ -61,6 +61,17 @@ return {
 			},
 
 			{
+				setting_id = "max_ammo_text",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "self_ammo_status",
+				type = "checkbox",
+				default_value = true,
+			},
+			
+			{
 				setting_id = "ability_cooldown_format",
 				type = "dropdown",
 				default_value = "time",

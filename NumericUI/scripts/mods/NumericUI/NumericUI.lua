@@ -5,6 +5,7 @@ local mod = get_mod("NumericUI")
 
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/TeamPlayerPanel")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
+mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerWeapon")
 
 local hud_elements = {
 	{
