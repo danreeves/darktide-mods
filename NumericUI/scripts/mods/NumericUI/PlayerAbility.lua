@@ -2,15 +2,14 @@ local mod = get_mod("NumericUI")
 local HudElementPlayerAbilitySettings = require(
 	"scripts/ui/hud/elements/player_ability/hud_element_player_ability_settings"
 )
-local HudElementPlayerAbilityHandlerSettings = require(
-	"scripts/ui/hud/elements/player_ability_handler/hud_element_player_ability_handler_settings"
-)
-local ColorUtilities = require("scripts/utilities/ui/colors")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
+
 local style = table.clone(UIFontSettings.hud_body)
 style.text_horizontal_alignment = "center"
 style.text_vertical_alignment = "center"
+
+-- selene: allow(global_usage)
 mod:hook(_G, "dofile", function(func, path)
 	local instance = func(path)
 	if path == "scripts/ui/hud/elements/player_ability/hud_element_player_ability_vertical_definitions" then

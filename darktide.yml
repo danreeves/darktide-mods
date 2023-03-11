@@ -1,0 +1,31 @@
+---
+base: lua51 # We will be extending off of Lua 5.1.
+globals:
+  cjson.encode:
+    args:
+      - type: table
+  cjson.decode:
+    args:
+      - type: string
+  table.keys:
+    args:
+      - type: table
+  table.clone:
+    args:
+      - type: table
+  table.merge:
+    args:
+      - type: table
+      - type: table
+  table.merge_recursive:
+    args:
+      - type: table
+      - type: table
+  Managers.time.time:
+    method: true
+    args:
+      - type: string
+  ScriptUnit.extension:
+    args:
+      - type: table
+      - type: string

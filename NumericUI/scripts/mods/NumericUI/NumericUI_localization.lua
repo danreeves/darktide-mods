@@ -3,6 +3,18 @@ return {
 		en = "Adds numbers to your HUD",
 		["zh-cn"] = "在 HUD 上显示数字",
 	},
+	ability_items = {
+		en = "Ability Cooldown HUD",
+	},
+	player_ammo_items = {
+		en = "Ammo HUD",
+	},
+	dodge_count_items = {
+		en = "Dodge Count HUD",
+	},
+	team_hud_items = {
+		en = "Team HUD",
+	},
 	health_text = {
 		en = "Show health text",
 		["zh-cn"] = "显示生命值",
@@ -22,8 +34,8 @@ return {
 	max_ammo_text = {
 		en = "Show maximum ammo text",
 	},
-	self_ammo_status = {
-		en = "Show icon representation of your ammo",
+	show_ammo_icon = {
+		en = "Show icon for your own ammo",
 	},
 	ammo_as_percent = {
 		en = "Show ammo as percent",

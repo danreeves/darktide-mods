@@ -1,14 +1,15 @@
 local mod = get_mod("NumericUI")
+local TEAM_HUD_DEF_PATH = "scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions"
+
 local backups = mod:persistent_table("team_hud_backups")
-backups.team_hud_definitions = backups.team_hud_definitions
-	or require("scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions")
+backups.team_hud_definitions = backups.team_hud_definitions or mod:original_require(TEAM_HUD_DEF_PATH)
+
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local HudElementTeamPlayerPanelSettings = require(
 	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings"
 )
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
-local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 
 local bar_size = HudElementTeamPlayerPanelSettings.size
 local hud_body_font_setting_name = "hud_body"
@@ -38,8 +39,7 @@ local tough_text_style = {
 	offset = { 0, -6, 2 },
 }
 
-local team_hud_def_path = "scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions"
-mod:hook_require(team_hud_def_path, function(instance)
+mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod:get("health_text") or mod:get("toughness_text") then
 		instance.widget_definitions.coherency_indicator = UIWidget.create_definition({
 			{
