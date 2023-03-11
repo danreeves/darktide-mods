@@ -49,11 +49,14 @@ return {
 	},
 	dodges_count_up = {
 		en = "Dodges count up",
+		["zh-cn"] = "正向显示闪避次数",
 	},
 	show_dodge_count_for_infinite_dodge = {
 		en = "Show dodge count for infinite dodge weapons",
+		["zh-cn"] = "无闪避上限的武器也显示闪避次数",
 	},
 	disable_ability_background_progress = {
 		en = "Disable ability background progress",
+		["zh-cn"] = "禁用主动能力冷却图标彩色进度条",
 	},
 }
