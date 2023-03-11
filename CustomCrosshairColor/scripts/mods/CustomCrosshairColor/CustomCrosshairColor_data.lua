@@ -1,4 +1,5 @@
 local mod = get_mod("CustomCrosshairColor")
+local CrosshairSettings = require("scripts/ui/hud/elements/crosshair/hud_element_crosshair_settings")
 
 local widgets = {
 	{
@@ -28,11 +29,13 @@ local widgets = {
 }
 
 for _, kind in ipairs(mod.kinds) do
-	for _, field in ipairs(mod.fields) do
+	for i, field in ipairs(mod.fields) do
+		-- +1 because the colors has alpha first but we only configure r,g,b
+		local default = CrosshairSettings.hit_indicator_colors[kind][i + 1]
 		widgets[#widgets + 1] = {
 			setting_id = kind .. "_" .. field,
 			type = "numeric",
-			default_value = 0,
+			default_value = default,
 			range = { 0, 255 },
 		}
 	end
