@@ -1,12 +1,24 @@
 ---
 base: lua51 # We will be extending off of Lua 5.1.
 globals:
+  Localize:
+    args:
+      - type: string
   cjson.encode:
     args:
       - type: table
   cjson.decode:
     args:
       - type: string
+  string.starts_with:
+    args:
+      - type: string
+      - type: string
+  table.find_by_key:
+    args:
+      - type: table
+      - type: string
+      - type: any
   table.keys:
     args:
       - type: table
@@ -24,6 +36,10 @@ globals:
   Managers.time.time:
     method: true
     args:
+      - type: string
+  ScriptUnit.has_extension:
+    args:
+      - type: table
       - type: string
   ScriptUnit.extension:
     args:
