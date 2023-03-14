@@ -66,7 +66,6 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self)
 			local ammo_text_widget = self._widgets_by_name.ammo_text
 			local icon_widget = self._widgets_by_name.ammo_icon
 			local uses_ammo = self._uses_ammo and not self._infinite_ammo
-			local background_offset
 
 			if ammo_text_widget then
 				local content = ammo_text_widget.content
@@ -81,7 +80,6 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self)
 					style.max_ammo.offset[1] = style.max_ammo.offset[1] + style.max_ammo.font_size * 2
 					style.max_ammo.offset[2] = style.max_ammo.offset[2] + style.max_ammo.font_size
 					style.max_ammo.drop_shadow = true
-					background_offset = style.max_ammo.offset
 				end
 			end
 
