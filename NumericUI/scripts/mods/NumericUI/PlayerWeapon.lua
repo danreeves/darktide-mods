@@ -21,7 +21,7 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 			parent = "background",
 			horizontal_alignment = "right",
 			size = {20, 20},
-			position = { 0, 51, 0 }
+			position = { 10, 52, 0 }
 		}
 	
 
@@ -110,10 +110,18 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self)
 					color = UIHudSettings.color_tint_ammo_high
 				end
 
+				local x_offset = ammo_text_widget.style.max_ammo.font_size * -15.5
+				local y_offset = ammo_text_widget.style.max_ammo.font_size * -5
+				
+				if max_clip < 10 then
+					x_offset = x_offset + 20
+				end
+
 				icon_widget.style.ammo_icon.offset = {
-					ammo_text_widget.style.max_ammo.font_size * -15,
-					ammo_text_widget.style.max_ammo.font_size * -5
-					}
+					x_offset,
+					y_offset
+				}
+
 				icon_widget.style.ammo_icon.color = color
 				icon_widget.dirty = true
 			end
