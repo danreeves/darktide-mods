@@ -15,6 +15,16 @@ local HudElementTeamPlayerPanelSettings = require(
 )
 
 mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
+
+	instance.scenegraph_definition.ammo_icon = {
+			vertical_alignment = "bottom",
+			parent = "background",
+			horizontal_alignment = "right",
+			size = {20, 20},
+			position = { 0, 51, 0 }
+		}
+	
+
 	instance.widget_definitions.ammo_icon = UIWidget.create_definition({
 		{
 			value_id = "ammo_icon",
@@ -25,14 +35,13 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 			value = "content/ui/materials/hud/icons/weapon_icon_container",
 			retained_mode = false,
 			style = {
-				vertical_alignment = "center",
+				vertical_alignment = "bottom",
 				horizontal_alignment = "right",
 				size = HudElementTeamPlayerPanelSettings.ammo_size,
-				offset = { -10, 0, 0 },
 				color = UIHudSettings.color_tint_main_1,
-			},
+			}, 	
 		},
-	}, "background")
+	}, "ammo_icon")
 
 	local ammo_text_widget = table.clone(backups.definitions.widget_definitions.ammo_text)
 	UIWidget.add_definition_pass(ammo_text_widget, {
@@ -43,6 +52,9 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 		style = backups.definitions.widget_definitions.ammo_text.style.ammo_spare_1,
 	})
 
+	ammo_text_widget.style['max_ammo'].font_size = ammo_text_widget.style['max_ammo'].font_size * 0.8
+    ammo_text_widget.style['max_ammo'].default_font_size = ammo_text_widget.style['max_ammo'].default_font_size * 0.8
+    ammo_text_widget.style['max_ammo'].focused_font_size = ammo_text_widget.style['max_ammo'].focused_font_size * 0.8
 	instance.widget_definitions.ammo_text = ammo_text_widget
 end)
 
@@ -54,6 +66,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self)
 			local ammo_text_widget = self._widgets_by_name.ammo_text
 			local icon_widget = self._widgets_by_name.ammo_icon
 			local uses_ammo = self._uses_ammo and not self._infinite_ammo
+			local background_offset
 
 			if ammo_text_widget then
 				local content = ammo_text_widget.content
@@ -68,6 +81,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self)
 					style.max_ammo.offset[1] = style.max_ammo.offset[1] + style.max_ammo.font_size * 2
 					style.max_ammo.offset[2] = style.max_ammo.offset[2] + style.max_ammo.font_size
 					style.max_ammo.drop_shadow = true
+					background_offset = style.max_ammo.offset
 				end
 			end
 
@@ -98,6 +112,10 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self)
 					color = UIHudSettings.color_tint_ammo_high
 				end
 
+				icon_widget.style.ammo_icon.offset = {
+					ammo_text_widget.style.max_ammo.font_size * -15,
+					ammo_text_widget.style.max_ammo.font_size * -5
+					}
 				icon_widget.style.ammo_icon.color = color
 				icon_widget.dirty = true
 			end
