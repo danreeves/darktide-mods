@@ -15,15 +15,13 @@ local HudElementTeamPlayerPanelSettings = require(
 )
 
 mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
-
 	instance.scenegraph_definition.ammo_icon = {
-			vertical_alignment = "bottom",
-			parent = "background",
-			horizontal_alignment = "right",
-			size = {20, 20},
-			position = { 10, 52, 0 }
-		}
-	
+		vertical_alignment = "bottom",
+		parent = "background",
+		horizontal_alignment = "right",
+		size = { 20, 20 },
+		position = { 10, 52, 0 },
+	}
 
 	instance.widget_definitions.ammo_icon = UIWidget.create_definition({
 		{
@@ -39,7 +37,7 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 				horizontal_alignment = "right",
 				size = HudElementTeamPlayerPanelSettings.ammo_size,
 				color = UIHudSettings.color_tint_main_1,
-			}, 	
+			},
 		},
 	}, "ammo_icon")
 
@@ -52,9 +50,9 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 		style = backups.definitions.widget_definitions.ammo_text.style.ammo_spare_1,
 	})
 
-	ammo_text_widget.style['max_ammo'].font_size = ammo_text_widget.style['max_ammo'].font_size * 0.8
-    ammo_text_widget.style['max_ammo'].default_font_size = ammo_text_widget.style['max_ammo'].default_font_size * 0.8
-    ammo_text_widget.style['max_ammo'].focused_font_size = ammo_text_widget.style['max_ammo'].focused_font_size * 0.8
+	ammo_text_widget.style["max_ammo"].font_size = ammo_text_widget.style["max_ammo"].font_size * 0.8
+	ammo_text_widget.style["max_ammo"].default_font_size = ammo_text_widget.style["max_ammo"].default_font_size * 0.8
+	ammo_text_widget.style["max_ammo"].focused_font_size = ammo_text_widget.style["max_ammo"].focused_font_size * 0.8
 	instance.widget_definitions.ammo_text = ammo_text_widget
 end)
 
@@ -112,14 +110,14 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self)
 
 				local x_offset = ammo_text_widget.style.max_ammo.font_size * -15.5
 				local y_offset = ammo_text_widget.style.max_ammo.font_size * -5
-				
+
 				if max_clip < 10 then
 					x_offset = x_offset + 20
 				end
 
 				icon_widget.style.ammo_icon.offset = {
 					x_offset,
-					y_offset
+					y_offset,
 				}
 
 				icon_widget.style.ammo_icon.color = color
