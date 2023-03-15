@@ -77,6 +77,11 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
+					{
+						setting_id = "show_max_ammo_as_percent",
+						type = "checkbox",
+						default_value = false,
+					},
 				},
 			},
 			{

@@ -77,4 +77,7 @@ return {
 		en = "Disable ability background progress",
 		["zh-cn"] = "禁用主动能力冷却图标彩色进度条",
 	},
+	show_max_ammo_as_percent = {
+		en = "Show max ammo as percent",
+	},
 }
