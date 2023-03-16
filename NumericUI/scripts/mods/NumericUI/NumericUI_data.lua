@@ -78,9 +78,15 @@ return {
 						default_value = true,
 					},
 					{
+<<<<<<< Updated upstream
 						setting_id = "show_max_ammo_as_percent",
 						type = "checkbox",
 						default_value = false,
+=======
+						setting_id = "show_munitions_gained",
+						type = "checkbox",
+						default_value = true,
+>>>>>>> Stashed changes
 					},
 				},
 			},

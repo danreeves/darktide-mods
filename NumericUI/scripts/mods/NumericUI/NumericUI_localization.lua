@@ -39,6 +39,9 @@ return {
 		en = "Show maximum ammo text",
 		["zh-cn"] = "显示最大弹药量",
 	},
+	show_munitions_gained = {
+		en = "Show when ammo is gained",
+	},
 	show_ammo_icon = {
 		en = "Show icon for your own ammo",
 		["zh-cn"] = "显示自己的弹药图标",
