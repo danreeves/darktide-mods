@@ -5,15 +5,19 @@ return {
 	},
 	ability_items = {
 		en = "Ability Cooldown HUD",
+		["zh-cn"] = "技能冷却 HUD",
 	},
 	player_ammo_items = {
 		en = "Ammo HUD",
+		["zh-cn"] = "弹药 HUD",
 	},
 	dodge_count_items = {
 		en = "Dodge Count HUD",
+		["zh-cn"] = "闪避计数 HUD",
 	},
 	team_hud_items = {
 		en = "Team HUD",
+		["zh-cn"] = "团队 HUD",
 	},
 	health_text = {
 		en = "Show health text",
@@ -33,9 +37,11 @@ return {
 	},
 	max_ammo_text = {
 		en = "Show maximum ammo text",
+		["zh-cn"] = "显示最大弹药量",
 	},
 	show_ammo_icon = {
 		en = "Show icon for your own ammo",
+		["zh-cn"] = "显示自己的弹药图标",
 	},
 	ammo_as_percent = {
 		en = "Show ammo as percent",
@@ -43,7 +49,7 @@ return {
 	},
 	dodge_count = {
 		en = "Show dodge count",
-		["zh-cn"] = "显示闪避次数",
+		["zh-cn"] = "显示闪避计数",
 	},
 	debug_dodge_count = {
 		en = "Show debug dodge info",
@@ -79,5 +85,6 @@ return {
 	},
 	show_max_ammo_as_percent = {
 		en = "Show max ammo as percent",
+		["zh-cn"] = "最大弹药量以百分比显示",
 	},
 }
