@@ -33,6 +33,10 @@ globals:
     args:
       - type: table
       - type: table
+  math.round_with_precision:
+    args:
+      - type: number
+      - type: number
   Managers.time.time:
     method: true
     args:

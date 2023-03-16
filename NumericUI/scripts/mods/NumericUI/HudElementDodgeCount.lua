@@ -62,7 +62,7 @@ end
 
 local HudElementDodgeCount = class("HudElementDodgeCount", "HudElementBase")
 
-HudElementDodgeCount.init = function(self, parent, draw_layer, start_scale, definitions)
+HudElementDodgeCount.init = function(self, parent, draw_layer, start_scale)
 	HudElementDodgeCount.super.init(self, parent, draw_layer, start_scale, {
 		scenegraph_definition = scenegraph_definition,
 		widget_definitions = widget_definitions,
@@ -109,7 +109,7 @@ local function _calculate_dodge_diminishing_return(
 	local diminishing_return = base
 		+ dr_distance_modifier * (1 - math.clamp(consecutive_dodges - dr_start, 0, dr_limit) / dr_limit)
 
-	return consecutive_dodges, math.floor(dr_start), math.floor(dr_limit), diminishing_return
+	return consecutive_dodges, dr_start, dr_limit, diminishing_return
 end
 
 HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings, input_service)
@@ -151,11 +151,11 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 			end
 		else
 			local display_dodges = mod:get("dodges_count_up") and current_dodges
-				or (num_efficient_dodges - current_dodges)
+				or (math.ceil(num_efficient_dodges) - current_dodges)
 			self._widgets_by_name.dodge_count.content.text = string.format(
 				"%d/%d",
 				display_dodges,
-				num_efficient_dodges
+				math.ceil(num_efficient_dodges)
 			)
 		end
 
@@ -171,8 +171,9 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 			self._widgets_by_name.debug_dodge_count.content.text = string.format(
 				"%d/%s/%s\nmodifier: x%.2f\ncooldown: %.2fs\ndodging: %s\nsliding: %s",
 				current_dodges,
-				num_efficient_dodges == math.huge and "inf" or tostring(num_efficient_dodges),
-				num_efficient_dodges == math.huge and "inf" or tostring(dr_limit + num_efficient_dodges),
+				num_efficient_dodges == math.huge and "inf"
+					or tostring(math.round_with_precision(num_efficient_dodges, 2)),
+				num_efficient_dodges == math.huge and "inf" or tostring(math.floor(dr_limit + num_efficient_dodges)),
 				distance_modifier,
 				cooldown > 0 and cooldown or 0,
 				tostring(movement_state_component.is_dodging),
