@@ -82,6 +82,12 @@ return {
 						type = "checkbox",
 						default_value = false,
 					},
+					{
+						setting_id = "show_munitions_gained",
+						type = "checkbox",
+						default_value = true,
+					},
+					
 				},
 			},
 			{
