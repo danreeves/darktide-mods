@@ -49,3 +49,29 @@ globals:
     args:
       - type: table
       - type: string
+  Managers.backend.interfaces.master_data.items_cache:
+    method: true
+    args: []
+  Managers.state.difficulty.get_table_entry_by_challenge:
+    method: true
+    args:
+      - type: table
+  Managers.state.player_unit_spawn.owner:
+    method: true
+    args:
+      - type: table
+  Managers.event.register:
+    method: true
+    args:
+      - type: table
+      - type: string
+      - type: string
+  Managers.event.trigger:
+    method: true
+    args:
+      - type: string
+      - type: ...
+  Managers.url_loader.load_texture:
+    method: true
+    args:
+      - type: string
