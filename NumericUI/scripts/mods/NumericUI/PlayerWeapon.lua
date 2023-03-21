@@ -19,29 +19,32 @@ local HudElementTeamPlayerPanelSettings = require(
 local prev_grenade_charges = 0				--Keeps track of grenade amount in the previous loop.
 local grenade_gained_display_t = 0			--keeps track of how long the grenade gained widget has been displayed
 local grenade_gained_amount = 0				--Keeps track of the amount of grenades gained
-local ammo_gained_cumulative = true		--When true, will use a single widget to show multiple ammo increments
-local ammo_gained_amount = 0 				--Keeps track of the amount of ammo gained for a specific index
-local ammo_gained_display_t = 0 			--Keeps track of how long the ammo gained has been displayed for specific index
-local prev_ammo_list = nil 					--Keeps track of ammo amount in the previous loop. Uses slot index number for key.
+local ammo_gained_cumulative = false		--When true, will use a single widget to show multiple ammo increments
+local static_prev_ammo = nil 				--Keeps track of ammo amount in the previous loop. 
 local ammo_gained_available_widgets = {} 	--List of non-active ammo-gained widgets (for non-cumulative display)
 local ammo_gained_active_widgets = {} 
 local ammo_gained_data = {
 	widget_name = "ammo_gained_1",
 	amount = 0,
 	display_t = 0,
-	offset = {-100, 10, 10},
-	offset_mod = {0.1, 0.2},
-	offset_slow_mod = {0.04, 0.15},
+	offset = {-100.0, 10.0, 10.0},
+	offset_mod = {0.1, 0.25},
+	offset_slow_mod = {0.04, 0.2},
 	alpha_multiplier = 1
 }
 
+directional_magnitude = 200
 for i = 1, 4 do
+	directional_magnitude = (directional_magnitude)*(-1)
+
 	table.insert(ammo_gained_available_widgets, table.clone(ammo_gained_data))
 	ammo_gained_available_widgets[i].widget_name = "ammo_gained_" .. i
-	ammo_gained_available_widgets[i].offset_mod[1] = ammo_gained_data.offset_mod[1] - (i/20)
-	ammo_gained_available_widgets[i].offset_mod[2] = ammo_gained_data.offset_mod[2] - (i/20)
-	ammo_gained_available_widgets[i].offset_slow_mod[1] = ammo_gained_data.offset_slow_mod[1] - (i/20)
-	ammo_gained_available_widgets[i].offset_slow_mod[2] = ammo_gained_data.offset_slow_mod[2] - (i/20)
+	ammo_gained_available_widgets[i].offset_mod[1] = ammo_gained_data.offset_mod[1] + 5*(i/directional_magnitude)
+	ammo_gained_available_widgets[i].offset_mod[2] = math.abs(ammo_gained_data.offset_mod[2] + (i/directional_magnitude))
+	ammo_gained_available_widgets[i].offset_slow_mod[1] = ammo_gained_data.offset_slow_mod[1] + 5*(i/directional_magnitude)
+	ammo_gained_available_widgets[i].offset_slow_mod[2] = math.abs(ammo_gained_data.offset_slow_mod[2] + (i/directional_magnitude))
+
+	
 end
 
 mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
@@ -144,6 +147,7 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 		},
 	}, "weapon")
 
+
 	instance.widget_definitions.grenade_gained = UIWidget.create_definition({
 		{
 			value_id = "grenade_gained",
@@ -178,44 +182,6 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 		}),
 	})
 	instance.widget_definitions.ammo_text = ammo_text_widget
-	
-	--[[
-	if not ammo_gained_cumulative then
-
-		local ammo_gained_widget_2 = table.clone(instance.widget_definitions.ammo_gained_1)
-		local ammo_gained_widget_3 = table.clone(instance.widget_definitions.ammo_gained_1)
-		local ammo_gained_widget_4 = table.clone(instance.widget_definitions.ammo_gained_1)
-		local ammo_gained_style = table.clone(instance.widget_definitions.ammo_gained_1.style.ammo_gained)
-
-		UIWidget.create_definition(ammo_gained_widget_2, {
-			value_id = "ammo_gained",
-			style_id = "ammo_gained",
-			pass_type = "text",
-			value = "",
-			style = table.clone(ammo_gained_style)
-		}, "weapon")
-		UIWidget.add_definition_pass(ammo_gained_widget_3, {
-			value_id = "ammo_gained",
-			style_id = "ammo_gained",
-			pass_type = "text",
-			value = "",
-			style = table.clone(ammo_gained_style)
-		})
-		UIWidget.add_definition_pass(ammo_gained_widget_4, {
-			value_id = "ammo_gained",
-			style_id = "ammo_gained",
-			pass_type = "text",
-			value = "",
-			style = table.clone(ammo_gained_style)
-		})
-
-		instance.widget_definitions.ammo_gained_2 = ammo_gained_widget_2
-		instance.widget_definitions.ammo_gained_3 = ammo_gained_widget_3
-		instance.widget_definitions.ammo_gained_4 = ammo_gained_widget_4
-
-
-	end
-	]]
 end)
 
 local function display_grenade_gained(dt, widget)
@@ -253,7 +219,8 @@ end
 local function display_ammo_gained(dt, widget, data)
 	--[[
 	Display an ammo_gained widget based on the information in data, as it is manipulated by the delta time.
-	Will display an ammo gained widget for 1.5s, then an additional 1s as it fades.
+	Will display an ammo gained widget for 1.5s, then an additional 1s as it fades. Returns true if the 
+	widget is no longer displayed, and false if it still requires additional display cycles.
 
 	dt: time since previous update loop
 	widget: The ammo_gained widget you wish to update
@@ -378,7 +345,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 
 			if mod:get("show_munitions_gained") then --this one checks for ammo gained
 				local total_ammo = self._total_ammo
-				local prev_ammo = prev_ammo_list or self._total_ammo
+				local prev_ammo = static_prev_ammo or self._total_ammo
 
 				if ammo_gained_cumulative then
 					local ammo_gained_widget = self._widgets_by_name.ammo_gained_1
@@ -400,16 +367,18 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 						else
 							widget_data = table.remove(ammo_gained_active_widgets, 1) -- If more than 4 widgets are already being shown, we reset and use the oldest one.
 							widget_data.alpha_multiplier = 1
-							self._widgets_by_name[widget_data.widget_name].style.ammo_gained.offset = widget_data.offset
+							self._widgets_by_name[widget_data.widget_name].style.ammo_gained.offset = table.clone(widget_data.offset)
 						end
 
-						widget_data.display_t = 0
+						widget_data.display_t = _dt
 						widget_data.amount = total_ammo - prev_ammo
 						table.insert(ammo_gained_active_widgets, widget_data)
 						self._widgets_by_name[widget_data.widget_name].content.ammo_gained = "+" .. widget_data.amount
 					end
 
 					for i = #ammo_gained_active_widgets, 1, -1 do
+						local ammo_gained_widget = self._widgets_by_name[ammo_gained_active_widgets[i].widget_name]
+
 						local widget_cleared = display_ammo_gained(
 							_dt, 
 							self._widgets_by_name[ammo_gained_active_widgets[i].widget_name], 
@@ -422,7 +391,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 					end
 				end
 
-				prev_ammo_list = total_ammo
+				static_prev_ammo = total_ammo
 			end
 		end
 
