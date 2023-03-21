@@ -45,7 +45,6 @@ return {
 	},
 	show_munitions_gained = {
 		en = "Show amount of ammo and grenades gained",
-		["zh-cn"] = "显示自己的弹药图标",
 	},
 	ammo_as_percent = {
 		en = "Show ammo as percent",
