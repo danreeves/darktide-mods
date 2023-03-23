@@ -10,12 +10,15 @@ backups.definitions = backups.definitions or table.clone(mod:original_require(IN
 
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
+local UIRenderer = require("scripts/managers/ui/ui_renderer")
 local Pickups = require("scripts/settings/pickup/pickups")
 
 local current_ammo = nil
 local max_ammo = nil
 local small_clip_gain = 0
 local large_clip_gain = 0
+local ammo_text_width = nil
+local ammo_text_height = 0
 
 mod:hook_require(INTERACTIONS_HUD_DEF_PATH, function(instance)
 	
@@ -32,7 +35,7 @@ mod:hook_require(INTERACTIONS_HUD_DEF_PATH, function(instance)
 			style = table.merge_recursive(table.clone(description_text_style), {
 				font_size = description_text_style.font_size * ammo_description_size_mod,
 				text_color = UIHudSettings.color_tint_ammo_high,
-				text_horizontal_alignment = "center",
+				text_horizontal_alignment = "left",
 				text_vertical_alignment = "bottom",
 				offset = {0,-6,0}
 				
@@ -45,26 +48,32 @@ end)
 mod:hook_safe("HudElementInteraction", "_setup_interaction_information", function(self, interactee_unit, interactee_extension, interactor_extension)
 	
 	if mod:get("show_ammo_amount_from_packs") then
-		local interaction_widget = self._widgets_by_name.description_text
+		local ammo_gain_widget = self._widgets_by_name.description_text
 
-		if interaction_widget and max_ammo then
-			local ammo_gain_widget = self._widgets_by_name.description_text
+		if ammo_gain_widget and max_ammo then
+			
 			local ammo_loss_widget = self._widgets_by_name.ammo_loss_description_text
 			local hud_description = interactor_extension:hud_description()
+			local font_size = ammo_gain_widget.style.text.font_size
+			local gap_size = font_size * 0.06
 
 			local missing_ammo = max_ammo - current_ammo
 			local ammo_gain_text = ""
 			local ammo_loss_text = ""
+			local x_offset = 0
+
 
 			if hud_description == "loc_pickup_consumable_small_clip_01" then
 				if missing_ammo >= small_clip_gain then
 					ammo_gain_text = string.format("  +%d", small_clip_gain)
-					
 
 				elseif missing_ammo > 0 then
 					ammo_gain_text = string.format("  +%d", missing_ammo)
 					ammo_loss_text = string.format("(%d)", (small_clip_gain - missing_ammo))
-					ammo_loss_widget.style.text.offset[1] = 15*string.len(missing_ammo)
+
+					local char_gap = (string.len(ammo_gain_text)-1) * gap_size
+					x_offset = (ammo_text_width * string.len(string.format("%s%s", ammo_gain_widget.content.text, ammo_gain_text))) + char_gap
+
 				end
 
 			elseif hud_description == "loc_pickup_consumable_large_clip_01" then
@@ -74,16 +83,27 @@ mod:hook_safe("HudElementInteraction", "_setup_interaction_information", functio
 				elseif missing_ammo > 0 then
 					ammo_gain_text = string.format("  +%d", missing_ammo)
 					ammo_loss_text = string.format("(%d)", (large_clip_gain - missing_ammo))
-					ammo_loss_widget.style.text.offset[1] = 15*string.len(missing_ammo) + 30 --The extra 30 is the size difference between "Ammo Tin" and "Ammo Pack"
 
+					local char_gap = (string.len(ammo_gain_text)-1) * gap_size
+					x_offset = (ammo_text_width * string.len(string.format("%s%s", ammo_gain_widget.content.text, ammo_gain_text))) + char_gap
 				end
 			end
 
 			ammo_gain_widget.content.text = string.format("%s%s", ammo_gain_widget.content.text, ammo_gain_text)
 			ammo_loss_widget.content.text = ammo_loss_text
+			ammo_loss_widget.style.text.offset[1] = x_offset
 			ammo_gain_widget.dirty = true
 			ammo_loss_widget.dirty = true
 		end
+	end
+end)
+
+mod:hook_safe("HudElementInteraction", "update", function(self, dt, t, ui_renderer, render_settings, input_service)
+	if ammo_text_width == nil and mod:get("show_ammo_amount_from_packs") then
+		local description_text_widget = self._widgets_by_name.description_text
+		local font_type = description_text_widget.style.text.font_type
+		local font_size = description_text_widget.style.text.font_size
+		ammo_text_width, ammo_text_height = UIRenderer.text_size(ui_renderer, "0", font_type, font_size)
 	end
 end)
 
