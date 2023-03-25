@@ -53,13 +53,6 @@ local widget_definitions = {
 	}, "container"),
 }
 
-local function _is_in_hub()
-	local game_mode_name = Managers.state.game_mode:game_mode_name()
-	local is_in_hub = game_mode_name == "hub"
-
-	return is_in_hub
-end
-
 local HudElementDodgeCount = class("HudElementDodgeCount", "HudElementBase")
 
 HudElementDodgeCount.init = function(self, parent, draw_layer, start_scale)
@@ -72,7 +65,7 @@ HudElementDodgeCount.init = function(self, parent, draw_layer, start_scale)
 	local player = player_manager:local_player(1)
 	local player_unit = player.player_unit
 	self._player_unit = player_unit
-	self._is_in_hub = _is_in_hub()
+	self._is_in_hub = mod._is_in_hub()
 end
 
 local function _calculate_dodge_diminishing_return(

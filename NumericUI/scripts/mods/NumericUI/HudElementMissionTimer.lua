@@ -14,7 +14,7 @@ local scenegraph_definition = {
 		vertical_alignment = "bottom",
 		horizontal_alignment = "right",
 		size = size,
-		position = { 0, 0, 0 },
+		position = { 0, 0, 200 },
 	},
 }
 
@@ -47,6 +47,8 @@ HudElementMissionTimer.init = function(self, parent, draw_layer, start_scale)
 		scenegraph_definition = scenegraph_definition,
 		widget_definitions = widget_definitions,
 	})
+
+	self._is_in_hub = mod._is_in_hub()
 end
 
 HudElementMissionTimer._disp_time = function(time)
@@ -66,7 +68,7 @@ HudElementMissionTimer.update = function(self, dt, t, ui_renderer, render_settin
 		active = true
 	end
 
-	if enabled and active then
+	if enabled and active and not self._is_in_hub then
 		content.text = self._disp_time(Managers.time:time("gameplay"))
 	else
 		content.text = ""
