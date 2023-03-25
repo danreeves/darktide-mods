@@ -38,7 +38,6 @@ local param_table = {}
 mod:hook_safe("PlayerUnitMoodExtension", "_add_mood", function(_self, _t, mood_type)
 	if mood_type == "toughness_broken" then
 		if mod:get("custom_toughness_broken_buff") then
-			mod:echo("Procing buff")
 			mod:add_proc_event("on_player_toughness_broken", param_table)
 		end
 	end

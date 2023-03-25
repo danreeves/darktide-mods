@@ -45,6 +45,13 @@ globals:
     args:
       - type: number
       - type: number
+  Managers.package.load:
+    method: true
+    args:
+      - type: string
+      - type: string
+      - type: string
+        required: false
   Managers.time.time:
     method: true
     args:
