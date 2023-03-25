@@ -45,6 +45,7 @@ return {
 	},
 	show_munitions_gained = {
 		en = "Show amount of ammo and grenades gained",
+		["zh-cn"] = "显示获取的弹药数和手雷数",
 	},
 	ammo_as_percent = {
 		en = "Show ammo as percent",
@@ -52,6 +53,7 @@ return {
 	},
 	show_ammo_amount_from_packs = {
 		en = "Show ammo amount from packs and tins",
+		["zh-cn"] = "显示弹药包内的弹药数",
 	},
 	dodge_count = {
 		en = "Show dodge count",
@@ -95,11 +97,14 @@ return {
 	},
 	mission_timer = {
 		en = "Mission Timer",
+		["zh-cn"] = "任务计时器",
 	},
 	show_mission_timer = {
 		en = "Show mission timer",
+		["zh-cn"] = "显示任务计时器",
 	},
 	mission_timer_in_overlay = {
 		en = "Only in the overlay",
+		["zh-cn"] = "仅在战术覆盖内显示",
 	},
 }
