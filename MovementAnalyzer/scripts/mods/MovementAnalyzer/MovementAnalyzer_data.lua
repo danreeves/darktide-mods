@@ -6,18 +6,16 @@ return {
 	is_togglable = true,
 	options = {
 		widgets = {
-			  {
-				setting_id    = "show_dodge",
-				type          = "checkbox",
+			{
+				setting_id = "show_dodge",
+				type = "checkbox",
 				default_value = true,
-			  },
-			  {
-				setting_id    = "show_slide",
-				type          = "checkbox",
+			},
+			{
+				setting_id = "show_slide",
+				type = "checkbox",
 				default_value = true,
-			  },
-		}
-	}
+			},
+		},
+	},
 }
-
-
