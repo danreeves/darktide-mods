@@ -1,6 +1,8 @@
 ---
 base: lua51 # We will be extending off of Lua 5.1.
 globals:
+  IS_WINDOWS:
+    any: true
   class:
     args:
       - type: string
@@ -90,3 +92,14 @@ globals:
     method: true
     args:
       - type: string
+  Window.has_focus:
+    args: []
+  Wwise.set_parameter:
+    args:
+      - type: string
+      - type: any
+  Application.user_setting:
+    args:
+      - type: string
+      - type: string
+        required: false
