@@ -50,6 +50,9 @@ return {
 		en = "Show ammo as percent",
 		["zh-cn"] = "弹药量以百分比显示",
 	},
+	show_ammo_amount_from_packs = {
+		en = "Show ammo amount from packs and tins",
+	},
 	dodge_count = {
 		en = "Show dodge count",
 		["zh-cn"] = "显示闪避计数",

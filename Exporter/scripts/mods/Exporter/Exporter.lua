@@ -260,3 +260,40 @@ function mod.export_files()
 	mod.write_file(string.format("exports\\localization_%s.json", lm:language()), cjson.encode(localizations))
 	mod.write_file("exports\\textures.txt", mod.array_join(textures))
 end
+
+mod:command("extension_localisation", "", function()
+	local WeaponTemplates = require("scripts/settings/equipment/weapon_templates/weapon_templates")
+
+	local strings_package_id = Managers.package:load("packages/strings", "ExporterMod", nil)
+	local lm = LocalizationManager:new()
+	lm:setup_localizers(strings_package_id)
+
+	local map = {}
+
+	for _, template in pairs(WeaponTemplates) do
+		if template.base_stats then
+			for key, base_stat in pairs(template.base_stats) do
+				map[key] = { display_name = lm:_lookup(base_stat.display_name) }
+			end
+		end
+	end
+
+	local items = Managers.backend.interfaces.master_data:items_cache():get_cached()
+
+	for id, item in pairs(items) do
+		if
+			item.item_type == "TRAIT"
+			or item.item_type == "PERK"
+			or item.item_type == "GADGET"
+			or item.item_type == "WEAPON_MELEE"
+			or item.item_type == "WEAPON_RANGED"
+		then
+			map[id] = {
+				description = lm:_lookup(item.description),
+				display_name = lm:_lookup(item.display_name),
+			}
+		end
+	end
+
+	mod.write_file("localisation.json", cjson.encode(map))
+end)
