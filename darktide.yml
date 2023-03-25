@@ -1,6 +1,11 @@
 ---
 base: lua51 # We will be extending off of Lua 5.1.
 globals:
+  class:
+    args:
+      - type: string
+      - type: string
+        required: false
   Localize:
     args:
       - type: string
@@ -14,6 +19,9 @@ globals:
     args:
       - type: string
       - type: string
+  table.clear:
+    args:
+      - type: table
   table.find_by_key:
     args:
       - type: table
