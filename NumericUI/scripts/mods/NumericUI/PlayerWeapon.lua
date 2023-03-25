@@ -33,7 +33,7 @@ local ammo_gained_data = {
 	alpha_multiplier = 1,
 }
 
-directional_magnitude = 200
+local directional_magnitude = 200
 for i = 1, 4 do
 	directional_magnitude = directional_magnitude * -1
 
@@ -219,7 +219,7 @@ end
 local function display_ammo_gained(dt, widget, data)
 	--[[
 	Display an ammo_gained widget based on the information in data, as it is manipulated by the delta time.
-	Will display an ammo gained widget for 1.5s, then an additional 1s as it fades. Returns true if the 
+	Will display an ammo gained widget for 1.5s, then an additional 1s as it fades. Returns true if the
 	widget is no longer displayed, and false if it still requires additional display cycles.
 
 	dt: time since previous update loop

@@ -12,6 +12,20 @@ local hud_elements = {
 	{
 		filename = "NumericUI/scripts/mods/NumericUI/HudElementDodgeCount",
 		class_name = "HudElementDodgeCount",
+		visibility_groups = {
+			"tactical_overlay",
+			"alive",
+			"communication_wheel",
+		},
+	},
+	{
+		filename = "NumericUI/scripts/mods/NumericUI/HudElementMissionTimer",
+		class_name = "HudElementMissionTimer",
+		visibility_groups = {
+			"tactical_overlay",
+			"alive",
+			"communication_wheel",
+		},
 	},
 }
 
@@ -26,7 +40,7 @@ mod:hook("UIHud", "init", function(func, self, elements, visibility_groups, para
 				class_name = hud_element.class_name,
 				filename = hud_element.filename,
 				use_hud_scale = true,
-				visibility_groups = {
+				visibility_groups = hud_element.visibility_groups or {
 					"alive",
 				},
 			})

@@ -115,6 +115,23 @@ return {
 					},
 				},
 			},
+			{
+				setting_id = "mission_timer",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "show_mission_timer",
+						type = "checkbox",
+						default_value = true,
+					},
+
+					{
+						setting_id = "mission_timer_in_overlay",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
+			},
 		},
 	},
 }

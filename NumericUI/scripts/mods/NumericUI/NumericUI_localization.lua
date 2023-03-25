@@ -93,4 +93,13 @@ return {
 		en = "Show max ammo as percent",
 		["zh-cn"] = "最大弹药量以百分比显示",
 	},
+	mission_timer = {
+		en = "Mission Timer",
+	},
+	show_mission_timer = {
+		en = "Show mission timer",
+	},
+	mission_timer_in_overlay = {
+		en = "Only in the overlay",
+	},
 }
