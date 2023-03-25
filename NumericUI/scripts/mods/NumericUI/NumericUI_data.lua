@@ -83,6 +83,11 @@ return {
 						default_value = false,
 					},
 					{
+						setting_id = "show_munitions_gained",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
 						setting_id = "show_ammo_amount_from_packs",
 						type = "checkbox",
 						default_value = true,
