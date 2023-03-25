@@ -87,7 +87,11 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
-					
+					{
+						setting_id = "show_ammo_amount_from_packs",
+						type = "checkbox",
+						default_value = true,
+					},
 				},
 			},
 			{
