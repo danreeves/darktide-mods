@@ -56,11 +56,8 @@ return {
 	},
 	show_munitions_gained = {
 		en = "Show amount of ammo and grenades gained",
-<<<<<<< HEAD
 		["zh-cn"] = "显示获取的弹药数和手雷数",
-=======
 		ru = "Показывать количество полученных боеприпасов и гранат",
->>>>>>> a2e39b4 (russian translations)
 	},
 	ammo_as_percent = {
 		en = "Show ammo as percent",
@@ -69,11 +66,8 @@ return {
 	},
 	show_ammo_amount_from_packs = {
 		en = "Show ammo amount from packs and tins",
-<<<<<<< HEAD
 		["zh-cn"] = "显示弹药包内的弹药数",
-=======
 		ru = "Показывать количество боеприпасов в упаковках и банках",
->>>>>>> a2e39b4 (russian translations)
 	},
 	dodge_count = {
 		en = "Show dodge count",
