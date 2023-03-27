@@ -60,6 +60,33 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 			backups.team_hud_definitions.widget_definitions.coherency_indicator
 	end
 
+	if mod:get("ammo_text") or mod:get("peril_icon") then
+		instance.widget_definitions.numeric_ui_peril_icon = UIWidget.create_definition({
+			{
+				value_id = "warning_text",
+				style_id = "warning_text",
+				pass_type = "text",
+				value = "",
+				visible = false,
+				style = {
+					default_font_size = 16,
+					font_size = 18,
+					text_vertical_alignment = "center",
+					text_horizontal_alignment = "left",
+					vertical_alignment = "center",
+					anim_progress = nil,
+					offset = { 150, -18, 3 },
+					size = { bar_size[1] * 1.5, bar_size[2] },
+					font_type = "machine_medium",--hud_body_font_settings.font_type,
+					text_color = UIHudSettings.color_tint_alert_2,
+					default_text_color = UIHudSettings.color_tint_main_2,
+				},
+			},
+		}, "toughness_bar")
+	else
+		instance.widget_definitions.numeric_ui_peril_icon = nil
+	end
+
 	if mod:get("ammo_text") then
 		instance.widget_definitions.numeric_ui_ammo_text = UIWidget.create_definition({
 			{
@@ -203,12 +230,37 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
 
 	local widget = self._widgets_by_name.numeric_ui_ammo_text
+	local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
 
 	if widget then
 		local extensions = self:_player_extensions(player)
 		local unit_data_extension = extensions and extensions.unit_data
+		local peril_color = nil
+		local warp_charge_level = nil
 
 		if unit_data_extension then
+			if peril_widget and peril_widget.visible then
+
+				local warp_charge_component = unit_data_extension:read_component("warp_charge")
+				warp_charge_level = warp_charge_component.current_percentage
+
+				if warp_charge_level > 0.98 then
+					peril_color = UIHudSettings.color_tint_ammo_high
+				elseif warp_charge_level > 0.75 then
+					peril_color = UIHudSettings.color_tint_ammo_medium
+				elseif warp_charge_level > 0.5 then
+					peril_color = UIHudSettings.color_tint_ammo_low
+				else
+					peril_color = peril_widget.style.warning_text.default_text_color
+				end
+
+				if mod:get("peril_icon") and peril_color ~= peril_widget.style.warning_text.text_color then
+					peril_widget.style.warning_text.text_color = peril_color
+					peril_widget.dirty = true
+				end
+
+			end
+
 			local weapon_slots = self._weapon_slots
 			local total_current_ammo = 0
 			local total_max_ammo = 0
@@ -227,7 +279,10 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 				end
 			end
 
-			if total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied then
+			if total_max_ammo == 0 and peril_widget.visible then
+				widget.content.text = string.format("%1d%%", (warp_charge_level * 100))
+				widget.style.text.text_color = peril_color
+			elseif total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied then
 				widget.content.text = ""
 			else
 				if mod:get("ammo_as_percent") then
@@ -244,3 +299,23 @@ end
 
 mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_ammo_count)
 mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_ammo_count)
+
+mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_layer, start_scale, data)
+	local player_extensions = self:_player_extensions(data.player)
+	
+	if player_extensions then
+		local unit_data_extension = player_extensions.unit_data
+		local archetype = unit_data_extension:archetype_name()
+		local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+		if archetype == "psyker" then
+			if mod:get("peril_icon") then
+				peril_widget.content.warning_text =  "" -- this boxed questionmark is the character for the peril icon
+			else
+				peril_widget.content.warning_text =  ""
+			end
+			peril_widget.visible = true -- I use the "visible" flag to determine if it's a psyker
+		else
+			peril_widget.visible = false
+		end
+	end
+end)

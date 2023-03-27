@@ -31,6 +31,11 @@ return {
 						default_value = true,
 					},
 					{
+						setting_id = "peril_icon",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
 						setting_id = "ammo_as_percent",
 						type = "checkbox",
 						default_value = false,

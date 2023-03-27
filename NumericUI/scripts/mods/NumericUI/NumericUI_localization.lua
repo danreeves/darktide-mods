@@ -44,6 +44,9 @@ return {
 		["zh-cn"] = "显示弹药量",
 		ru = "Показывать текст боеприпасов",
 	},
+	peril_icon = {
+		en = "Show peril icon"
+	},
 	max_ammo_text = {
 		en = "Show maximum ammo text",
 		["zh-cn"] = "显示最大弹药量",
