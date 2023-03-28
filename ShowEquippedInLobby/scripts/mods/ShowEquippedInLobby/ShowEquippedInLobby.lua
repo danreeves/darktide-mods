@@ -20,9 +20,6 @@ mod:hook_safe("LobbyView", "init", function(self)
 			local slot_name = slot.default_slot == "slot_primary" and "slot_secondary" or "slot_primary"
 			local profile_spawner = slot.profile_spawner
 			local slot_item = slot.profile and slot.profile.loadout[slot_name]
-			-- local item_inventory_animation_event = slot.ready and "ready"
-			-- 	or slot_item and slot_item.inventory_animation_event
-			-- 	or "inventory_idle_default"
 
 			local item_inventory_animation_event = slot_item and slot_item.inventory_animation_event
 				or "inventory_idle_default"
@@ -33,6 +30,8 @@ mod:hook_safe("LobbyView", "init", function(self)
 				profile_spawner:assign_animation_event(item_inventory_animation_event)
 			end
 
+			-- There's no ready to ready transition so assign the ready animation after
+			-- resetting to idle first
 			if slot.ready then
 				profile_spawner:assign_animation_event("ready")
 			end
@@ -40,4 +39,9 @@ mod:hook_safe("LobbyView", "init", function(self)
 			slot.default_slot = slot_name
 		end
 	end
+end)
+
+mod:hook("LobbyView", "_setup_loadout_widgets", function(func, self, spawn_slot)
+	spawn_slot.default_slot = mod:get("default_slot")
+	return func(self, spawn_slot)
 end)
