@@ -77,7 +77,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 					anim_progress = nil,
 					offset = { 150, -18, 3 },
 					size = { bar_size[1] * 1.5, bar_size[2] },
-					font_type = "machine_medium",--hud_body_font_settings.font_type,
+					font_type = "machine_medium", --hud_body_font_settings.font_type,
 					text_color = UIHudSettings.color_tint_alert_2,
 					default_text_color = UIHudSettings.color_tint_main_2,
 				},
@@ -240,7 +240,6 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 
 		if unit_data_extension then
 			if peril_widget and peril_widget.visible then
-
 				local warp_charge_component = unit_data_extension:read_component("warp_charge")
 				warp_charge_level = warp_charge_component.current_percentage
 
@@ -258,7 +257,6 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 					peril_widget.style.warning_text.text_color = peril_color
 					peril_widget.dirty = true
 				end
-
 			end
 
 			local weapon_slots = self._weapon_slots
@@ -302,16 +300,16 @@ mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_ammo_cou
 
 mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_layer, start_scale, data)
 	local player_extensions = self:_player_extensions(data.player)
-	
+
 	if player_extensions then
 		local unit_data_extension = player_extensions.unit_data
 		local archetype = unit_data_extension:archetype_name()
 		local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
 		if archetype == "psyker" then
 			if mod:get("peril_icon") then
-				peril_widget.content.warning_text =  "" -- this boxed questionmark is the character for the peril icon
+				peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
 			else
-				peril_widget.content.warning_text =  ""
+				peril_widget.content.warning_text = ""
 			end
 			peril_widget.visible = true -- I use the "visible" flag to determine if it's a psyker
 		else

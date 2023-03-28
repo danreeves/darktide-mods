@@ -45,7 +45,7 @@ return {
 		ru = "Показывать текст боеприпасов",
 	},
 	peril_icon = {
-		en = "Show peril icon"
+		en = "Show peril icon",
 	},
 	max_ammo_text = {
 		en = "Show maximum ammo text",
