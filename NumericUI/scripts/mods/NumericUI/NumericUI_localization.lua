@@ -46,6 +46,7 @@ return {
 	},
 	peril_icon = {
 		en = "Show peril icon",
+		["zh-cn"] = "显示危机值图标",
 	},
 	max_ammo_text = {
 		en = "Show maximum ammo text",
