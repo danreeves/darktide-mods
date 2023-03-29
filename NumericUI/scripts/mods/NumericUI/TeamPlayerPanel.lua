@@ -39,6 +39,9 @@ local tough_text_style = {
 	offset = { 0, -6, 2 },
 }
 
+local ability_max_cooldown = {} -- "player ID -> max cooldown"
+local ability_cooldown_timer = {} -- "player ID -> cooldown timer"
+
 mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod:get("health_text") or mod:get("toughness_text") then
 		instance.widget_definitions.coherency_indicator = UIWidget.create_definition({
@@ -60,6 +63,65 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 			backups.team_hud_definitions.widget_definitions.coherency_indicator
 	end
 
+	if mod:get("ability_cd_text") then
+		instance.widget_definitions.ability_text = UIWidget.create_definition({
+			{
+				value_id = "text",
+				style_id = "text",
+				pass_type = "text",
+				value = "",
+				style = table.merge_recursive(table.clone(tough_text_style), {
+					text_color = UIHudSettings.color_tint_8,
+					default_color = UIHudSettings.color_tint_8,
+					dimmed_color = UIHudSettings.color_tint_9,
+					offset = { 28, 22 },
+					character_spacing = .05,
+				}),
+			},
+		}, "toughness_bar")
+	else
+		instance.widget_definitions.ability_text = nil
+	end
+
+	if mod:get("ability_cd_bar") then
+		instance.widget_definitions.ability_bar = UIWidget.create_definition({
+			{
+				value = "content/ui/materials/backgrounds/default_square",
+				style_id = "texture",
+				pass_type = "texture",
+				style = {
+					vertical_alignment = "center",
+					horizontal_alignment = "left",
+					offset = {
+						0,
+						20,
+						4
+					},
+					size = {bar_size[1], 3},
+					color = UIHudSettings.color_tint_8
+				}
+			},
+			{
+				value = "content/ui/materials/backgrounds/default_square",
+				style_id = "texture_background",
+				pass_type = "texture",
+				style = {
+					vertical_alignment = "center",
+					horizontal_alignment = "left",
+					offset = {
+						0,
+						20,
+						0
+					},
+					size = {bar_size[1], 2},
+					color = UIHudSettings.color_tint_0
+				}
+			}
+		}, "toughness_bar")
+	else
+		instance.widget_definitions.ability_bar = nil
+	end
+
 	if mod:get("ammo_text") or mod:get("peril_icon") then
 		instance.widget_definitions.numeric_ui_peril_icon = UIWidget.create_definition({
 			{
@@ -77,7 +139,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 					anim_progress = nil,
 					offset = { 150, -18, 3 },
 					size = { bar_size[1] * 1.5, bar_size[2] },
-					font_type = "machine_medium", --hud_body_font_settings.font_type,
+					font_type = "machine_medium",--hud_body_font_settings.font_type,
 					text_color = UIHudSettings.color_tint_alert_2,
 					default_text_color = UIHudSettings.color_tint_main_2,
 				},
@@ -224,6 +286,98 @@ local function hud_init_with_features(
 
 	return func(self, parent, draw_layer, start_scale, data, definition_path, definition_settings)
 end
+
+local function update_numericui_ability_cd(self, player, ability_bar_widget, ability_text_widget, ability_component, dt)
+
+	if not ability_cooldown_timer[player:name()] then
+		ability_cooldown_timer[player:name()] = 0
+	end
+
+	local time = Managers.time:time("gameplay")
+	local time_remaining = ability_component.cooldown - time
+	local hide_widgets = (self._show_as_dead or self._dead or self._hogtied)
+	local show_ability_text = (mod:get("ability_cd_text") and ability_text_widget)
+	local show_ability_bar = (mod:get("ability_cd_bar") and ability_bar_widget)
+	
+
+	if hide_widgets then
+		if show_ability_text then
+			ability_text_widget.visible = false
+			ability_text_widget.dirty = true
+		end
+
+		if show_ability_bar then
+			ability_bar_widget.visible = false
+			ability_bar_widget.dirty = true
+
+		end
+
+		return
+	end
+	
+	if ability_component.num_charges > 0 and ability_cooldown_timer[player:name()] > 0 then
+		ability_cooldown_timer[player:name()] = 0
+
+		if show_ability_text then
+			ability_text_widget.visible = false
+			ability_text_widget.dirty = true
+		end
+
+		if show_ability_bar then
+			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_8
+			ability_bar_widget.style.texture.size[1] = bar_size[1]
+			ability_bar_widget.dirty = true
+		end
+	
+	elseif ability_component.num_charges > 0 and ability_cooldown_timer[player:name()] == 0 then
+		if show_ability_text then
+			if show_ability_text.visible then
+				show_ability_text.visible = false
+				show_ability_text.dirty = true
+			end
+		end
+
+		if show_ability_bar then
+			if ability_bar_widget.style.texture.size[1] ~= bar_size[1] then
+				ability_bar_widget.style.texture.color = UIHudSettings.color_tint_8
+				ability_bar_widget.style.texture.size[1] = bar_size[1]
+				ability_bar_widget.dirty = true
+			end
+		end
+
+	elseif ability_cooldown_timer[player:name()] == 0 then
+		ability_max_cooldown[player:name()] = time_remaining
+		ability_cooldown_timer[player:name()] = dt
+
+		if show_ability_text then
+			ability_text_widget.visible = true
+			ability_text_widget.content.text = string.format("%03d", time_remaining)
+			ability_text_widget.dirty = true
+		end
+
+		if show_ability_bar then
+			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_9
+			ability_bar_widget.style.texture.size[1] = bar_size[1] * (ability_cooldown_timer[player:name()]/ability_max_cooldown[player:name()])
+			ability_bar_widget.dirty = true
+		end
+
+	elseif ability_cooldown_timer[player:name()] > 0 then
+		ability_cooldown_timer[player:name()] = ability_cooldown_timer[player:name()] + dt
+
+		if show_ability_text then
+			local cd_timer = ability_max_cooldown[player:name()] - ability_cooldown_timer[player:name()]
+			ability_text_widget.content.text = string.format("%03d", cd_timer)
+			ability_text_widget.dirty = true
+		end
+
+		if show_ability_bar then
+			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_9
+			ability_bar_widget.style.texture.size[1] = bar_size[1] * (ability_cooldown_timer[player:name()]/ability_max_cooldown[player:name()])
+			ability_bar_widget.dirty = true
+		end
+	end
+end
+
 mod:hook("HudElementPlayerPanelBase", "init", hud_init_with_features)
 
 local function update_ammo_count(func, self, dt, t, player, ui_renderer)
@@ -231,15 +385,17 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 
 	local widget = self._widgets_by_name.numeric_ui_ammo_text
 	local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+	local extensions = self:_player_extensions(player)
+	local unit_data_extension = extensions and extensions.unit_data
 
 	if widget then
-		local extensions = self:_player_extensions(player)
-		local unit_data_extension = extensions and extensions.unit_data
+		
 		local peril_color = nil
 		local warp_charge_level = nil
 
 		if unit_data_extension then
 			if peril_widget and peril_widget.visible then
+
 				local warp_charge_component = unit_data_extension:read_component("warp_charge")
 				warp_charge_level = warp_charge_component.current_percentage
 
@@ -257,6 +413,7 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 					peril_widget.style.warning_text.text_color = peril_color
 					peril_widget.dirty = true
 				end
+
 			end
 
 			local weapon_slots = self._weapon_slots
@@ -293,6 +450,13 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 			widget.dirty = true
 		end
 	end
+
+	if mod:get("ability_cd_text") or mod:get("ability_cd_bar") then
+		if extensions then
+			local ability_component = unit_data_extension:read_component("combat_ability")
+			update_numericui_ability_cd(self, player, self._widgets_by_name.ability_bar, self._widgets_by_name.ability_text, ability_component, dt)
+		end
+	end
 end
 
 mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_ammo_count)
@@ -303,17 +467,32 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 
 	if player_extensions then
 		local unit_data_extension = player_extensions.unit_data
-		local archetype = unit_data_extension:archetype_name()
-		local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
-		if archetype == "psyker" then
-			if mod:get("peril_icon") then
-				peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
-			else
-				peril_widget.content.warning_text = ""
+
+		if unit_data_extension then
+
+			if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
+				ability_component = unit_data_extension:read_component("combat_ability")
+				ability_cooldown_timer[data.player:name()] = 0 
+				if ability_component then
+					local time = Managers.time:time("gameplay")
+					local time_remaining = ability_component.cooldown - time
+
+					ability_max_cooldown[data.player:name()] = time_remaining
+				end
 			end
-			peril_widget.visible = true -- I use the "visible" flag to determine if it's a psyker
-		else
-			peril_widget.visible = false
+
+			local archetype = unit_data_extension:archetype_name()
+			local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+			if archetype == "psyker" then
+				if mod:get("peril_icon") then
+					peril_widget.content.warning_text =  "" -- this boxed questionmark is the character for the peril icon
+				else
+					peril_widget.content.warning_text =  ""
+				end
+				peril_widget.visible = true -- I use the "visible" flag to determine if it's a psyker
+			else
+				peril_widget.visible = false
+			end
 		end
 	end
 end)
