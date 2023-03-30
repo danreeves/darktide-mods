@@ -302,14 +302,13 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 
 	if hide_widgets then
 		if show_ability_text then
+			ability_text_widget.dirty = ability_text_widget.visible
 			ability_text_widget.visible = false
-			ability_text_widget.dirty = true
 		end
 
 		if show_ability_bar then
+			ability_bar_widget.dirty = ability_bar_widget.visible
 			ability_bar_widget.visible = false
-			ability_bar_widget.dirty = true
-
 		end
 
 		return
