@@ -303,17 +303,16 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 
 	if player_extensions then
 		local unit_data_extension = player_extensions.unit_data
-		local archetype = unit_data_extension:archetype_name()
-		local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
-		if archetype == "psyker" then
-			if mod:get("peril_icon") then
+		if mod:get("peril_icon") then
+			local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+			local archetype = unit_data_extension:archetype_name()
+			if archetype == "psyker" then
 				peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
+				peril_widget.visible = true -- I use the "visible" flag to determine if it's a psyker
 			else
 				peril_widget.content.warning_text = ""
+				peril_widget.visible = false
 			end
-			peril_widget.visible = true -- I use the "visible" flag to determine if it's a psyker
-		else
-			peril_widget.visible = false
 		end
 	end
 end)
