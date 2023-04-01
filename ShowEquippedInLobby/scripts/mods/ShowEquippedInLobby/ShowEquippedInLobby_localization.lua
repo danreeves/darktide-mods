@@ -5,11 +5,14 @@ return {
 	},
 	default_slot = {
 		en = "Default equipped slot",
+		["zh-cn"] = "默认装备武器",
 	},
 	slot_primary = {
 		en = "Primary",
+		["zh-cn"] = "主武器",
 	},
 	slot_secondary = {
 		en = "Secondary",
+		["zh-cn"] = "副武器",
 	},
 }
