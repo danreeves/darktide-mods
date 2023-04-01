@@ -34,6 +34,12 @@ return {
 		["zh-cn"] = "显示韧性值",
 		ru = "Показывать текст стойкости",
 	},
+	ability_cd_bar = {
+		en = "Show team's ability cooldown as progress bar",
+	},
+	ability_cd_text = {
+		en = "Show team's ability cooldown as numeric counter",
+	},
 	level = {
 		en = "Show level",
 		["zh-cn"] = "显示等级",
