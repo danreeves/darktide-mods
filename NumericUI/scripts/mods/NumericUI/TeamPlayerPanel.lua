@@ -466,7 +466,6 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 
 	if player_extensions then
 		local unit_data_extension = player_extensions.unit_data
-
 		if unit_data_extension then
 
 			if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
@@ -480,17 +479,16 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 				end
 			end
 
-			local archetype = unit_data_extension:archetype_name()
-			local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
-			if archetype == "psyker" then
-				if mod:get("peril_icon") then
-					peril_widget.content.warning_text =  "" -- this boxed questionmark is the character for the peril icon
-				else
-					peril_widget.content.warning_text =  ""
-				end
-				peril_widget.visible = true -- I use the "visible" flag to determine if it's a psyker
-			else
-				peril_widget.visible = false
+      local archetype = unit_data_extension:archetype_name()
+      local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+
+      if mod:get("peril_icon") then
+        peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
+        peril_widget.visible = (archetype == "psyker")
+
+      elseif mod:get("ammo_text") then
+        peril_widget.content.warning_text = ""
+        peril_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
 			end
 		end
 	end
