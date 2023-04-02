@@ -40,6 +40,16 @@ return {
 						type = "checkbox",
 						default_value = false,
 					},
+					{
+						setting_id = "ability_cd_bar",
+						type = "checkbox",
+						default_value = true,
+					},					
+					{
+						setting_id = "ability_cd_text",
+						type = "checkbox",
+						default_value = true,
+					},
 				},
 			},
 			{
