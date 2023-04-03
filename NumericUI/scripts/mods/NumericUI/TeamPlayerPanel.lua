@@ -391,11 +391,10 @@ mod:hook_safe("HudElementPlayerPanelBase", "destroy", function (self, ui_rendere
 		if player_extensions then
 			local unit_data_extension = player_extensions.unit_data
 			if unit_data_extension then
-					ability_component = unit_data_extension:read_component("combat_ability")
-					ability_cooldown_timer[data.player:name()] = nil
-					if ability_component then
-						ability_max_cooldown[data.player:name()] = nil
-					end
+				ability_component = unit_data_extension:read_component("combat_ability")
+				ability_cooldown_timer[data.player:name()] = nil
+				if ability_component then
+					ability_max_cooldown[data.player:name()] = nil
 				end
 			end
 		end
