@@ -144,4 +144,10 @@ return {
 		["zh-cn"] = "仅在战术覆盖内显示",
 		ru = "Только в оверлее",
 	},
+	nameplates = {
+		en = "Nameplates",
+	},
+	archetype_icons_in_nameplates = {
+		en = "Use class icons in nameplates",
+	},
 }

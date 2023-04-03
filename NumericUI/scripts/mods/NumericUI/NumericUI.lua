@@ -8,6 +8,7 @@ mod:io_dofile("NumericUI/scripts/mods/NumericUI/TeamPlayerPanel")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerWeapon")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/Interactions")
+mod:io_dofile("NumericUI/scripts/mods/NumericUI/Nameplates")
 
 local hud_elements = {
 	{

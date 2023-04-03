@@ -44,7 +44,7 @@ return {
 						setting_id = "ability_cd_bar",
 						type = "checkbox",
 						default_value = true,
-					},					
+					},
 					{
 						setting_id = "ability_cd_text",
 						type = "checkbox",
@@ -142,6 +142,17 @@ return {
 
 					{
 						setting_id = "mission_timer_in_overlay",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
+			},
+			{
+				setting_id = "nameplates",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "archetype_icons_in_nameplates",
 						type = "checkbox",
 						default_value = true,
 					},

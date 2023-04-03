@@ -103,3 +103,7 @@ globals:
       - type: string
       - type: string
         required: false
+  Color.ui_hud_green_light:
+    args:
+      - type: number
+      - type: bool
