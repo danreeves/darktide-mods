@@ -322,7 +322,6 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		if show_ability_bar then
 			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_8
 			ability_bar_widget.style.texture.size[1] = bar_size[1]
-			ability_bar_widget.visible = true
 			ability_bar_widget.dirty = true
 		end
 	
@@ -335,6 +334,11 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		end
 
 		if show_ability_bar then
+			if not ability_bar_widget.visible then
+				ability_bar_widget.visible = true
+				ability_bar_widget.dirty = true
+			end
+			
 			if ability_bar_widget.style.texture.size[1] ~= bar_size[1] then
 				ability_bar_widget.style.texture.color = UIHudSettings.color_tint_8
 				ability_bar_widget.style.texture.size[1] = bar_size[1]
@@ -380,6 +384,33 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 end
 
 mod:hook("HudElementPlayerPanelBase", "init", hud_init_with_features)
+
+mod:hook_safe("HudElementPlayerPanelBase", "destroy", function (self, ui_renderer)
+	local player_extensions = self:_player_extensions(self._data.player)
+	if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
+		if player_extensions then
+			local unit_data_extension = player_extensions.unit_data
+			if unit_data_extension then
+					ability_component = unit_data_extension:read_component("combat_ability")
+					ability_cooldown_timer[data.player:name()] = nil
+					if ability_component then
+						ability_max_cooldown[data.player:name()] = nil
+					end
+				end
+			end
+		end
+
+		if (mod:get("ability_cd_text") and ability_text_widget) then
+			self._widgets_by_name.ability_text.visible = false
+			self._widgets_by_name.ability_text.dirty = true
+		end
+
+		if (mod:get("ability_cd_bar") and ability_bar_widget) then
+			self._widgets_by_name.ability_bar_widget.visible = false
+			self._widgets_by_name.ability_bar_widget.dirty = true
+		end
+	end
+end)
 
 local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
@@ -495,3 +526,4 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 		end
 	end
 end)
+
