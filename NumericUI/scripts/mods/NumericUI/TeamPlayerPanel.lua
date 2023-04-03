@@ -293,12 +293,9 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		ability_cooldown_timer[player:name()] = 0
 	end
 
-	local time = Managers.time:time("gameplay")
-	local time_remaining = ability_component.cooldown - time
 	local hide_widgets = (self._show_as_dead or self._dead or self._hogtied)
 	local show_ability_text = (mod:get("ability_cd_text") and ability_text_widget)
-	local show_ability_bar = (mod:get("ability_cd_bar") and ability_bar_widget)
-	
+	local show_ability_bar = (mod:get("ability_cd_bar") and ability_bar_widget)	
 
 	if hide_widgets then
 		if show_ability_text then
@@ -325,6 +322,7 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		if show_ability_bar then
 			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_8
 			ability_bar_widget.style.texture.size[1] = bar_size[1]
+			ability_bar_widget.visible = true
 			ability_bar_widget.dirty = true
 		end
 	
@@ -345,6 +343,8 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		end
 
 	elseif ability_cooldown_timer[player:name()] == 0 then
+		local time = Managers.time:time("gameplay")
+		local time_remaining = ability_component.cooldown - time
 		ability_max_cooldown[player:name()] = time_remaining
 		ability_cooldown_timer[player:name()] = dt
 
@@ -357,6 +357,7 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		if show_ability_bar then
 			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_9
 			ability_bar_widget.style.texture.size[1] = bar_size[1] * (ability_cooldown_timer[player:name()]/ability_max_cooldown[player:name()])
+			ability_bar_widget.visible = true
 			ability_bar_widget.dirty = true
 		end
 
@@ -371,7 +372,8 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 
 		if show_ability_bar then
 			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_9
-			ability_bar_widget.style.texture.size[1] = bar_size[1] * (ability_cooldown_timer[player:name()]/ability_max_cooldown[player:name()])
+			local cd_progress = math.clamp(ability_cooldown_timer[player:name()]/ability_max_cooldown[player:name()], 0, 1.0)
+			ability_bar_widget.style.texture.size[1] = bar_size[1] * cd_progress
 			ability_bar_widget.dirty = true
 		end
 	end
@@ -479,16 +481,16 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 				end
 			end
 
-      local archetype = unit_data_extension:archetype_name()
-      local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+			local archetype = unit_data_extension:archetype_name()
+			local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
 
-      if mod:get("peril_icon") then
-        peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
-        peril_widget.visible = (archetype == "psyker")
+			if mod:get("peril_icon") then
+				peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
+				peril_widget.visible = (archetype == "psyker")
 
-      elseif mod:get("ammo_text") then
-        peril_widget.content.warning_text = ""
-        peril_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
+			elseif mod:get("ammo_text") then
+				peril_widget.content.warning_text = ""
+				peril_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
 			end
 		end
 	end
