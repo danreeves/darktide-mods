@@ -36,9 +36,11 @@ return {
 	},
 	ability_cd_bar = {
 		en = "Show team's ability cooldown as progress bar",
+		["zh-cn"] = "显示团队技能冷却进度条",
 	},
 	ability_cd_text = {
 		en = "Show team's ability cooldown as numeric counter",
+		["zh-cn"] = "显示团队技能冷却计数器",
 	},
 	level = {
 		en = "Show level",
@@ -146,8 +148,10 @@ return {
 	},
 	nameplates = {
 		en = "Nameplates",
+		["zh-cn"] = "名称标签",
 	},
 	archetype_icons_in_nameplates = {
 		en = "Use class icons in nameplates",
+		["zh-cn"] = "在名称标签内使用职业图标",
 	},
 }
