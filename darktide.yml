@@ -1,6 +1,8 @@
 ---
 base: lua51 # We will be extending off of Lua 5.1.
 globals:
+  HAS_STEAM:
+    any: true
   IS_WINDOWS:
     any: true
   class:
@@ -47,17 +49,6 @@ globals:
     args:
       - type: number
       - type: number
-  Managers.package.load:
-    method: true
-    args:
-      - type: string
-      - type: string
-      - type: string
-        required: false
-  Managers.time.time:
-    method: true
-    args:
-      - type: string
   ScriptUnit.has_extension:
     args:
       - type: table
@@ -65,32 +56,6 @@ globals:
   ScriptUnit.extension:
     args:
       - type: table
-      - type: string
-  Managers.backend.interfaces.master_data.items_cache:
-    method: true
-    args: []
-  Managers.state.difficulty.get_table_entry_by_challenge:
-    method: true
-    args:
-      - type: table
-  Managers.state.player_unit_spawn.owner:
-    method: true
-    args:
-      - type: table
-  Managers.event.register:
-    method: true
-    args:
-      - type: table
-      - type: string
-      - type: string
-  Managers.event.trigger:
-    method: true
-    args:
-      - type: string
-      - type: ...
-  Managers.url_loader.load_texture:
-    method: true
-    args:
       - type: string
   Window.has_focus:
     args: []
@@ -103,7 +68,12 @@ globals:
       - type: string
       - type: string
         required: false
-  Color.ui_hud_green_light:
+  Color:
+    any: true
+  Managers:
+    any: true
+  Vector3:
     args:
       - type: number
-      - type: bool
+      - type: number
+      - type: number

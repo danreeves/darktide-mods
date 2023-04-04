@@ -1,6 +1,7 @@
 local mod = get_mod("ChatBlock")
 local WeaponTemplate = require("scripts/utilities/weapon/weapon_template")
-local WeaponTemplates = require("scripts/settings/equipment/weapon_templates/weapon_templates")
+
+mod.input_blocked = false
 
 mod:hook("InputService", "get", function(func, self, action_name)
 	-- Don't impact the non gameplay input services
@@ -26,7 +27,7 @@ mod:hook("InputService", "get", function(func, self, action_name)
 						end
 
 						-- Chat or some other menu is open
-						if Managers.input:cursor_active() then
+						if mod.input_blocked then
 							return true
 						end
 					end
@@ -58,7 +59,9 @@ mod:hook("InputService", "get", function(func, self, action_name)
 	return func(self, action_name)
 end)
 
-mod:hook("HumanGameplay", "_input_active", function()
+mod:hook("HumanGameplay", "_input_active", function(func, ...)
+	mod.input_blocked = not func(...)
+
 	if Managers.state.cinematic:active() then
 		return false
 	end
