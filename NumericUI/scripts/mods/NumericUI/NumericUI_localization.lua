@@ -37,10 +37,12 @@ return {
 	ability_cd_bar = {
 		en = "Show team's ability cooldown as progress bar",
 		["zh-cn"] = "显示团队技能冷却进度条",
+		ru = "Показывать время восст. способности команды в виде полосы прогреccа",
 	},
 	ability_cd_text = {
 		en = "Show team's ability cooldown as numeric counter",
 		["zh-cn"] = "显示团队技能冷却计数器",
+		ru = "Показывать время восстановления способности команды в виде числа",
 	},
 	level = {
 		en = "Show level",
@@ -55,6 +57,7 @@ return {
 	peril_icon = {
 		en = "Show peril icon",
 		["zh-cn"] = "显示危机值图标",
+		ru = "Показывать значок опасности",
 	},
 	max_ammo_text = {
 		en = "Show maximum ammo text",
@@ -114,7 +117,7 @@ return {
 	dodges_count_up = {
 		en = "Dodges count up",
 		["zh-cn"] = "正向显示闪避次数",
-		ru = "Счетчик уклонений вверх",
+		ru = "Счетчик уклонений увеличивается",
 	},
 	show_dodge_count_for_infinite_dodge = {
 		en = "Show dodge count for infinite dodge weapons",
@@ -149,9 +152,11 @@ return {
 	nameplates = {
 		en = "Nameplates",
 		["zh-cn"] = "名称标签",
+		ru = "Таблички с именами",
 	},
 	archetype_icons_in_nameplates = {
 		en = "Use class icons in nameplates",
 		["zh-cn"] = "在名称标签内使用职业图标",
+		ru = "Использовать значки классов в табличках с именами",
 	},
 }
