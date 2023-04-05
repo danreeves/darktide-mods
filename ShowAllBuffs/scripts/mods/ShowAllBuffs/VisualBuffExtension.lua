@@ -102,6 +102,16 @@ VisualBuffExtension._on_remove_buff = function(self, buff_instance)
 	Managers.event:trigger("event_player_buff_removed", player, buff_instance)
 end
 
+-- Copied from old BuffExtensionBase
+VisualBuffExtension._set_proc_active_start_time = function(self, index, activation_time)
+	local buffs_by_index = self._buffs_by_index
+	local buff_instance = buffs_by_index[index]
+
+	if buff_instance and buff_instance.set_active_start_time then
+		buff_instance:set_active_start_time(activation_time)
+	end
+end
+
 VisualBuffExtension.clear_buffs = function(self)
 	local buffs = self._buffs_by_index
 
