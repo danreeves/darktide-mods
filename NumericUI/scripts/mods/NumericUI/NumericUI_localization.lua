@@ -159,4 +159,10 @@ return {
 		["zh-cn"] = "在名称标签内使用职业图标",
 		ru = "Использовать значки классов в табличках с именами",
 	},
+	loading_screens = {
+		en = "Loading screens",
+	},
+	mission_title_on_intro = {
+		en = "Show mission title on loading screen",
+	},
 }

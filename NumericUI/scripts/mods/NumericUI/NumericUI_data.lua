@@ -4,6 +4,7 @@ return {
 	name = "Numeric UI",
 	description = mod:localize("mod_description"),
 	is_togglable = true,
+	allow_rehooking = true, -- The nameplate require hook needs this
 	options = {
 		widgets = {
 			{
@@ -153,6 +154,17 @@ return {
 				sub_widgets = {
 					{
 						setting_id = "archetype_icons_in_nameplates",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
+			},
+			{
+				setting_id = "loading_screens",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "mission_title_on_intro",
 						type = "checkbox",
 						default_value = true,
 					},
