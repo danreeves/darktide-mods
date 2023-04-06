@@ -20,7 +20,7 @@ for breed_name, breed in pairs(Breeds) do
 end
 
 return {
-	name = "Healthbars",
+	name = mod:localize("mod_name"),
 	description = mod:localize("mod_description"),
 	is_togglable = true,
 	options = {
