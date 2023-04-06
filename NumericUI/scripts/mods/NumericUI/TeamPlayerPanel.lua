@@ -71,11 +71,11 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 				pass_type = "text",
 				value = "",
 				style = table.merge_recursive(table.clone(tough_text_style), {
-					text_color = UIHudSettings.color_tint_8,
-					default_color = UIHudSettings.color_tint_8,
-					dimmed_color = UIHudSettings.color_tint_9,
+					text_color = UIHudSettings.color_tint_secondary_1,
+					default_color = UIHudSettings.color_tint_secondary_1,
+					dimmed_color = UIHudSettings.color_tint_secondary_3,
 					offset = { 28, 22 },
-					character_spacing = .05,
+					character_spacing = 0.05,
 				}),
 			},
 		}, "toughness_bar")
@@ -95,11 +95,11 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 					offset = {
 						0,
 						20,
-						4
+						4,
 					},
-					size = {bar_size[1], 3},
-					color = UIHudSettings.color_tint_8
-				}
+					size = { bar_size[1], 3 },
+					color = UIHudSettings.color_tint_secondary_1,
+				},
 			},
 			{
 				value = "content/ui/materials/backgrounds/default_square",
@@ -111,12 +111,12 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 					offset = {
 						0,
 						20,
-						0
+						0,
 					},
-					size = {bar_size[1], 2},
-					color = UIHudSettings.color_tint_0
-				}
-			}
+					size = { bar_size[1], 2 },
+					color = UIHudSettings.color_tint_0,
+				},
+			},
 		}, "toughness_bar")
 	else
 		instance.widget_definitions.ability_bar = nil
@@ -139,7 +139,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 					anim_progress = nil,
 					offset = { 150, -18, 3 },
 					size = { bar_size[1] * 1.5, bar_size[2] },
-					font_type = "machine_medium",--hud_body_font_settings.font_type,
+					font_type = "machine_medium", --hud_body_font_settings.font_type,
 					text_color = UIHudSettings.color_tint_alert_2,
 					default_text_color = UIHudSettings.color_tint_main_2,
 				},
@@ -288,14 +288,13 @@ local function hud_init_with_features(
 end
 
 local function update_numericui_ability_cd(self, player, ability_bar_widget, ability_text_widget, ability_component, dt)
-
 	if not ability_cooldown_timer[player:name()] then
 		ability_cooldown_timer[player:name()] = 0
 	end
 
 	local hide_widgets = (self._show_as_dead or self._dead or self._hogtied)
 	local show_ability_text = (mod:get("ability_cd_text") and ability_text_widget)
-	local show_ability_bar = (mod:get("ability_cd_bar") and ability_bar_widget)	
+	local show_ability_bar = (mod:get("ability_cd_bar") and ability_bar_widget)
 
 	if hide_widgets then
 		if show_ability_text then
@@ -310,7 +309,7 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 
 		return
 	end
-	
+
 	if ability_component.num_charges > 0 and ability_cooldown_timer[player:name()] > 0 then
 		ability_cooldown_timer[player:name()] = 0
 
@@ -320,11 +319,10 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		end
 
 		if show_ability_bar then
-			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_8
+			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_secondary_1
 			ability_bar_widget.style.texture.size[1] = bar_size[1]
 			ability_bar_widget.dirty = true
 		end
-	
 	elseif ability_component.num_charges > 0 and ability_cooldown_timer[player:name()] == 0 then
 		if show_ability_text then
 			if show_ability_text.visible then
@@ -338,14 +336,13 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 				ability_bar_widget.visible = true
 				ability_bar_widget.dirty = true
 			end
-			
+
 			if ability_bar_widget.style.texture.size[1] ~= bar_size[1] then
-				ability_bar_widget.style.texture.color = UIHudSettings.color_tint_8
+				ability_bar_widget.style.texture.color = UIHudSettings.color_tint_secondary_1
 				ability_bar_widget.style.texture.size[1] = bar_size[1]
 				ability_bar_widget.dirty = true
 			end
 		end
-
 	elseif ability_cooldown_timer[player:name()] == 0 then
 		local time = Managers.time:time("gameplay")
 		local time_remaining = ability_component.cooldown - time
@@ -359,12 +356,12 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		end
 
 		if show_ability_bar then
-			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_9
-			ability_bar_widget.style.texture.size[1] = bar_size[1] * (ability_cooldown_timer[player:name()]/ability_max_cooldown[player:name()])
+			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_secondary_3
+			ability_bar_widget.style.texture.size[1] = bar_size[1]
+				* (ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()])
 			ability_bar_widget.visible = true
 			ability_bar_widget.dirty = true
 		end
-
 	elseif ability_cooldown_timer[player:name()] > 0 then
 		ability_cooldown_timer[player:name()] = ability_cooldown_timer[player:name()] + dt
 
@@ -375,8 +372,12 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		end
 
 		if show_ability_bar then
-			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_9
-			local cd_progress = math.clamp(ability_cooldown_timer[player:name()]/ability_max_cooldown[player:name()], 0, 1.0)
+			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_secondary_3
+			local cd_progress = math.clamp(
+				ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()],
+				0,
+				1.0
+			)
 			ability_bar_widget.style.texture.size[1] = bar_size[1] * cd_progress
 			ability_bar_widget.dirty = true
 		end
@@ -385,7 +386,7 @@ end
 
 mod:hook("HudElementPlayerPanelBase", "init", hud_init_with_features)
 
-mod:hook_safe("HudElementPlayerPanelBase", "destroy", function (self, ui_renderer)
+mod:hook_safe("HudElementPlayerPanelBase", "destroy", function(self, ui_renderer)
 	local player_extensions = self:_player_extensions(self._data.player)
 	if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
 		if player_extensions then
@@ -399,12 +400,12 @@ mod:hook_safe("HudElementPlayerPanelBase", "destroy", function (self, ui_rendere
 			end
 		end
 
-		if (mod:get("ability_cd_text") and ability_text_widget) then
+		if mod:get("ability_cd_text") and ability_text_widget then
 			self._widgets_by_name.ability_text.visible = false
 			self._widgets_by_name.ability_text.dirty = true
 		end
 
-		if (mod:get("ability_cd_bar") and ability_bar_widget) then
+		if mod:get("ability_cd_bar") and ability_bar_widget then
 			self._widgets_by_name.ability_bar_widget.visible = false
 			self._widgets_by_name.ability_bar_widget.dirty = true
 		end
@@ -420,13 +421,11 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 	local unit_data_extension = extensions and extensions.unit_data
 
 	if widget then
-		
 		local peril_color = nil
 		local warp_charge_level = nil
 
 		if unit_data_extension then
 			if peril_widget and peril_widget.visible then
-
 				local warp_charge_component = unit_data_extension:read_component("warp_charge")
 				warp_charge_level = warp_charge_component.current_percentage
 
@@ -444,7 +443,6 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 					peril_widget.style.warning_text.text_color = peril_color
 					peril_widget.dirty = true
 				end
-
 			end
 
 			local weapon_slots = self._weapon_slots
@@ -485,7 +483,14 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 	if mod:get("ability_cd_text") or mod:get("ability_cd_bar") then
 		if extensions then
 			local ability_component = unit_data_extension:read_component("combat_ability")
-			update_numericui_ability_cd(self, player, self._widgets_by_name.ability_bar, self._widgets_by_name.ability_text, ability_component, dt)
+			update_numericui_ability_cd(
+				self,
+				player,
+				self._widgets_by_name.ability_bar,
+				self._widgets_by_name.ability_text,
+				ability_component,
+				dt
+			)
 		end
 	end
 end
@@ -499,10 +504,9 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 	if player_extensions then
 		local unit_data_extension = player_extensions.unit_data
 		if unit_data_extension then
-
 			if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
 				ability_component = unit_data_extension:read_component("combat_ability")
-				ability_cooldown_timer[data.player:name()] = 0 
+				ability_cooldown_timer[data.player:name()] = 0
 				if ability_component then
 					local time = Managers.time:time("gameplay")
 					local time_remaining = ability_component.cooldown - time
@@ -517,7 +521,6 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 			if mod:get("peril_icon") then
 				peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
 				peril_widget.visible = (archetype == "psyker")
-
 			elseif mod:get("ammo_text") then
 				peril_widget.content.warning_text = ""
 				peril_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
@@ -525,4 +528,3 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 		end
 	end
 end)
-
