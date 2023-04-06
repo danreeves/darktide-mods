@@ -1,15 +1,19 @@
 local Breeds = require("scripts/settings/breed/breeds")
 
 local localizations = {
+	mod_name = {
+		en = "Killfeed Improvements",
+		ru = "Улучшение ленты убийств",
+	},
 	mod_description = {
 		en = "Deduplicate feed items and filter by breed",
 		["zh-cn"] = "击杀面板消息去重，以及按敌人类型筛选",
-		ru = "Убирает из киллфида дубликаты сообщений и фильтрует по происхождению",
+		ru = "Убирает из ленты убийств дубликаты сообщений и фильтрует по происхождению.",
 	},
 	include_breeds = {
 		en = "Show in killfeed",
 		["zh-cn"] = "在击杀面板显示",
-		ru = "Показывать в киллфиде",
+		ru = "Показывать в ленте убийств",
 	},
 	enable_in_psykanium = {
 		en = "Enable in Psykanium",
