@@ -1,4 +1,8 @@
 return {
+	mod_name = {
+		en = "Numeric UI",
+		ru = "Числовой интерфейс",
+	},
 	mod_description = {
 		en = "Adds numbers to your HUD",
 		["zh-cn"] = "在 HUD 上显示数字",
@@ -82,7 +86,7 @@ return {
 	show_ammo_amount_from_packs = {
 		en = "Show ammo amount from packs and tins",
 		["zh-cn"] = "显示弹药包内的弹药数",
-		ru = "Показывать количество боеприпасов в упаковках и банках",
+		ru = "Показывать количество боеприпасов в контейнерах и коробках",
 	},
 	dodge_count = {
 		en = "Show dodge count",
@@ -117,7 +121,7 @@ return {
 	dodges_count_up = {
 		en = "Dodges count up",
 		["zh-cn"] = "正向显示闪避次数",
-		ru = "Счетчик уклонений увеличивается",
+		ru = "Счётчик уклонений увеличивается",
 	},
 	show_dodge_count_for_infinite_dodge = {
 		en = "Show dodge count for infinite dodge weapons",
@@ -161,8 +165,10 @@ return {
 	},
 	loading_screens = {
 		en = "Loading screens",
+		ru = "Экран загрузки",
 	},
 	mission_title_on_intro = {
 		en = "Show mission title on loading screen",
+		ru = "Показывать название миссии на экране загрузки",
 	},
 }
