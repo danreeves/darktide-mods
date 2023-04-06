@@ -361,7 +361,7 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		end
 
 		if show_ability_bar then
-			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_secondary_3
+			ability_bar_widget.style.texture.color = Color.terminal_background_gradient_selected(255, true)
 			ability_bar_widget.style.texture.size[1] = bar_size[1]
 				* (ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()])
 			ability_bar_widget.visible = true
@@ -377,7 +377,7 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		end
 
 		if show_ability_bar then
-			ability_bar_widget.style.texture.color = UIHudSettings.color_tint_secondary_3
+			ability_bar_widget.style.texture.color = Color.terminal_background_gradient_selected(255, true)
 			local cd_progress = math.clamp(
 				ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()],
 				0,
