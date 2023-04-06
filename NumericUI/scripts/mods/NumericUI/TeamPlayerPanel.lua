@@ -10,6 +10,7 @@ local HudElementTeamPlayerPanelSettings = require(
 )
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
+local FixedFrame = require("scripts/utilities/fixed_frame")
 
 local bar_size = HudElementTeamPlayerPanelSettings.size
 local hud_body_font_setting_name = "hud_body"
@@ -278,11 +279,14 @@ local function hud_init_with_features(
 	definition_path,
 	definition_settings
 )
-	if definition_path == TEAM_PANEL_DEF_PATH then
-		definition_settings.feature_list.health_text = mod:get("health_text")
-		definition_settings.feature_list.toughness_text = mod:get("toughness_text")
+
+	if data.player:is_human_controlled() then
+		if definition_path == TEAM_PANEL_DEF_PATH then
+			definition_settings.feature_list.health_text = mod:get("health_text")
+			definition_settings.feature_list.toughness_text = mod:get("toughness_text")
+		end
+		definition_settings.feature_list.level = mod:get("level")
 	end
-	definition_settings.feature_list.level = mod:get("level")
 
 	return func(self, parent, draw_layer, start_scale, data, definition_path, definition_settings)
 end
@@ -343,9 +347,10 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 				ability_bar_widget.dirty = true
 			end
 		end
-	elseif ability_cooldown_timer[player:name()] == 0 then
-		local time = Managers.time:time("gameplay")
-		local time_remaining = ability_component.cooldown - time
+
+	elseif (ability_cooldown_timer[player:name()] == 0) or (ability_cooldown_timer[player:name()] > ability_max_cooldown[player:name()]) then
+		local fixed_frame_t = FixedFrame.get_latest_fixed_time()	
+		local time_remaining = math.max(ability_component.cooldown - fixed_frame_t, 0)
 		ability_max_cooldown[player:name()] = time_remaining
 		ability_cooldown_timer[player:name()] = dt
 
@@ -386,7 +391,10 @@ end
 
 mod:hook("HudElementPlayerPanelBase", "init", hud_init_with_features)
 
-mod:hook_safe("HudElementPlayerPanelBase", "destroy", function(self, ui_renderer)
+mod:hook_safe("HudElementPlayerPanelBase", "destroy", function (self, ui_renderer)
+	if not self._data.player:is_human_controlled() then
+		return
+	end
 	local player_extensions = self:_player_extensions(self._data.player)
 	if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
 		if player_extensions then
@@ -414,6 +422,10 @@ end)
 
 local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
+
+	if not player:is_human_controlled() then
+		return
+	end
 
 	local widget = self._widgets_by_name.numeric_ui_ammo_text
 	local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
@@ -499,6 +511,18 @@ mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_ammo
 mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_ammo_count)
 
 mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_layer, start_scale, data)
+	
+	if not data.player:is_human_controlled() then
+		if self._widgets_by_name.numeric_ui_ammo_text then
+			self._widgets_by_name.numeric_ui_ammo_text.content.text = " "
+		end
+
+		if self._widgets_by_name.ability_bar then
+			self._widgets_by_name.ability_bar.visible = false
+		end
+		return
+	end
+
 	local player_extensions = self:_player_extensions(data.player)
 
 	if player_extensions then
