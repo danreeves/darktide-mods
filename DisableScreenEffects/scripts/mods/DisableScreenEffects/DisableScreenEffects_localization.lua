@@ -20,6 +20,10 @@ local function localize(name)
 end
 
 local localization = {
+	mod_name = {
+		en = "Disable Screen Effects",
+		ru = "Отключение экранных эффектов",
+	},
 	mod_description = {
 		en = "Makes all screen effects toggleable",
 		["zh-cn"] = "允许开关所有屏幕特效",
