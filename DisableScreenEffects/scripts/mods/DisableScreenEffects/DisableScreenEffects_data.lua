@@ -43,7 +43,7 @@ for mood_type, _ in pairs(mood_types) do
 end
 
 return {
-	name = "Disable Screen Effects",
+	name = mod:localize("mod_name"),
 	description = mod:localize("mod_description"),
 	is_togglable = true,
 	options = {
