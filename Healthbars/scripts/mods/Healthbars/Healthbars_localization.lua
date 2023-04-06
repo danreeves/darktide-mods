@@ -2,6 +2,10 @@ local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
 
 local localization = {
+	mod_name = {
+		en = "Healthbars",
+		ru = "Полоски здоровья",
+	},
 	mod_description = {
 		en = "Show healthbars from the Psykanium in regular game modes",
 		["zh-cn"] = "在常规游戏模式中也显示灵能室的血条",
@@ -66,7 +70,7 @@ for breed_name, breed in pairs(Breeds) do
 		localization[breed_name] = {
 			en = "[" .. get_tag(breed, "en") .. "] Show " .. display_name .. " health",
 			["zh-cn"] = "[" .. get_tag(breed, "zh-cn") .. "] 显示" .. display_name .. "的血量",
-			ru = "[" .. get_tag(breed, "ru") .. "] Показать здоровье: " .. display_name,
+			ru = "Показать здоровье:\n" .. "[" .. get_tag(breed, "ru") .. "] " .. display_name,
 		}
 	end
 end
