@@ -4,6 +4,7 @@ local localizations = {
 	mod_name = {
 		en = "Killfeed Improvements",
 		ru = "Улучшение ленты убийств",
+		["zh-cn"] = "击杀消息优化",
 	},
 	mod_description = {
 		en = "Deduplicate feed items and filter by breed",

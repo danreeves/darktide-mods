@@ -22,6 +22,7 @@ end
 local localization = {
 	mod_name = {
 		en = "Disable Screen Effects",
+		["zh-cn"] = "禁用屏幕特效",
 		ru = "Отключение экранных эффектов",
 	},
 	mod_description = {

@@ -2,6 +2,7 @@ return {
 	mod_name = {
 		en = "Numeric UI",
 		ru = "Числовой интерфейс",
+		["zh-cn"] = "数显界面",
 	},
 	mod_description = {
 		en = "Adds numbers to your HUD",
@@ -166,9 +167,11 @@ return {
 	loading_screens = {
 		en = "Loading screens",
 		ru = "Экран загрузки",
+		["zh-cn"] = "加载界面",
 	},
 	mission_title_on_intro = {
 		en = "Show mission title on loading screen",
 		ru = "Показывать название миссии на экране загрузки",
+		["zh-cn"] = "在加载界面显示任务详情",
 	},
 }

@@ -2,6 +2,7 @@ return {
 	mod_name = {
 		en = "Show Equipped In Lobby",
 		ru = "Показать выбранное оружие в лобби",
+		["zh-cn"] = "在准备界面显示装备",
 	},
 	mod_description = {
 		en = "Press [E] to Swap Weapon in the Lobby",

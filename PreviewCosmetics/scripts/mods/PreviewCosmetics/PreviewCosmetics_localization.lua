@@ -2,6 +2,7 @@ return {
 	mod_name = {
 		en = "Preview Cosmetics",
 		ru = "Предварительный просмотр косметических предметов",
+		["zh-cn"] = "饰品预览",
 	},
 	mod_description = {
 		en = "Preview cosmetics on your own character",
