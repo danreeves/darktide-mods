@@ -5,6 +5,7 @@ local localization = {
 	mod_name = {
 		en = "Healthbars",
 		ru = "Полоски здоровья",
+		["zh-cn"] = "敌人血条",
 	},
 	mod_description = {
 		en = "Show healthbars from the Psykanium in regular game modes",

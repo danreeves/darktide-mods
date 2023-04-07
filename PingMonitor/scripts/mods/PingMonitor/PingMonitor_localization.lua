@@ -2,6 +2,7 @@ return {
 	mod_name = {
 		en = "Ping Monitor",
 		ru = "Индикатор пинга",
+		["zh-cn"] = "网络延迟显示",
 	},
 	mod_description = {
 		en = "Displays your ping to the host in the tab menu in game",
