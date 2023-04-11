@@ -51,6 +51,20 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
+					{
+						setting_id = "grenades_count",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "grenades_count_format",
+						type = "dropdown",
+						default_value = "icons",
+						options = {
+							{ text = "icons", value = "icons" },
+							{ text = "number", value = "number" },
+						},
+					},
 				},
 			},
 			{
