@@ -73,7 +73,7 @@ mod:hook_safe("HudElementTacticalOverlay", "update", function(self)
 	if self._active then
 		local color = mod.ping_color(mod.jitter, mod.ping)
 		local ping_widget = self._widgets_by_name.ping_monitor
-		ping_widget.content.ping_text = mod.ping
+		ping_widget.content.ping_text = mod.ping ~= mod.ping and "" or mod.ping
 		ping_widget.style.ping_text.text_color = color
 		ping_widget.style.ping_icon.color = color
 		ping_widget.dirty = true
