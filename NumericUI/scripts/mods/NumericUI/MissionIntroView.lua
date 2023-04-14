@@ -54,6 +54,9 @@ mod:hook_require("scripts/ui/views/mission_intro_view/mission_intro_view_definit
 end)
 
 local function draw_mission_title(self)
+	if not Managers.mechanism._mechanism then
+		return
+	end
 	local mechanism_data = Managers.mechanism._mechanism._mechanism_data
 	local mission_settings = Missions[mechanism_data.mission_name]
 
