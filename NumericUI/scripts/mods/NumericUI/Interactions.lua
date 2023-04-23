@@ -39,7 +39,7 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 			local max_ammo = max_ammo_reserve + max_ammo_clip
 			local current_ammo = ammo_clip + ammo_reserve
 			local small_clip_gain = small_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, small_clip_data)
-			local large_clip_gain = large_clip_data.ammo_amount_func(max_ammo_clip, max_ammo_clip, large_clip_data)
+			local large_clip_gain = large_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, large_clip_data)
 
 			local hud_description = interactor_extension:hud_description()
 

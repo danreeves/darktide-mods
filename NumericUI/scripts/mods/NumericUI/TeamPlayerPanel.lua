@@ -186,7 +186,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 		instance.widget_definitions.ability_bar = nil
 	end
 
-	if mod:get("peril_icon") then
+	if mod:get("ammo_text") or mod:get("peril_icon") then
 		instance.widget_definitions.numeric_ui_peril_icon = UIWidget.create_definition({
 			{
 				value_id = "icon_text",
@@ -546,7 +546,11 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 			if total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied then
 				-- No ammo or dead
 				ammo_text_widget.content.text = ""
-			elseif total_max_ammo == 0 and peril_icon_widget.visible and mod:get("peril_text") then
+			elseif
+				total_max_ammo == 0
+				and (peril_icon_widget and peril_icon_widget.visible)
+				and mod:get("peril_text")
+			then
 				-- Ammo text as peril percent
 				ammo_text_widget.content.text = string.format("%1d%%", math.round(warp_charge_level * 100))
 				ammo_text_widget.style.text.text_color = peril_color
