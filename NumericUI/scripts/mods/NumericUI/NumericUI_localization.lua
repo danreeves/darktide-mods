@@ -180,4 +180,7 @@ return {
 	fade_out_max_dodges = {
 		en = "Fade out when at max dodges",
 	},
+	peril_text = {
+		en = "Show peril percent text",
+	},
 }

@@ -49,6 +49,14 @@ globals:
     args:
       - type: number
       - type: number
+  math.clamp:
+    args:
+      - type: number
+      - type: number
+      - type: number
+  math.round:
+    args:
+      - type: number
   ScriptUnit.has_extension:
     args:
       - type: table

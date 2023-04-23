@@ -32,6 +32,11 @@ return {
 						default_value = true,
 					},
 					{
+						setting_id = "peril_text",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
 						setting_id = "peril_icon",
 						type = "checkbox",
 						default_value = true,
