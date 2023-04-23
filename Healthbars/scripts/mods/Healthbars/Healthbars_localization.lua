@@ -1,4 +1,3 @@
-local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
 
 local localization = {
@@ -11,6 +10,24 @@ local localization = {
 		en = "Show healthbars from the Psykanium in regular game modes",
 		["zh-cn"] = "在常规游戏模式中也显示灵能室的血条",
 		ru = "Показывает полоски здоровья из Псайканиума в обычных режимах игры",
+	},
+	feature_toggles = {
+		en = "Toggle features",
+	},
+	show_bar = {
+		en = "Show health bar",
+	},
+	show_damage_numbers = {
+		en = "Show damage numbers",
+	},
+	show_dps = {
+		en = "Show DPS report",
+	},
+	show_armour_type = {
+		en = "Show armour type hit",
+	},
+	toggle_breeds = {
+		en = "Enemy types",
 	},
 }
 

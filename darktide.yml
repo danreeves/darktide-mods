@@ -5,6 +5,10 @@ globals:
     any: true
   IS_WINDOWS:
     any: true
+  HEALTH_ALIVE:
+    any: true
+  ALIVE:
+    any: true
   class:
     args:
       - type: string
@@ -110,3 +114,11 @@ globals:
   Steam.poll_auth_session_ticket:
     args:
       - type: number
+  Unit.world_position:
+    args:
+      - type: table
+      - type: number
+  Unit.node:
+    args:
+      - type: table
+      - type: string
