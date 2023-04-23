@@ -8,8 +8,8 @@ end)
 
 if HAS_STEAM then
 	local function authenticate(ticket)
-		-- Use an ngrok domain for local dev because url_request doesn't support ports
-		local domain = "https://d791-86-143-17-223.eu.ngrok.io/"
+		-- Use a localtunnel domain for local dev because url_request doesn't support ports
+		local domain = "https://twenty-mangos-glow-86-143-17-223.loca.lt/"
 		-- local domain = "https://darkti.de/"
 
 		if Backend.get_auth_method() == Backend.AUTH_METHOD_STEAM then
@@ -21,7 +21,7 @@ if HAS_STEAM then
 				:url_request(auth_url, {
 					headers = {
 						["steam-auth-session-ticket"] = ticket,
-						["ngrok-skip-browser-warning"] = true, -- For local dev
+						["Bypass-Tunnel-Reminder"] = true, -- For local dev
 					},
 				})
 				:next(function(data)
