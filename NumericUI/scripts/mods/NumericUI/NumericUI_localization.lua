@@ -177,4 +177,7 @@ return {
 	show_efficient_dodges = {
 		en = "Show number of efficient dodges",
 	},
+	fade_out_max_dodges = {
+		en = "Fade out when at max dodges",
+	},
 }
