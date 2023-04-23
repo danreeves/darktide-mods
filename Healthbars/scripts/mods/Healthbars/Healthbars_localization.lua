@@ -13,21 +13,27 @@ local localization = {
 	},
 	feature_toggles = {
 		en = "Toggle features",
+		["zh-cn"] = "开关功能",
 	},
 	show_bar = {
 		en = "Show health bar",
+		["zh-cn"] = "显示血条",
 	},
 	show_damage_numbers = {
 		en = "Show damage numbers",
+		["zh-cn"] = "显示伤害数字",
 	},
 	show_dps = {
 		en = "Show DPS report",
+		["zh-cn"] = "显示 DPS 报告",
 	},
 	show_armour_type = {
 		en = "Show armour type hit",
+		["zh-cn"] = "显示命中护甲类型",
 	},
 	toggle_breeds = {
 		en = "Enemy types",
+		["zh-cn"] = "敌人类型",
 	},
 }
 
