@@ -9,8 +9,7 @@ end)
 if HAS_STEAM then
 	local function authenticate(ticket)
 		-- Use a localtunnel domain for local dev because url_request doesn't support ports
-		local domain = "https://twenty-mangos-glow-86-143-17-223.loca.lt/"
-		-- local domain = "https://darkti.de/"
+		local domain = "https://darkti.de/"
 
 		if Backend.get_auth_method() == Backend.AUTH_METHOD_STEAM then
 			mod:echo("Authenticating...")
