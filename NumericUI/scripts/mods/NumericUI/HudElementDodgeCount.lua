@@ -145,11 +145,16 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 		else
 			local display_dodges = mod:get("dodges_count_up") and current_dodges
 				or (math.ceil(num_efficient_dodges) - current_dodges)
-			self._widgets_by_name.dodge_count.content.text = string.format(
-				"%d/%d",
-				display_dodges,
-				math.ceil(num_efficient_dodges)
-			)
+
+			if mod:get("show_efficient_dodges") then
+				self._widgets_by_name.dodge_count.content.text = string.format(
+					"%d/%d",
+					display_dodges,
+					math.ceil(num_efficient_dodges)
+				)
+			else
+				self._widgets_by_name.dodge_count.content.text = tostring(math.ceil(display_dodges))
+			end
 		end
 
 		if current_dodges >= num_efficient_dodges then

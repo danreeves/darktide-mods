@@ -174,4 +174,7 @@ return {
 		ru = "Показывать название миссии на экране загрузки",
 		["zh-cn"] = "在加载界面显示任务详情",
 	},
+	show_efficient_dodges = {
+		en = "Show number of efficient dodges",
+	},
 }

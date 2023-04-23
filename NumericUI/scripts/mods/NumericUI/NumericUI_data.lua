@@ -68,6 +68,11 @@ return {
 						default_value = false,
 					},
 					{
+						setting_id = "show_efficient_dodges",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
 						setting_id = "show_dodge_count_for_infinite_dodge",
 						type = "checkbox",
 						default_value = false,
