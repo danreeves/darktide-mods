@@ -69,3 +69,26 @@ mod:hook("HumanGameplay", "_input_active", function(func, ...)
 	-- Keep the input active so you can block
 	return true
 end)
+
+-- local colors = {
+-- 	{ 246, 0, 0 },
+-- 	{ 255, 140, 0 },
+-- 	{ 255, 238, 0 },
+-- 	{ 77, 233, 76 },
+-- 	{ 55, 131, 255 },
+-- 	{ 72, 21, 170 },
+-- }
+--
+-- local font_size = 16
+--
+-- mod:hook("ConstantElementChat", "_scrub", function(func, self, text)
+-- 	return text
+-- local new_text = ""
+-- for i = 1, #text do
+-- 	local char = text:sub(i, i)
+-- 	local color = colors[i % #colors + 1]
+-- 	new_text = string.format("%s{#color(%d,%d,%d,255)}%s", new_text, color[1], color[2], color[3], char)
+-- end
+-- -- return text
+-- return new_text
+-- end)

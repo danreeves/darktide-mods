@@ -42,7 +42,6 @@ mod:hook_safe(
 	function(_self, _extension_init_context, unit, _extension_init_data, _game_object_data)
 		-- Add custom healthbar marker
 		if should_enable_healthbar(unit) then
-			mod:echo("adding world marker")
 			Managers.event:trigger("add_world_marker_unit", MarkerTemplate.name, unit)
 		end
 	end
