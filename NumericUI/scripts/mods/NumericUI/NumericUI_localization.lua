@@ -137,7 +137,7 @@ return {
 	show_max_ammo_as_percent = {
 		en = "Show max ammo as percent",
 		["zh-cn"] = "最大弹药量以百分比显示",
-		ru = "Показать максимальный боезапас в процентах",
+		ru = "Показывать максимальный боезапас в процентах",
 	},
 	mission_timer = {
 		en = "Mission Timer",
@@ -147,7 +147,7 @@ return {
 	show_mission_timer = {
 		en = "Show mission timer",
 		["zh-cn"] = "显示任务计时器",
-		ru = "Показать таймер миссии",
+		ru = "Показывать таймер миссии",
 	},
 	mission_timer_in_overlay = {
 		en = "Only in the overlay",
@@ -177,13 +177,16 @@ return {
 	show_efficient_dodges = {
 		en = "Show number of efficient dodges",
 		["zh-cn"] = "显示有效闪避数",
+		ru = "Показывать количество эффективных уклонений",
 	},
 	fade_out_max_dodges = {
 		en = "Fade out when at max dodges",
 		["zh-cn"] = "最大闪避数时隐藏",
+		ru = "Скрывать при максимуме уклонений",
 	},
 	peril_text = {
 		en = "Show peril percent text",
 		["zh-cn"] = "显示危机值百分比文本",
+		ru = "Показывать процент угрозы",
 	},
 }
