@@ -9,31 +9,37 @@ local localization = {
 	mod_description = {
 		en = "Show healthbars from the Psykanium in regular game modes",
 		["zh-cn"] = "在常规游戏模式中也显示灵能室的血条",
-		ru = "Показывает полоски здоровья из Псайканиума в обычных режимах игры",
+		ru = "Healthbars - Показывает полоски здоровья из Псайканиума в обычных режимах игры",
 	},
 	feature_toggles = {
 		en = "Toggle features",
 		["zh-cn"] = "开关功能",
+		ru = "Переключение функций",
 	},
 	show_bar = {
 		en = "Show health bar",
 		["zh-cn"] = "显示血条",
+		ru = "Показывать полоски здоровья",
 	},
 	show_damage_numbers = {
 		en = "Show damage numbers",
 		["zh-cn"] = "显示伤害数字",
+		ru = "Показывать цифры урона",
 	},
 	show_dps = {
 		en = "Show DPS report",
 		["zh-cn"] = "显示 DPS 报告",
+		ru = "Показывать отчёт - урон/с",
 	},
 	show_armour_type = {
 		en = "Show armour type hit",
 		["zh-cn"] = "显示命中护甲类型",
+		ru = "Показывать тип поражённой брони",
 	},
 	toggle_breeds = {
 		en = "Enemy types",
 		["zh-cn"] = "敌人类型",
+		ru = "Типы врагов",
 	},
 }
 
