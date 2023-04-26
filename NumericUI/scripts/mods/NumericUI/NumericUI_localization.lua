@@ -186,4 +186,10 @@ return {
 		en = "Show peril percent text",
 		["zh-cn"] = "显示危机值百分比文本",
 	},
+	pickup_settings = {
+		en = "Pickups",
+	},
+	show_medical_crate_radius = {
+		en = "Show medical crate radius (increases memory use)",
+	},
 }

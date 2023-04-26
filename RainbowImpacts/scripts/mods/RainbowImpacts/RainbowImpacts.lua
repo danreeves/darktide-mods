@@ -2,6 +2,9 @@ local mod = get_mod("RainbowImpacts")
 
 local hits = mod:persistent_table("hits")
 
+local package_name = "content/levels/training_grounds/missions/mission_tg_basic_combat_01"
+Managers.package:load(package_name, "RainbowImpacts")
+
 mod:hook_safe(
 	"FxSystem",
 	"play_surface_impact_fx",
@@ -26,6 +29,10 @@ mod:hook_safe(
 )
 
 local function create_decal_unit(world, position, rotation)
+	if not Managers.package:has_loaded(package_name) then
+		return
+	end
+
 	local decal_unit_name = "content/levels/training_grounds/fx/decal_aoe_indicator"
 	local rx, ry, rz = Vector3.to_elements(rotation)
 	local orientation = Quaternion.from_euler_angles_xyz(rx, ry, rz)

@@ -122,3 +122,24 @@ globals:
     args:
       - type: table
       - type: string
+  Unit.world:
+    args:
+      - type: table
+  Unit.local_position:
+    args:
+      - type: table
+      - type: number
+  World.spawn_unit_ex:
+    any: true
+  Unit.set_local_scale:
+    any: true
+  Quaternion.identity:
+    any: true
+  Quaternion.set_xyzw:
+    any: true
+  Unit.set_vector4_for_material:
+    any: true
+  Unit.set_scalar_for_material:
+    any: true
+  World.destroy_unit:
+    any: true

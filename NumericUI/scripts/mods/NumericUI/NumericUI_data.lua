@@ -4,7 +4,7 @@ return {
 	name = mod:localize("mod_name"),
 	description = mod:localize("mod_description"),
 	is_togglable = true,
-	allow_rehooking = true, -- The nameplate require hook needs this
+	allow_rehooking = true, -- Hooking objects in hook_require
 	options = {
 		widgets = {
 			{
@@ -180,6 +180,18 @@ return {
 				sub_widgets = {
 					{
 						setting_id = "mission_title_on_intro",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
+			},
+			{
+				setting_id = "pickup_settings",
+				type = "group",
+				sub_widgets = {
+
+					{
+						setting_id = "show_medical_crate_radius",
 						type = "checkbox",
 						default_value = true,
 					},
