@@ -7,12 +7,12 @@ return {
 	mod_description = {
 		en = "Adds numbers to your HUD",
 		["zh-cn"] = "在 HUD 上显示数字",
-		ru = "Добавляет цифры в ваш интерфейс",
+		ru = "Numeric UI - Добавляет цифры в ваш интерфейс",
 	},
 	ability_items = {
 		en = "Ability Cooldown HUD",
 		["zh-cn"] = "技能冷却 HUD",
-		ru = "Интерфейс перезарядки способностей",
+		ru = "Интерфейс перезарядки способности",
 	},
 	player_ammo_items = {
 		en = "Ammo HUD",
@@ -42,7 +42,7 @@ return {
 	ability_cd_bar = {
 		en = "Show team's ability cooldown as progress bar",
 		["zh-cn"] = "显示团队技能冷却进度条",
-		ru = "Показывать время восст. способности команды в виде полосы прогреccа",
+		ru = "Показывать время восстановления способностей в виде полоски",
 	},
 	ability_cd_text = {
 		en = "Show team's ability cooldown as numeric counter",
@@ -72,7 +72,7 @@ return {
 	show_ammo_icon = {
 		en = "Show icon for your own ammo",
 		["zh-cn"] = "显示自己的弹药图标",
-		ru = "Показывать иконку ваших боеприпасов",
+		ru = "Показывать значок ваших\nбоеприпасов",
 	},
 	show_munitions_gained = {
 		en = "Show amount of ammo and grenades gained",
@@ -87,7 +87,7 @@ return {
 	show_ammo_amount_from_packs = {
 		en = "Show ammo amount from packs and tins",
 		["zh-cn"] = "显示弹药包内的弹药数",
-		ru = "Показывать количество боеприпасов в контейнерах и коробках",
+		ru = "Показывать количество боеприпасов\nв контейнерах и коробках",
 	},
 	dodge_count = {
 		en = "Show dodge count",
@@ -102,7 +102,7 @@ return {
 	ability_cooldown_format = {
 		en = "Ability cooldown format",
 		["zh-cn"] = "主动能力冷却显示格式",
-		ru = "Формат перезарядки способностей",
+		ru = "Формат перезарядки способности",
 	},
 	percent = {
 		en = "Percent",
@@ -117,17 +117,17 @@ return {
 	none = {
 		en = "None",
 		["zh-cn"] = "不显示",
-		ru = "Нет",
+		ru = "Не показывать",
 	},
 	dodges_count_up = {
 		en = "Dodges count up",
 		["zh-cn"] = "正向显示闪避次数",
-		ru = "Счётчик уклонений увеличивается",
+		ru = "Счётчик уклонений всегда увеличивается",
 	},
 	show_dodge_count_for_infinite_dodge = {
 		en = "Show dodge count for infinite dodge weapons",
 		["zh-cn"] = "无闪避上限的武器也显示闪避次数",
-		ru = "Показывать количество уклонений для оружия с бесконечным уклонением",
+		ru = "Показывать счётчик уклонений для оружия с бесконечным уклонением",
 	},
 	disable_ability_background_progress = {
 		en = "Disable ability background progress",
@@ -137,7 +137,7 @@ return {
 	show_max_ammo_as_percent = {
 		en = "Show max ammo as percent",
 		["zh-cn"] = "最大弹药量以百分比显示",
-		ru = "Показать максимальный боезапас в процентах",
+		ru = "Показывать максимальный боезапас\nв процентах",
 	},
 	mission_timer = {
 		en = "Mission Timer",
@@ -147,7 +147,7 @@ return {
 	show_mission_timer = {
 		en = "Show mission timer",
 		["zh-cn"] = "显示任务计时器",
-		ru = "Показать таймер миссии",
+		ru = "Показывать таймер миссии",
 	},
 	mission_timer_in_overlay = {
 		en = "Only in the overlay",
@@ -166,7 +166,7 @@ return {
 	},
 	loading_screens = {
 		en = "Loading screens",
-		ru = "Экран загрузки",
+		ru = "Экраны загрузки",
 		["zh-cn"] = "加载界面",
 	},
 	mission_title_on_intro = {
@@ -177,19 +177,48 @@ return {
 	show_efficient_dodges = {
 		en = "Show number of efficient dodges",
 		["zh-cn"] = "显示有效闪避数",
+		ru = "Показывать количество\nэффективных уклонений",
 	},
 	fade_out_max_dodges = {
 		en = "Fade out when at max dodges",
 		["zh-cn"] = "最大闪避数时隐藏",
+		ru = "Скрывать при максимальном количестве уклонений",
 	},
 	peril_text = {
 		en = "Show peril percent text",
 		["zh-cn"] = "显示危机值百分比文本",
+		ru = "Показывать проценты угрозы",
 	},
 	pickup_settings = {
 		en = "Pickups",
+		ru = "Размещаемые объекты",
 	},
 	show_medical_crate_radius = {
-		en = "Show medical crate radius (increases memory use)",
+		en = "Show medical crate radius",
+		ru = "Показывать радиус медицинского контейнера",
+	},
+	show_medical_crate_radius_description = {
+		en = "INCREASES MEMORY USE!",
+		ru = "УВЕЛИЧИВАЕТ ИСПОЛЬЗОВАНИЕ ПАМЯТИ!",
+	},
+	ability_cooldown_font_size = {
+		en = "Ability cooldown font size",
+		ru = "Размер шрифта времени восстановления способности",
+	},
+	ability_cooldown_font_size_description = {
+		en = "Use less than 45 for percentage format!",
+		ru = "Для процентного формата не более 45!",
+	},
+	ammo_text_font_size = {
+		en = "Ammo text font size",
+		ru = "Размер шрифта текста боеприпасов",
+	},
+	ammo_text_offset_y = {
+		en = "Ammo text offset Y",
+		ru = "Смещение текста боеприпасов\nпо вертикали",
+	},
+	ammo_text_offset_x = {
+		en = "Ammo text offset X",
+		ru = "Смещение текста боеприпасов\nпо горизонтали",
 	},
 }
