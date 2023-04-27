@@ -54,6 +54,9 @@ mod:hook_require("scripts/ui/views/mission_intro_view/mission_intro_view_definit
 end)
 
 local function draw_mission_title(self)
+	if not Managers.mechanism._mechanism then
+		return
+	end
 	local mechanism_data = Managers.mechanism._mechanism._mechanism_data
 	local mission_settings = Missions[mechanism_data.mission_name]
 
@@ -99,9 +102,16 @@ local function draw_mission_title(self)
 end
 
 mod:hook_origin("MissionIntroView", "draw", function(self, dt, t, input_service, layer)
-	if mod:get("mission_title_on_intro") then
-		draw_mission_title(self)
+	if not mod:get("mission_title_on_intro") then
+		self._widgets_by_name.mission_title.visible = false
+		self._widgets_by_name.mission_title.dirty = true
+	else
+		self._widgets_by_name.mission_title.visible = true
+		self._widgets_by_name.mission_title.dirty = true
 	end
+
+	draw_mission_title(self)
+
 	local render_scale = self._render_scale
 	local render_settings = self._render_settings
 	local ui_renderer = self._ui_renderer

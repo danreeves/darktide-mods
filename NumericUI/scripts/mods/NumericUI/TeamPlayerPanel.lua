@@ -12,6 +12,69 @@ local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local FixedFrame = require("scripts/utilities/fixed_frame")
 
+-- Force team hud for yourself
+if false then
+	mod:hook_origin(
+		"HudElementTeamPanelHandler",
+		"_add_panel",
+		function(self, unique_id, ui_renderer, fixed_scenegraph_id)
+			local PlayerCompositions = require("scripts/utilities/players/player_compositions")
+			local HudElementPersonalPlayerPanelHub = require(
+				"scripts/ui/hud/elements/personal_player_panel_hub/hud_element_personal_player_panel_hub"
+			)
+			local HudElementTeamPlayerPanelHub = require(
+				"scripts/ui/hud/elements/team_player_panel_hub/hud_element_team_player_panel_hub"
+			)
+			local HudElementTeamPlayerPanel = require(
+				"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel"
+			)
+			local player_composition_name = self._player_composition_name
+			local player = PlayerCompositions.player_from_unique_id(player_composition_name, unique_id)
+			local scale = ui_renderer.scale or 1
+			local scenegraph_id = fixed_scenegraph_id or self:_get_available_scenegraph()
+			local draw_layer = self._draw_layer
+			local parent = self._parent
+			local is_my_player = self._my_player == player
+			local data = {
+				synced = false,
+				unique_id = unique_id,
+				player = player,
+				is_my_player = is_my_player,
+				local_player = self._my_player,
+				scenegraph_id = scenegraph_id,
+				using_fixed_scenegraph_id = fixed_scenegraph_id ~= nil,
+			}
+			local panel = nil
+			local host_type = Managers.connection:host_type()
+			local game_mode_name = Managers.state.game_mode and Managers.state.game_mode:game_mode_name()
+			local is_in_hub = host_type == "hub_server" or game_mode_name == "hub"
+			local is_in_training_grounds = game_mode_name == "shooting_range"
+
+			if is_in_training_grounds then
+				if is_my_player then
+					panel = HudElementTeamPlayerPanel:new(parent, draw_layer, scale, data)
+				else
+					panel = HudElementTeamPlayerPanelHub:new(parent, draw_layer, scale, data)
+				end
+			elseif is_in_hub then
+				if is_my_player then
+					panel = HudElementPersonalPlayerPanelHub:new(parent, draw_layer, scale, data)
+				else
+					panel = HudElementTeamPlayerPanelHub:new(parent, draw_layer, scale, data)
+				end
+			else
+				panel = HudElementTeamPlayerPanel:new(parent, draw_layer, scale, data)
+			end
+
+			data.panel = panel
+			self._player_panels_array[#self._player_panels_array + 1] = data
+			self._player_panel_by_unique_id[unique_id] = data
+			self._unique_id_by_scenegraph[scenegraph_id] = unique_id
+			self._num_panels = self._num_panels + 1
+		end
+	)
+end
+
 local bar_size = HudElementTeamPlayerPanelSettings.size
 local hud_body_font_setting_name = "hud_body"
 local hud_body_font_settings = UIFontSettings[hud_body_font_setting_name]
@@ -214,21 +277,20 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod:get("ammo_text") or mod:get("peril_icon") then
 		instance.widget_definitions.numeric_ui_peril_icon = UIWidget.create_definition({
 			{
-				value_id = "warning_text",
-				style_id = "warning_text",
+				value_id = "icon_text",
+				style_id = "icon_text",
 				pass_type = "text",
 				value = "",
 				visible = false,
 				style = {
-					default_font_size = 16,
 					font_size = 18,
 					text_vertical_alignment = "center",
-					text_horizontal_alignment = "left",
-					vertical_alignment = "center",
-					anim_progress = nil,
-					offset = { 150, -18, 3 },
-					size = { bar_size[1] * 1.5, bar_size[2] },
-					font_type = "machine_medium", --hud_body_font_settings.font_type,
+					text_horizontal_alignment = "right",
+					vertical_alignment = "top",
+					horizontal_alignment = "left",
+					offset = { 0, -22, 3 },
+					size = { bar_size[1], 18 },
+					font_type = "machine_medium",
 					text_color = UIHudSettings.color_tint_alert_2,
 					default_text_color = UIHudSettings.color_tint_main_2,
 				},
@@ -368,7 +430,6 @@ local function hud_init_with_features(
 	definition_path,
 	definition_settings
 )
-
 	if data.player:is_human_controlled() then
 		if definition_path == TEAM_PANEL_DEF_PATH then
 			definition_settings.feature_list.health_text = mod:get("health_text")
@@ -436,9 +497,11 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 				ability_bar_widget.dirty = true
 			end
 		end
-
-	elseif (ability_cooldown_timer[player:name()] == 0) or (ability_cooldown_timer[player:name()] > ability_max_cooldown[player:name()]) then
-		local fixed_frame_t = FixedFrame.get_latest_fixed_time()	
+	elseif
+		(ability_cooldown_timer[player:name()] == 0)
+		or (ability_cooldown_timer[player:name()] > ability_max_cooldown[player:name()])
+	then
+		local fixed_frame_t = FixedFrame.get_latest_fixed_time()
 		local time_remaining = math.max(ability_component.cooldown - fixed_frame_t, 0)
 		ability_max_cooldown[player:name()] = time_remaining
 		ability_cooldown_timer[player:name()] = dt
@@ -480,19 +543,24 @@ end
 
 mod:hook("HudElementPlayerPanelBase", "init", hud_init_with_features)
 
-mod:hook_safe("HudElementPlayerPanelBase", "destroy", function (self, ui_renderer)
+mod:hook_safe("HudElementPlayerPanelBase", "destroy", function(self)
 	if not self._data.player:is_human_controlled() then
 		return
 	end
+
 	local player_extensions = self:_player_extensions(self._data.player)
+
 	if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
+		local ability_text_widget = self._widgets_by_name.ability_text
+		local ability_bar_widget = self._widgets_by_name.ability_bar
+
 		if player_extensions then
 			local unit_data_extension = player_extensions.unit_data
 			if unit_data_extension then
-				ability_component = unit_data_extension:read_component("combat_ability")
-				ability_cooldown_timer[data.player:name()] = nil
+				local ability_component = unit_data_extension:read_component("combat_ability")
+				ability_cooldown_timer[self._data.player:name()] = nil
 				if ability_component then
-					ability_max_cooldown[data.player:name()] = nil
+					ability_max_cooldown[self._data.player:name()] = nil
 				end
 			end
 		end
@@ -509,77 +577,24 @@ mod:hook_safe("HudElementPlayerPanelBase", "destroy", function (self, ui_rendere
 	end
 end)
 
-local prev_grenade_charges = 0
-
-local function update_ammo_count(func, self, dt, t, player, ui_renderer)
+local function update_numericui_player_features(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
 
 	if not player:is_human_controlled() then
 		return
 	end
-	
-	local widget = self._widgets_by_name.numeric_ui_ammo_text
-	local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+
+	local ammo_text_widget = self._widgets_by_name.numeric_ui_ammo_text
+	local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
 	local extensions = self:_player_extensions(player)
 	local unit_data_extension = extensions and extensions.unit_data
 
-	if extensions then
-		local ability_extension = extensions.ability
-		
-		if ability_extension then
-			if mod:get("grenades_count") then
-				local grenades_count_format = mod:get("grenades_count_format")
-				local remaining_throwables_charges = ability_extension:remaining_ability_charges("grenade_ability")
-				local max_throwables_charges = ability_extension:max_ability_charges("grenade_ability")
-				local remaining_throwable_ratio = remaining_throwables_charges/max_throwables_charges
-
-				if self.prev_grenade_charges and self.prev_grenade_charges ~= remaining_throwables_charges then
-					local throwable_color = nil
-					local empty_thowable_color = UIHudSettings.color_tint_main_3
-
-					if remaining_throwable_ratio == 0 then
-						throwable_color = UIHudSettings.color_tint_ammo_high
-						empty_thowable_color = Color.dark_red(255, true)
-					elseif remaining_throwable_ratio <= .49 then
-						throwable_color = UIHudSettings.color_tint_ammo_medium
-					elseif remaining_throwable_ratio <= .74 then
-						throwable_color = UIHudSettings.color_tint_ammo_low
-					else
-						throwable_color = UIHudSettings.color_tint_main_1
-					end
-
-					if grenades_count_format == "icons" then
-						local throwable_icons_widget = self._widgets_by_name.team_throwable_icon
-
-						for i = 1, max_throwables_charges do
-							if i > remaining_throwables_charges then
-								throwable_icons_widget.style["icon_"..i].color = empty_thowable_color
-							else 
-								throwable_icons_widget.style["icon_"..i].color = throwable_color--UIHudSettings.color_tint_main_1
-							end
-						end
-
-						throwable_icons_widget.dirty = true
-
-					elseif grenades_count_format == "number" then
-						local throwable_number_widget = self._widgets_by_name.team_throwable_text
-						throwable_number_widget.content.text = remaining_throwables_charges .. "/" .. max_throwables_charges
-						throwable_number_widget.style.text.text_color = throwable_color
-						throwable_number_widget.dirty = true
-					end
-					self.prev_grenade_charges = remaining_throwables_charges
-				end
-			end
-		end
-	end
-
-	if widget then
+	if ammo_text_widget then
 		local peril_color = nil
 		local warp_charge_level = nil
 
 		if unit_data_extension then
-
-			if peril_widget and peril_widget.visible then
+			if peril_icon_widget and peril_icon_widget.visible then
 				local warp_charge_component = unit_data_extension:read_component("warp_charge")
 				warp_charge_level = warp_charge_component.current_percentage
 
@@ -590,12 +605,12 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 				elseif warp_charge_level > 0.5 then
 					peril_color = UIHudSettings.color_tint_ammo_low
 				else
-					peril_color = peril_widget.style.warning_text.default_text_color
+					peril_color = peril_icon_widget.style.icon_text.default_text_color
 				end
 
-				if mod:get("peril_icon") and peril_color ~= peril_widget.style.warning_text.text_color then
-					peril_widget.style.warning_text.text_color = peril_color
-					peril_widget.dirty = true
+				if mod:get("peril_icon") and peril_color ~= peril_icon_widget.style.icon_text.text_color then
+					peril_icon_widget.style.icon_text.text_color = peril_color
+					peril_icon_widget.dirty = true
 				end
 			end
 
@@ -617,20 +632,27 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 				end
 			end
 
-			if total_max_ammo == 0 and peril_widget.visible then
-				widget.content.text = string.format("%1d%%", (warp_charge_level * 100))
-				widget.style.text.text_color = peril_color
-			elseif total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied then
-				widget.content.text = ""
+			if total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied then
+				-- No ammo or dead
+				ammo_text_widget.content.text = ""
+			elseif
+				total_max_ammo == 0
+				and (peril_icon_widget and peril_icon_widget.visible)
+				and mod:get("peril_text")
+			then
+				-- Ammo text as peril percent
+				ammo_text_widget.content.text = string.format("%1d%%", math.round(warp_charge_level * 100))
+				ammo_text_widget.style.text.text_color = peril_color
 			else
+				-- Ammo
 				if mod:get("ammo_as_percent") then
-					widget.content.text = string.format("%1d%%", (total_current_ammo / total_max_ammo) * 100)
+					ammo_text_widget.content.text = string.format("%1d%%", (total_current_ammo / total_max_ammo) * 100)
 				else
-					widget.content.text = string.format("%1d/%1d", total_current_ammo, total_max_ammo)
+					ammo_text_widget.content.text = string.format("%1d/%1d", total_current_ammo, total_max_ammo)
 				end
-				widget.style.text.text_color = self._widgets_by_name.ammo_status.style.ammo.color
+				ammo_text_widget.style.text.text_color = self._widgets_by_name.ammo_status.style.ammo.color
 			end
-			widget.dirty = true
+			ammo_text_widget.dirty = true
 		end
 	end
 
@@ -649,11 +671,10 @@ local function update_ammo_count(func, self, dt, t, player, ui_renderer)
 	end
 end
 
-mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_ammo_count)
-mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_ammo_count)
+mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_numericui_player_features)
+mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_numericui_player_features)
 
-mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_layer, start_scale, data)
-	
+mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, _parent, _draw_layer, _start_scale, data)
 	if not data.player:is_human_controlled() then
 		if self._widgets_by_name.numeric_ui_ammo_text then
 			self._widgets_by_name.numeric_ui_ammo_text.content.text = " "
@@ -773,7 +794,7 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 		
 		if unit_data_extension then
 			if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
-				ability_component = unit_data_extension:read_component("combat_ability")
+				local ability_component = unit_data_extension:read_component("combat_ability")
 				ability_cooldown_timer[data.player:name()] = 0
 
 				if ability_component then
@@ -784,14 +805,14 @@ mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, parent, draw_l
 			end
 
 			local archetype = unit_data_extension:archetype_name()
-			local peril_widget = self._widgets_by_name.numeric_ui_peril_icon
+			local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
 
 			if mod:get("peril_icon") then
-				peril_widget.content.warning_text = "" -- this boxed questionmark is the character for the peril icon
-				peril_widget.visible = (archetype == "psyker")
+				peril_icon_widget.content.icon_text = "" -- this boxed questionmark is the character for the peril icon
+				peril_icon_widget.visible = (archetype == "psyker")
 			elseif mod:get("ammo_text") then
-				peril_widget.content.warning_text = ""
-				peril_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
+				peril_icon_widget.content.icon_text = ""
+				peril_icon_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
 			end
 		end
 	end

@@ -116,7 +116,7 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 	end
 
 	local style = self._widgets_by_name.dodge_count.style
-	style.text.text_color = color_efficient
+	style.text.text_color = table.clone(color_efficient)
 
 	local unit_data_extension = ScriptUnit.extension(self._player_unit, "unit_data_system")
 	local weapon_extension = ScriptUnit.has_extension(self._player_unit, "weapon_system")
@@ -145,19 +145,33 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 		else
 			local display_dodges = mod:get("dodges_count_up") and current_dodges
 				or (math.ceil(num_efficient_dodges) - current_dodges)
-			self._widgets_by_name.dodge_count.content.text = string.format(
-				"%d/%d",
-				display_dodges,
-				math.ceil(num_efficient_dodges)
-			)
+
+			if mod:get("show_efficient_dodges") then
+				self._widgets_by_name.dodge_count.content.text = string.format(
+					"%d/%d",
+					display_dodges,
+					math.ceil(num_efficient_dodges)
+				)
+			else
+				self._widgets_by_name.dodge_count.content.text = tostring(math.ceil(display_dodges))
+			end
 		end
 
 		if current_dodges >= num_efficient_dodges then
-			style.text.text_color = color_inefficient
+			style.text.text_color = table.clone(color_inefficient)
 		end
 
 		if current_dodges >= math.floor(dr_limit + num_efficient_dodges) then
-			style.text.text_color = color_limit
+			style.text.text_color = table.clone(color_limit)
+		end
+
+		if mod:get("fade_out_max_dodges") and current_dodges == 0 then
+			local time_since_cooldown = math.clamp(
+				gameplay_t - dodge_state_component.consecutive_dodges_cooldown - 1,
+				0,
+				1
+			)
+			style.text.text_color[1] = math.lerp(255, 0, time_since_cooldown)
 		end
 
 		if mod:get("debug_dodge_count") then

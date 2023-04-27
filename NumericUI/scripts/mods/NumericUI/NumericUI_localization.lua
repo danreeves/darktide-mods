@@ -186,4 +186,22 @@ return {
 		ru = "Показывать название миссии на экране загрузки",
 		["zh-cn"] = "在加载界面显示任务详情",
 	},
+	show_efficient_dodges = {
+		en = "Show number of efficient dodges",
+		["zh-cn"] = "显示有效闪避数",
+	},
+	fade_out_max_dodges = {
+		en = "Fade out when at max dodges",
+		["zh-cn"] = "最大闪避数时隐藏",
+	},
+	peril_text = {
+		en = "Show peril percent text",
+		["zh-cn"] = "显示危机值百分比文本",
+	},
+	pickup_settings = {
+		en = "Pickups",
+	},
+	show_medical_crate_radius = {
+		en = "Show medical crate radius (increases memory use)",
+	},
 }

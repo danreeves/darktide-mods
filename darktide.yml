@@ -5,6 +5,10 @@ globals:
     any: true
   IS_WINDOWS:
     any: true
+  HEALTH_ALIVE:
+    any: true
+  ALIVE:
+    any: true
   class:
     args:
       - type: string
@@ -49,6 +53,14 @@ globals:
     args:
       - type: number
       - type: number
+  math.clamp:
+    args:
+      - type: number
+      - type: number
+      - type: number
+  math.round:
+    args:
+      - type: number
   ScriptUnit.has_extension:
     args:
       - type: table
@@ -77,3 +89,57 @@ globals:
       - type: number
       - type: number
       - type: number
+  Application.open_url_in_browser:
+    args:
+      - type: string
+  Backend.get_auth_method:
+    args: []
+  Managers.backend.url_request:
+    method: true
+    args:
+      - type: string
+      - type: table
+        required: false
+  Steam.user_id:
+    args: []
+  Steam.id_hex_to_dec:
+    args:
+      - type: string
+  XboxLive.user_id:
+    args: []
+  Backend.AUTH_METHOD_STEAM:
+    any: true
+  Steam.retrieve_auth_session_ticket:
+    args: []
+  Steam.poll_auth_session_ticket:
+    args:
+      - type: number
+  Unit.world_position:
+    args:
+      - type: table
+      - type: number
+  Unit.node:
+    args:
+      - type: table
+      - type: string
+  Unit.world:
+    args:
+      - type: table
+  Unit.local_position:
+    args:
+      - type: table
+      - type: number
+  World.spawn_unit_ex:
+    any: true
+  Unit.set_local_scale:
+    any: true
+  Quaternion.identity:
+    any: true
+  Quaternion.set_xyzw:
+    any: true
+  Unit.set_vector4_for_material:
+    any: true
+  Unit.set_scalar_for_material:
+    any: true
+  World.destroy_unit:
+    any: true

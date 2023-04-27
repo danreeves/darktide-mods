@@ -11,20 +11,9 @@ backups.definitions = backups.definitions or table.clone(mod:original_require(PL
 local UIRenderer = require("scripts/managers/ui/ui_renderer")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
-local Pickups = require("scripts/settings/pickup/pickups")
-local mod = get_mod("NumericUI")
 local HudElementTeamPlayerPanelSettings = require(
 	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings"
 )
-
--- vars for "show_ammo_amount_from_packs"
-mod.current_ammo = nil
-mod.max_ammo = nil
-mod.small_clip_gain = 0
-mod.large_clip_gain = 0
-mod.ammo_text_width = nil
-mod.ammo_text_height = 0
-----
 
 --Init global vars for mod: "show_munitions_gained"
 local prev_clip_ammo_char_len = 0 -- Tells where ammo icon should be generated
@@ -45,7 +34,6 @@ local ammo_gained_data = {
 	offset_slow_mod = { 0.04, 0.2 },
 	alpha_multiplier = 1,
 }
-
 
 local directional_magnitude = 200
 for i = 1, 4 do
@@ -317,7 +305,6 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 					style.max_ammo.drop_shadow = true
 				end
 
-
 				if mod:get("show_ammo_icon") and icon_widget then
 					icon_widget.content.ammo_icon = "content/ui/materials/hud/icons/party_ammo"
 
@@ -346,7 +333,6 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 					local ammo_len = max_clip < 10 and 2 or 3
 					local font_size = ammo_text_widget.style.ammo_amount_1.font_size
 					if ammo_len ~= prev_clip_ammo_char_len or prev_font_size ~= font_size then
-
 						local font_type = ammo_text_widget.style.ammo_amount_1.font_type
 						local text_width, text_height = UIRenderer.text_size(ui_renderer, "0", font_type, font_size)
 						local gap_size = font_size * 0.25
@@ -430,53 +416,5 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 
 		display_grenade_gained(_dt, self._widgets_by_name.grenade_gained)
 		prev_grenade_charges = total_ammo
-	end
-end)
-
-mod:hook_safe("HudElementPlayerWeapon", "init", function(self, amount, total_max_amount)
-	local uses_ammo = self._uses_ammo and not self._infinite_ammo
-
-	if not self._ability_type then
-		local slot_component = self._slot_component
-		if slot_component then
-			if uses_ammo then
-				if mod:get("show_ammo_amount_from_packs") then
-					local max_reserve = slot_component.max_ammunition_reserve
-					local max_ammunition_clip = slot_component.max_ammunition_clip
-					local pickup_data_small_clip = Pickups.by_name["small_clip"]
-					local pickup_data_large_clip = Pickups.by_name["large_clip"]
-
-					mod.max_ammo = max_reserve + max_ammunition_clip
-					mod.current_ammo = max_ammo
-
-					mod.small_clip_gain = pickup_data_small_clip.ammo_amount_func(
-						max_reserve,
-						max_ammunition_clip,
-						pickup_data_small_clip
-					)
-					mod.large_clip_gain = pickup_data_large_clip.ammo_amount_func(
-						max_reserve,
-						max_ammunition_clip,
-						pickup_data_large_clip
-					)
-				end
-			end
-		end
-	end
-end)
-
-mod:hook_safe("HudElementPlayerWeapon", "destroy", function(self, ui_renderer)
-	--reset vars for "show_ammo_amount_from_packs"
-	mod.current_ammo = nil
-	mod.max_ammo = nil
-	mod.small_clip_gain = 0
-	mod.large_clip_gain = 0
-	mod.ammo_text_width = nil
-	mod.ammo_text_height = 0
-end)
-
-mod:hook_safe("HudElementPlayerWeapon", "set_ammo_amount", function(self, total_ammo, total_max_ammo)
-	if total_max_ammo == mod.max_ammo then
-		mod.current_ammo = total_ammo
 	end
 end)
