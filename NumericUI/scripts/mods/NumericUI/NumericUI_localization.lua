@@ -188,8 +188,10 @@ return {
 	},
 	pickup_settings = {
 		en = "Pickups",
+		["zh-cn"] = "拾取物",
 	},
 	show_medical_crate_radius = {
 		en = "Show medical crate radius (increases memory use)",
+		["zh-cn"] = "显示医疗箱范围（会增加内存占用）",
 	},
 }
