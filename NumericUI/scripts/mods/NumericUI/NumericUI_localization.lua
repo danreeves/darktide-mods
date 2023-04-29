@@ -191,14 +191,17 @@ return {
 	},
 	pickup_settings = {
 		en = "Pickups",
+	  ["zh-cn"] = "拾取物",
 		ru = "Размещаемые объекты",
 	},
 	show_medical_crate_radius = {
 		en = "Show medical crate radius",
+    ["zh-cn"] = "显示医疗箱范围",
 		ru = "Показывать радиус медицинского контейнера",
 	},
 	show_medical_crate_radius_description = {
 		en = "INCREASES MEMORY USE!",
+    ["zh-cn"] = "会增加内存占用",
 		ru = "УВЕЛИЧИВАЕТ ИСПОЛЬЗОВАНИЕ ПАМЯТИ!",
 	},
 	ability_cooldown_font_size = {
