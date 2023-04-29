@@ -143,3 +143,8 @@ globals:
     any: true
   World.destroy_unit:
     any: true
+  Imgui:
+    any: true
+  table.is_empty:
+    args:
+      - type: table
