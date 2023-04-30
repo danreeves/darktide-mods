@@ -166,3 +166,5 @@ globals:
     args:
       - type: table
       - type: table
+  Vector3Box:
+    any: true

@@ -5,28 +5,14 @@ local hits = mod:persistent_table("hits")
 local package_name = "content/levels/training_grounds/missions/mission_tg_basic_combat_01"
 Managers.package:load(package_name, "RainbowImpacts")
 
-mod:hook_safe(
-	"FxSystem",
-	"play_surface_impact_fx",
-	function(
-		self,
-		hit_position,
-		hit_direction,
-		source_parameters,
-		attacking_unit,
-		optional_hit_normal,
-		damage_type,
-		hit_type,
-		optional_will_be_predicted
-	)
-		table.insert(hits, {
-			created_t = Managers.time:time("main"),
-			position = Vector3Box(hit_position),
-			direction = Vector3Box(hit_direction),
-			decal_unit = nil,
-		})
-	end
-)
+mod:hook_safe("FxSystem", "play_surface_impact_fx", function(_self, hit_position, hit_direction)
+	table.insert(hits, {
+		created_t = Managers.time:time("main"),
+		position = Vector3Box(hit_position),
+		direction = Vector3Box(hit_direction),
+		decal_unit = nil,
+	})
+end)
 
 local function create_decal_unit(world, position, rotation)
 	if not Managers.package:has_loaded(package_name) then
@@ -74,4 +60,8 @@ mod.update = function(dt)
 			table.remove(hits, i)
 		end
 	end
+end
+
+mod.on_game_state_changed = function()
+	table.clear(hits)
 end
