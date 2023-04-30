@@ -148,3 +148,21 @@ globals:
   table.is_empty:
     args:
       - type: table
+  Unit.set_local_position:
+    args:
+      - type: table
+      - type: number
+      - type: table
+  World.update_unit_and_children:
+    args:
+      - type: table
+      - type: table
+  Quaternion.from_yaw_pitch_roll:
+    args:
+      - type: number
+      - type: number
+      - type: number
+  Quaternion.rotate:
+    args:
+      - type: table
+      - type: table
