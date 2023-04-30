@@ -2,7 +2,7 @@ local mod = get_mod("Exporter")
 
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIWorkspaceSettings = require("scripts/settings/ui/ui_workspace_settings")
-local BaseView = require("scripts/ui/views/base_view")
+local BaseView = require("scripts/ui/views/base_view") -- needs to be required before creating a class from it
 local generate_blueprints_function = require("scripts/ui/view_content_blueprints/item_blueprints")
 
 local size = {

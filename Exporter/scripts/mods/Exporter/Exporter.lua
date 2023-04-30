@@ -1,21 +1,32 @@
 local mod = get_mod("Exporter")
-local Views = require("scripts/ui/views/views")
 local LocalizationManager = require("scripts/managers/localization/localization_manager")
 
 -- Set up custom view
 mod:add_require_path("Exporter/scripts/mods/Exporter/ItemPreviewView")
-Views.item_preview_view = {
-	name = "item_preview_view",
-	display_name = "loc_exporter_item_preview_view",
-	state_bound = true,
-	path = "Exporter/scripts/mods/Exporter/ItemPreviewView",
-	package = "packages/ui/views/system_view/system_view",
-	load_always = true,
-	class = "ItemPreviewView",
-	disable_game_world = true,
-	load_in_hub = true,
-	close_on_hotkey_pressed = false,
-}
+
+mod:register_view({
+	view_name = "item_preview_view",
+	view_settings = {
+		init_view_function = function()
+			return true
+		end,
+		class = "ItemPreviewView",
+		disable_game_world = true,
+		display_name = "loc_exporter_item_preview_view",
+		load_always = true,
+		load_in_hub = true,
+		package = "packages/ui/views/system_view/system_view", -- abritrary
+		path = "Exporter/scripts/mods/Exporter/ItemPreviewView",
+		state_bound = true,
+	},
+	view_transitions = {},
+	view_options = {
+		close_all = false,
+		close_previous = false,
+		close_transition_time = nil,
+		transition_time = nil,
+	},
+})
 
 -- Increase the resolution of the weapon/icon renderers
 mod:hook("UIManager", "create_single_icon_renderer", function(func, self, render_type, id, settings)
