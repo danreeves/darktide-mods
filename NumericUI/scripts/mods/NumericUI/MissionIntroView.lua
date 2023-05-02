@@ -8,9 +8,15 @@ local Zones = require("scripts/settings/zones/zones")
 local Circumstances = require("scripts/settings/circumstance/circumstance_templates")
 
 mod:hook_require("scripts/ui/views/mission_intro_view/mission_intro_view_definitions", function(instance)
+	local top_scenegraph = nil
+	for k, _ in pairs(instance.scenegraph_definition) do
+		top_scenegraph = k
+		break
+	end
+
 	instance.scenegraph_definition.mission_title = {
 		vertical_alignment = "top",
-		parent = "screen",
+		parent = top_scenegraph,
 		horizontal_alignment = "left",
 		size = {
 			1200,

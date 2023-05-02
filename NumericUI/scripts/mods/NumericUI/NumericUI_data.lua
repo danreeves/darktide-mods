@@ -174,17 +174,17 @@ return {
 					},
 				},
 			},
-			{
-				setting_id = "loading_screens",
-				type = "group",
-				sub_widgets = {
-					{
-						setting_id = "mission_title_on_intro",
-						type = "checkbox",
-						default_value = true,
-					},
-				},
-			},
+			-- {
+			-- 	setting_id = "loading_screens",
+			-- 	type = "group",
+			-- 	sub_widgets = {
+			-- 		{
+			-- 			setting_id = "mission_title_on_intro",
+			-- 			type = "checkbox",
+			-- 			default_value = true,
+			-- 		},
+			-- 	},
+			-- },
 			{
 				setting_id = "pickup_settings",
 				type = "group",
