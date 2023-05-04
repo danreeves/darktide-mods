@@ -75,6 +75,11 @@ end
 
 mod.on_all_mods_loaded = function()
 	recreate_hud()
+
+	if mod:get("show_medical_crate_radius") then
+		local package_name = "content/levels/training_grounds/missions/mission_tg_basic_combat_01"
+		Managers.package:load(package_name, "NumericUI")
+	end
 end
 
 mod.on_setting_changed = function()

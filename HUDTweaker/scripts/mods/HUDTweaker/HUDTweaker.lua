@@ -35,15 +35,17 @@ mod:hook("HudElementBase", "update", function(func, self, ...)
 		local widgets_by_name = self._widgets_by_name
 		for widget_name, widget_styles in pairs(tweaks) do
 			local widget = widgets_by_name[widget_name]
-			for style_id, custom_styles in pairs(widget_styles) do
-				local styles = widget.style[style_id]
-				for style_key, value in pairs(custom_styles) do
-					if type(value) == "table" then
-						for k, v in pairs(value) do
-							styles[style_key][k] = v
+			if widget then
+				for style_id, custom_styles in pairs(widget_styles) do
+					local styles = widget.style[style_id]
+					for style_key, value in pairs(custom_styles) do
+						if type(value) == "table" then
+							for k, v in pairs(value) do
+								styles[style_key][k] = v
+							end
+						else
+							styles[style_key] = value
 						end
-					else
-						styles[style_key] = value
 					end
 				end
 			end
