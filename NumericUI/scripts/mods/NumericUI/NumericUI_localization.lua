@@ -195,8 +195,8 @@ return {
 		ru = "Размещаемые объекты",
 	},
 	show_medical_crate_radius = {
-		en = "Show medical crate radius (increases memory use)",
-		["zh-cn"] = "显示医疗箱范围（会增加内存占用）",
+		en = "Show medical crate radius",
+		["zh-cn"] = "显示医疗箱范围",
 		ru = "Показывать радиус медицинского контейнера",
 	},
 	show_medical_crate_radius_description = {
