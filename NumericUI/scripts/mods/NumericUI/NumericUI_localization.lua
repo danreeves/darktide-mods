@@ -7,7 +7,7 @@ return {
 	mod_description = {
 		en = "Adds numbers to your HUD",
 		["zh-cn"] = "在 HUD 上显示数字",
-		ru = "Добавляет цифры в ваш интерфейс",
+		ru = "Numeric UI - Добавляет цифры в ваш интерфейс",
 	},
 	ability_items = {
 		en = "Ability Cooldown HUD",
