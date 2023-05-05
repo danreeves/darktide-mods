@@ -7,7 +7,7 @@ return {
 	mod_description = {
 		en = "Adds numbers to your HUD",
 		["zh-cn"] = "在 HUD 上显示数字",
-		ru = "Добавляет цифры в ваш интерфейс",
+		ru = "Numeric UI - Добавляет цифры в ваш интерфейс",
 	},
 	ability_items = {
 		en = "Ability Cooldown HUD",
@@ -177,21 +177,31 @@ return {
 	show_efficient_dodges = {
 		en = "Show number of efficient dodges",
 		["zh-cn"] = "显示有效闪避数",
+		ru = "Показывать количество\nэффективных уклонений",
 	},
 	fade_out_max_dodges = {
 		en = "Fade out when at max dodges",
 		["zh-cn"] = "最大闪避数时隐藏",
+		ru = "Скрывать при максимальном количестве уклонений",
 	},
 	peril_text = {
 		en = "Show peril percent text",
 		["zh-cn"] = "显示危机值百分比文本",
+		ru = "Показывать проценты угрозы",
 	},
 	pickup_settings = {
 		en = "Pickups",
 		["zh-cn"] = "拾取物",
+		ru = "Размещаемые объекты",
 	},
 	show_medical_crate_radius = {
-		en = "Show medical crate radius (increases memory use)",
-		["zh-cn"] = "显示医疗箱范围（会增加内存占用）",
+		en = "Show medical crate radius",
+		["zh-cn"] = "显示医疗箱范围",
+		ru = "Показывать радиус медицинского контейнера",
+	},
+	show_medical_crate_radius_description = {
+		en = "INCREASES MEMORY USE!",
+		["zh-cn"] = "会增加内存占用",
+		ru = "УВЕЛИЧИВАЕТ ИСПОЛЬЗОВАНИЕ ПАМЯТИ!",
 	},
 }
