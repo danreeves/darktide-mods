@@ -26,7 +26,9 @@ local function set_style_tweak(path, val)
 end
 
 mod:hook_safe("HudElementBase", "init", function(self)
-	hud_elements[self.__class_name] = self
+	if not string.find(self.__class_name, "Handler") then
+		hud_elements[self.__class_name] = self
+	end
 end)
 
 mod:hook("HudElementBase", "update", function(func, self, ...)

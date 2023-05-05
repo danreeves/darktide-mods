@@ -1,7 +1,7 @@
 local mod = get_mod("HUDTweaker")
 
 return {
-	name = "HUDTweaker",
+	name = "HUD Tweaker",
 	description = mod:localize("mod_description"),
 	is_togglable = true,
 	options = {
