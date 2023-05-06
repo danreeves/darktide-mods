@@ -176,7 +176,26 @@ mod:hook_safe("PlayerUnitBuffExtension", "destroy", function()
 end)
 
 mod:hook("HudElementPlayerBuffs", "_sync_current_active_buffs", function(func, self, buffs)
-	func(self, buffs)
+	local regular_buffs = {}
+	local priority_buffs = {}
+
+	for _, buff in ipairs(buffs) do
+		local buff_name = buff._template_name
+		local is_hidden = mod:get(buff_name .. "_hidden")
+		local is_priority = mod:get(buff_name .. "_priority")
+		if is_priority then
+			table.insert(priority_buffs, buff)
+		elseif not is_hidden then
+			table.insert(regular_buffs, buff)
+		end
+	end
+
+	if self.__class_name == "HudElementPriorityBuffs" then
+		func(self, priority_buffs)
+	else
+		func(self, regular_buffs)
+	end
+
 	func(self, pt.visual_buff_extension:buffs())
 end)
 

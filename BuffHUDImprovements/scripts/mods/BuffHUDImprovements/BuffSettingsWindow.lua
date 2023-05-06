@@ -125,7 +125,7 @@ function BuffSettingsWindow:update()
 			end
 		end
 		Imgui.columns(1)
-		self._page = Imgui.slider_int("Page", self._page, 1, math.min(i - 9, self._num_buffs - 8))
+		self._page = Imgui.slider_int("Page", self._page, 1, math.max(1, math.min(i - 9, self._num_buffs - 8)))
 		Imgui.end_window()
 	end
 end

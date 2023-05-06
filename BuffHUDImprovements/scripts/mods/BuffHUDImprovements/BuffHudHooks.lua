@@ -3,8 +3,9 @@ local mod = get_mod("BuffHUDImprovements")
 mod:hook("HudElementPlayerBuffs", "event_player_buff_added", function(func, self, player, buff_instance)
 	local buff_name = buff_instance._template_name
 	local is_hidden = mod:get(buff_name .. "_hidden")
+	local is_priority = mod:get(buff_name .. "_priority")
 
-	if is_hidden then
+	if is_hidden or is_priority then
 		return
 	end
 

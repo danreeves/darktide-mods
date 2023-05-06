@@ -87,3 +87,30 @@ mod.update = function()
 		buff_settings_window:update()
 	end
 end
+
+local hud_element = {
+	package = "packages/ui/hud/player_buffs/player_buffs",
+	use_retained_mode = true,
+	use_hud_scale = true,
+	class_name = "HudElementPriorityBuffs",
+	filename = "BuffHUDImprovements/scripts/mods/BuffHUDImprovements/HudElementPriorityBuffs",
+	visibility_groups = {
+		"dead",
+		"alive",
+		"communication_wheel",
+	},
+}
+
+mod:add_require_path(hud_element.filename)
+
+mod:hook_require("scripts/ui/hud/hud_elements_player_onboarding", function(elements)
+	if not table.find_by_key(elements, "class_name", hud_element.class_name) then
+		table.insert(elements, hud_element)
+	end
+end)
+
+mod:hook_require("scripts/ui/hud/hud_elements_player", function(elements)
+	if not table.find_by_key(elements, "class_name", hud_element.class_name) then
+		table.insert(elements, hud_element)
+	end
+end)
