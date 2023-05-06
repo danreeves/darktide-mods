@@ -1,7 +1,6 @@
 return {
 	mod_description = {
-		en = "Give blessing buffs icons in the HUD",
-		["zh-cn"] = "在 HUD 上显示祝福效果状态",
+		en = "Disable buffs, move important buffs to a new buff bar, a framework for custom buffs",
 	},
 	custom_buffs = {
 		en = "Custom buffs",

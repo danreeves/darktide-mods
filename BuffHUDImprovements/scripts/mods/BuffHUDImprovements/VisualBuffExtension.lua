@@ -1,4 +1,4 @@
-local mod = get_mod("ShowAllBuffs")
+local mod = get_mod("BuffHUDImprovements")
 local pt = mod:persistent_table("pt")
 
 require("scripts/extension_systems/buff/buff_extension_base")
@@ -112,6 +112,28 @@ VisualBuffExtension._set_proc_active_start_time = function(self, index, activati
 	end
 end
 
+VisualBuffExtension.has_buff = function(self, template_name)
+	local buffs = self._buffs_by_index
+
+	for _, buff in pairs(buffs) do
+		if buff._template_name == template_name then
+			return true
+		end
+	end
+
+	return false
+end
+
+VisualBuffExtension.remove_buff = function(self, template_name)
+	local buffs = self._buffs_by_index
+
+	for index, buff in pairs(buffs) do
+		if buff._template_name == template_name then
+			self:_remove_buff(index)
+		end
+	end
+end
+
 VisualBuffExtension.clear_buffs = function(self)
 	local buffs = self._buffs_by_index
 
@@ -158,18 +180,35 @@ mod:hook("HudElementPlayerBuffs", "_sync_current_active_buffs", function(func, s
 	func(self, pt.visual_buff_extension:buffs())
 end)
 
+function mod:has_buff(template_name)
+	return pt.visual_buff_extension:has_buff(template_name)
+end
+
 -- Public function
 function mod:add_buff(buff_template)
-	local t = Managers.time:time("gameplay")
-	pt.visual_buff_extension:_add_buff(buff_template, t)
+	if pt.visual_buff_extension then
+		local t = Managers.time:time("gameplay")
+		pt.visual_buff_extension:_add_buff(buff_template, t)
+	end
+end
+
+-- Public function
+function mod:remove_buff(template_name)
+	if pt.visual_buff_extension then
+		pt.visual_buff_extension:remove_buff(template_name)
+	end
 end
 
 -- Public function
 function mod:clear_buffs()
-	pt.visual_buff_extension:clear_buffs()
+	if pt.visual_buff_extension then
+		pt.visual_buff_extension:clear_buffs()
+	end
 end
 
 -- Public function
 function mod:add_proc_event(proc_event, param_table)
-	pt.visual_buff_extension:add_proc_event(proc_event, param_table)
+	if pt.visual_buff_extension then
+		pt.visual_buff_extension:add_proc_event(proc_event, param_table)
+	end
 end

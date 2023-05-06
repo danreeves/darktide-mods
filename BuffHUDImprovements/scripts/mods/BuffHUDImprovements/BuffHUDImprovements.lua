@@ -1,10 +1,10 @@
-local mod = get_mod("ShowAllBuffs")
+local mod = get_mod("BuffHUDImprovements")
 
 local BuffSettings = require("scripts/settings/buff/buff_settings")
 local AttackIntensitySettings = require("scripts/settings/attack_intensity/attack_intensity_settings")
 local DEFAULT_BUFF_ICON = "content/ui/materials/icons/abilities/default"
 
-mod:io_dofile("ShowAllBuffs/scripts/mods/ShowAllBuffs/VisualBuffExtension")
+mod:io_dofile("BuffHUDImprovements/scripts/mods/BuffHUDImprovements/VisualBuffExtension")
 
 local custom_buffs = {
 	toughness_broken_grace_period = {
@@ -34,10 +34,15 @@ mod.on_all_mods_loaded = function()
 	end
 end
 
+mod.on_setting_changed = function()
+	mod._add_custom_buffs()
+end
+
 local param_table = {}
 mod:hook_safe("PlayerUnitMoodExtension", "_add_mood", function(_self, _t, mood_type)
 	if mood_type == "toughness_broken" then
 		if mod:get("custom_toughness_broken_buff") then
+			mod:echo("adding custom buff")
 			mod:add_proc_event("on_player_toughness_broken", param_table)
 		end
 	end
@@ -45,15 +50,19 @@ end)
 
 mod._add_custom_buffs = function()
 	if mod:get("custom_toughness_broken_buff") then
-		local grace_settings = Managers.state.difficulty:get_table_entry_by_challenge(
-			AttackIntensitySettings.toughness_broken_grace
-		)
-		local grace_cooldown = Managers.state.difficulty:get_table_entry_by_challenge(
-			AttackIntensitySettings.toughness_broken_grace_cooldown
-		)
-		local buff = table.clone(custom_buffs.toughness_broken_grace_period)
-		buff.active_duration = grace_settings.duration
-		buff.cooldown_duration = grace_cooldown
-		mod:add_buff(buff)
+		if not mod:has_buff(custom_buffs.toughness_broken_grace_period.name) then
+			local grace_settings = Managers.state.difficulty:get_table_entry_by_challenge(
+				AttackIntensitySettings.toughness_broken_grace
+			)
+			local grace_cooldown = Managers.state.difficulty:get_table_entry_by_challenge(
+				AttackIntensitySettings.toughness_broken_grace_cooldown
+			)
+			local buff = table.clone(custom_buffs.toughness_broken_grace_period)
+			buff.active_duration = grace_settings.duration
+			buff.cooldown_duration = grace_cooldown
+			mod:add_buff(buff)
+		end
+	else
+		mod:remove_buff(custom_buffs.toughness_broken_grace_period.name)
 	end
 end
