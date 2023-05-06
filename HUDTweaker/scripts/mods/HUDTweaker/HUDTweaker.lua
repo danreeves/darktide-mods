@@ -40,13 +40,15 @@ mod:hook("HudElementBase", "update", function(func, self, ...)
 			if widget then
 				for style_id, custom_styles in pairs(widget_styles) do
 					local styles = widget.style[style_id]
-					for style_key, value in pairs(custom_styles) do
-						if type(value) == "table" then
-							for k, v in pairs(value) do
-								styles[style_key][k] = v
+					if styles then
+						for style_key, value in pairs(custom_styles) do
+							if type(value) == "table" then
+								for k, v in pairs(value) do
+									styles[style_key][k] = v
+								end
+							else
+								styles[style_key] = value
 							end
-						else
-							styles[style_key] = value
 						end
 					end
 				end
@@ -138,26 +140,24 @@ function HUDTweaker:update()
 	end
 
 	Imgui.set_next_window_size(500, 500)
-	local _, closed = Imgui.begin_window("HUDTweaker", "always_auto_resize")
+	local _, closed = Imgui.begin_window(mod:localize("mod_name"), "always_auto_resize")
 
 	if closed then
 		self:close()
 	end
 
-	self._search = Imgui.input_text("Search", self._search)
+	self._search = Imgui.input_text(mod:localize("search_box"), self._search)
 
 	for class_name, element in pairs(hud_elements) do
 		if self._search and string.find(string.lower(class_name), string.lower(self._search)) or self._search == "" then
 			if Imgui.tree_node(class_name) then
-				if Imgui.small_button("Reset tweaks") then
+				if Imgui.small_button(mod:localize("reset_tweaks")) then
 					set_style_tweak({ class_name }, nil)
 					for _, widget in pairs(element._widgets_by_name) do
 						widget.dirty = true
 					end
 				end
-				-- if Imgui.is_item_hovered() then
-				-- 	mod:echo("Hovering " .. class_name)
-				-- end
+
 				-- table_to_tree(element._ui_scenegraph, {})
 
 				for widget_name, widget in pairs(element._widgets_by_name) do
