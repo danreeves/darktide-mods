@@ -7,6 +7,14 @@ return {
 	options = {
 		widgets = {
 			{
+				setting_id = "open_buff_settings",
+				type = "keybind",
+				default_value = {},
+				keybind_trigger = "pressed",
+				keybind_type = "function_call",
+				function_name = "open_buff_settings",
+			},
+			{
 				setting_id = "custom_buffs",
 				type = "group",
 				sub_widgets = {
