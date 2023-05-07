@@ -59,13 +59,19 @@ function BuffSettingsWindow:_get_icon(buff_template)
 		return buff_template.hud_icon
 	end
 
-	local cached_icon = self._icon_cache[buff_template.name]
+	local buff_name = buff_template.name
+
+	local cached_icon = self._icon_cache[buff_name]
 	if cached_icon then
 		return cached_icon
 	end
 
+	if string.find(buff_name, "_parent") then
+		buff_name = string.gsub(buff_name, "_parent", "")
+	end
+
 	for _, item in pairs(self._items) do
-		if item.trait == buff_template.name then
+		if item.trait == buff_name then
 			if item.icon and item.icon ~= "" then
 				self._icon_cache[buff_template.name] = item.icon
 				return item.icon
@@ -89,8 +95,10 @@ end
 
 function BuffSettingsWindow:update()
 	if self._is_open then
-		-- Imgui.set_next_window_size(400, 600)
-		Imgui.begin_window("Buff Settings", "always_auto_resize")
+		local _, closed = Imgui.begin_window("Buff Settings", "always_auto_resize")
+		if closed then
+			self:close()
+		end
 
 		local _search = Imgui.input_text("Search", self._search)
 		if _search ~= self._search then
@@ -104,22 +112,26 @@ function BuffSettingsWindow:update()
 		local i = 1
 		for _, buff_template in pairs(self._buffs) do
 			if self._search == "" or #self._search > 0 and string.find(buff_template.name, self._search) then
+				local hud_icon = self:_get_icon(buff_template)
 				if i >= min and i <= max then
-					local hud_icon = self:_get_icon(buff_template)
+					-- if hud_icon then
+					Imgui.columns(2)
+					Imgui.set_column_width(80, 0)
 					if hud_icon then
-						Imgui.columns(2)
-						Imgui.set_column_width(80, 0)
 						Imgui.image(hud_icon, 64, 64)
-						if Imgui.is_item_hovered() then
-							Imgui.begin_tool_tip()
-							Imgui.text(buff_template.name)
-							Imgui.end_tool_tip()
-						end
-						Imgui.next_column()
-						self:checkbox("Priority", buff_template.name .. "_priority")
-						self:checkbox("Hidden", buff_template.name .. "_hidden")
-						Imgui.next_column()
+					else
+						Imgui.text(buff_template.name)
 					end
+					if Imgui.is_item_hovered() then
+						Imgui.begin_tool_tip()
+						Imgui.text(buff_template.name)
+						Imgui.end_tool_tip()
+					end
+					Imgui.next_column()
+					self:checkbox("Priority", buff_template.name .. "_priority")
+					self:checkbox("Hidden", buff_template.name .. "_hidden")
+					Imgui.next_column()
+					-- end
 				end
 				i = i + 1
 			end
