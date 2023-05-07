@@ -138,8 +138,72 @@ function BuffSettingsWindow:update()
 		end
 		Imgui.columns(1)
 		self._page = Imgui.slider_int("Page", self._page, 1, math.max(1, math.min(i - 9, self._num_buffs - 8)))
+
+		Imgui.separator()
+		if Imgui.button("Prioritise all negative buffs") then
+			self:_prioritise_all_negative()
+		end
+
+		if Imgui.button("Prioritise all blessings") then
+			self:_prioritise_all_blessings()
+		end
+
+		if Imgui.button("Hide all buffs") then
+			self:_hide_all()
+		end
+
+		if Imgui.button("Reset all settings") then
+			self:_reset_all()
+		end
+
 		Imgui.end_window()
 	end
+end
+
+function BuffSettingsWindow:_prioritise_all_blessings()
+	for _, item in pairs(self._items) do
+		if item.item_type == "TRAIT" then
+			local buff_name = item.trait
+
+			if self._buffs[buff_name] then
+				mod:set(buff_name .. "_priority", true)
+				mod:set(buff_name .. "_hidden", false)
+			end
+
+			buff_name = buff_name .. "_parent"
+
+			if self._buffs[buff_name] then
+				mod:set(buff_name .. "_priority", true)
+				mod:set(buff_name .. "_hidden", false)
+			end
+		end
+	end
+	mod:echo("Set all blessing buffs to priority buff bar")
+end
+
+function BuffSettingsWindow:_set_all_negative()
+	for _, buff_template in pairs(self._buffs) do
+		if buff_template.is_negative then
+			mod:set(buff_template.name .. "_priority", true)
+		end
+	end
+	mod:echo("Set all negative buffs to priority buff bar")
+end
+
+function BuffSettingsWindow:_hide_all()
+	for _, buff_template in pairs(self._buffs) do
+		mod:set(buff_template.name .. "_priority", false)
+		mod:set(buff_template.name .. "_hidden", true)
+	end
+	mod:echo("Reset all buff settings")
+end
+
+function BuffSettingsWindow:_reset_all()
+	for _, buff_template in pairs(self._buffs) do
+		mod:set(buff_template.name .. "_priority", false)
+		mod:set(buff_template.name .. "_hidden", false)
+	end
+	mod:echo("Reset all buff settings")
 end
 
 return BuffSettingsWindow
