@@ -1,4 +1,8 @@
 return {
+	mod_name = {
+		en = "Buff HUD Improvements",
+		["zh-cn"] = "状态效果 HUD 优化",
+	},
 	mod_description = {
 		en = "Disable buffs, move important buffs to a new buff bar, a framework for custom buffs",
 		["zh-cn"] = "禁用状态效果，将重要效果移动到单独的状态栏，并可作为自定义状态效果框架",
