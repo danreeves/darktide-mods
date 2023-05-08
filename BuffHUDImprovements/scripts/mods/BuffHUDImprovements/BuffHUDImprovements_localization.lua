@@ -1,10 +1,11 @@
 return {
 	mod_description = {
 		en = "Disable buffs, move important buffs to a new buff bar, a framework for custom buffs",
-		["zh-cn"] = "禁用状态效果，将重要效果移动到单独的状态栏，自定义状态效果框架",
+		["zh-cn"] = "禁用状态效果，将重要效果移动到单独的状态栏，并可作为自定义状态效果框架",
 	},
 	open_buff_settings = {
 		en = "Open settings window",
+		["zh-cn"] = "打开设置窗口",
 	},
 	custom_buffs = {
 		en = "Custom buffs",
