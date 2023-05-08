@@ -10,7 +10,7 @@ end)
 mod:hook_safe("ConstantMissionLobbyStatus", "_set_start_time", function(self, time)
 	if time < 1 then
 		local num_in_party = 0
-		for i, slot_widget in ipairs(self._slot_widgets) do
+		for _, slot_widget in ipairs(self._slot_widgets) do
 			if slot_widget.content.occupied then
 				num_in_party = num_in_party + 1
 			end
