@@ -85,3 +85,6 @@ end
 mod.on_setting_changed = function()
 	recreate_hud()
 end
+
+-- Presence.set_presence("steam_player_group", "Hello there")
+-- Presence.set_presence("steam_player_group_size", nil)

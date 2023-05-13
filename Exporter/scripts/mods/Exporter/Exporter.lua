@@ -231,7 +231,7 @@ function mod.export_files()
 				tbl.id = id
 				tbl.preview_image = id:gsub("/", "-")
 
-				if #tbl.description_values == 0 then
+				if tbl.description_values and #tbl.description_values == 0 then
 					tbl.description_values = nil
 				end
 
@@ -273,8 +273,64 @@ function mod.export_files()
 
 	preprocess(item_master_list)
 
+	local BuffTemplates = require("scripts/settings/buff/buff_templates")
+	local allowed_buff_keys = {
+		"name",
+		"class_name",
+		"keywords",
+		"stat_buffs",
+		"predicted",
+		"proc_events",
+		"unique_buff_id",
+		"duration",
+		"buff_id",
+		"lerped_stat_buffs",
+		"interval",
+		"hud_icon",
+		"hud_priority",
+		"is_negative",
+		"target",
+		"stepped_stat_buffs",
+		"refresh_duration_on_stack",
+		"max_stacks",
+		"unique_buff_priority",
+		"forbidden_keywords",
+		"damage_template",
+		"damage_type",
+		"max_stacks_cap",
+		"start_interval_on_apply",
+		"start_with_frame_offset",
+		"localization_info",
+		"meta_buff",
+		"meta_stat_buffs",
+	}
+	local buff_templates = {}
+
+	local function replace_functions(tbl)
+		for k, v in pairs(tbl) do
+			if type(v) == "function" then
+				mod:echo("AAAAA " .. k)
+				local info = debug.getinfo(v, "n")
+				mod:echo(cjson.encode(info))
+				tbl[k] = ""
+			end
+			if type(v) == "table" then
+				replace_functions(v)
+			end
+		end
+	end
+	for _, buff_template in pairs(BuffTemplates) do
+		local tbl = mod.copy_keys(buff_template, allowed_buff_keys)
+		replace_functions(tbl)
+		table.insert(buff_templates, tbl)
+	end
+
+	preprocess(buff_templates)
+
+	mod.write_file("exports\\buff_templates.json", cjson.encode(buff_templates))
 	mod.write_file("exports\\weapon_templates.json", cjson.encode(weapon_templates))
 	mod.write_file("exports\\item_master_list.json", cjson.encode(item_master_list))
+
 	mod.write_file(string.format("exports\\localization_%s.json", lm:language()), cjson.encode(localizations))
 	mod.write_file("exports\\textures.txt", mod.array_join(textures))
 end
