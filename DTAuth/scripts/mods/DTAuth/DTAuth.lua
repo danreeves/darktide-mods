@@ -8,7 +8,6 @@ end)
 
 if HAS_STEAM then
 	local function authenticate(ticket)
-		-- Use a localtunnel domain for local dev because url_request doesn't support ports
 		local domain = "https://darkti.de/"
 
 		if Backend.get_auth_method() == Backend.AUTH_METHOD_STEAM then
@@ -20,7 +19,6 @@ if HAS_STEAM then
 				:url_request(auth_url, {
 					headers = {
 						["steam-auth-session-ticket"] = ticket,
-						["Bypass-Tunnel-Reminder"] = true, -- For local dev
 					},
 				})
 				:next(function(data)
@@ -29,7 +27,7 @@ if HAS_STEAM then
 					end
 				end)
 				:catch(function(e)
-					if e.body.error then
+					if e.body and e.body.error then
 						mod:echo(e.body.error)
 					else
 						mod:echo("Failed with unknown error")
