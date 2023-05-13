@@ -52,9 +52,9 @@ mod:command("capture_images", "Automatically dump images of all items", function
 	Managers.ui:open_view("item_preview_view")
 end)
 
-function mod.write_file(file, contents)
+function mod.write_file(relative_path, contents)
 	local user_dir = os.getenv("USERPROFILE")
-	local path = string.format("%s\\Desktop\\%s", user_dir, file)
+	local path = string.format("%s\\Desktop\\%s", user_dir, relative_path)
 	local file = Mods.lua.io.open(path, "w+")
 	file:write(contents)
 	file:close()
@@ -128,6 +128,9 @@ function mod.export_files()
 				mod:echo(k .. " is nan")
 				t[k] = nil
 			end
+
+			-- need to check for inf, not math.huge(? i forget)
+			-- selene: allow(divide_by_zero)
 			if value == 1 / 0 then
 				mod:echo(k .. " is inf")
 				t[k] = nil
@@ -228,11 +231,15 @@ function mod.export_files()
 				tbl.id = id
 				tbl.preview_image = id:gsub("/", "-")
 
+				if #tbl.description_values == 0 then
+					tbl.description_values = nil
+				end
+
 				local archetypes = {}
 				for specialization, unlock_settings in pairs(WeaponUnlockSettings) do
-					for level, items in ipairs(unlock_settings) do
-						for _, item in ipairs(items) do
-							if item == id then
+					for _, items in ipairs(unlock_settings) do
+						for _, item_id in ipairs(items) do
+							if item_id == id then
 								archetypes[#archetypes + 1] = specialization_to_archetype[specialization]
 							end
 						end
@@ -241,9 +248,9 @@ function mod.export_files()
 				tbl.archetypes = archetypes
 
 				-- If a specialization has a weapon as a unique weapon its archetypes should only include that
-				for spec_id, specialization in pairs(ArchetypeSpecializations) do
+				for _, specialization in pairs(ArchetypeSpecializations) do
 					if specialization.unique_weapons then
-						for i, unique_weapon in ipairs(specialization.unique_weapons) do
+						for _, unique_weapon in ipairs(specialization.unique_weapons) do
 							if id == unique_weapon.item then
 								tbl.archetypes = { specialization.archetype }
 							end
