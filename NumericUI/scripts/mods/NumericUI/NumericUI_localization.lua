@@ -201,7 +201,7 @@ return {
 	},
 	show_medical_crate_radius_description = {
 		en = "INCREASES MEMORY USE!",
-		["zh-cn"] = "会增加内存占用",
+		["zh-cn"] = "会增加内存占用！",
 		ru = "УВЕЛИЧИВАЕТ ИСПОЛЬЗОВАНИЕ ПАМЯТИ!",
 	},
 	boss_health_settings = {
