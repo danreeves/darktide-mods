@@ -140,18 +140,18 @@ function HUDTweaker:update()
 	end
 
 	Imgui.set_next_window_size(500, 500)
-	local _, closed = Imgui.begin_window(mod:localize("mod_name"), "always_auto_resize")
+	local _, closed = Imgui.begin_window("HUD Tweaker", "always_auto_resize")
 
 	if closed then
 		self:close()
 	end
 
-	self._search = Imgui.input_text(mod:localize("search_box"), self._search)
+	self._search = Imgui.input_text("Search", self._search)
 
 	for class_name, element in pairs(hud_elements) do
 		if self._search and string.find(string.lower(class_name), string.lower(self._search)) or self._search == "" then
 			if Imgui.tree_node(class_name) then
-				if Imgui.small_button(mod:localize("reset_tweaks")) then
+				if Imgui.small_button("Reset tweaks") then
 					set_style_tweak({ class_name }, nil)
 					for _, widget in pairs(element._widgets_by_name) do
 						widget.dirty = true
