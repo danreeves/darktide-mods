@@ -197,6 +197,18 @@ return {
 					},
 				},
 			},
+			{
+				setting_id = "boss_health_settings",
+				type = "group",
+				sub_widgets = {
+
+					{
+						setting_id = "show_boss_health_numbers",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
+			},
 		},
 	},
 }

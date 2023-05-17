@@ -27,6 +27,10 @@ globals:
     args:
       - type: string
       - type: string
+  table.array_contains:
+    args:
+      - type: table
+      - type: any
   table.clear:
     args:
       - type: table
@@ -168,3 +172,8 @@ globals:
       - type: table
   Vector3Box:
     any: true
+  Mods:
+    any: true
+  math.is_nan:
+    args:
+      - type: any

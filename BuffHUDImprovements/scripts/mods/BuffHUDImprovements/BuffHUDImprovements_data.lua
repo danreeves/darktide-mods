@@ -1,7 +1,7 @@
 local mod = get_mod("BuffHUDImprovements")
 
 return {
-	name = "Buff HUD Improvements",
+	name = mod:localize("mod_name"),
 	description = mod:localize("mod_description"),
 	is_togglable = true,
 	options = {
