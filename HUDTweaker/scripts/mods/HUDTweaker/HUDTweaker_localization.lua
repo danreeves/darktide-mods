@@ -2,6 +2,7 @@ return {
 	mod_name = {
 		en = "HUD Tweaker",
 		ru = "Тонкая настройка интерфейса",
+		["zh-cn"] = "HUD 调整器",
 	},
 	mod_description = {
 		en = "A tool to tweak the styles of any HUD element",
