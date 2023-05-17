@@ -11,6 +11,7 @@ mod:io_dofile("NumericUI/scripts/mods/NumericUI/Interactions")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/Nameplates")
 -- mod:io_dofile("NumericUI/scripts/mods/NumericUI/MissionIntroView")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/MedicalCrate")
+mod:io_dofile("NumericUI/scripts/mods/NumericUI/BossHealth")
 
 local hud_elements = {
 	{
