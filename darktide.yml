@@ -177,3 +177,5 @@ globals:
   math.is_nan:
     args:
       - type: any
+  callback:
+    any: true
