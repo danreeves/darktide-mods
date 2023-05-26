@@ -207,9 +207,11 @@ return {
 	boss_health_settings = {
 		en = "Boss health",
 		["zh-cn"] = "Boss 生命值",
+		ru = "Здоровье босса",
 	},
 	show_boss_health_numbers = {
 		en = "Show boss health numbers",
 		["zh-cn"] = "显示 Boss 生命值数字",
+		ru = "Показывать цифры здоровья босса",
 	},
 }
