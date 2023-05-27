@@ -181,7 +181,7 @@ function BuffSettingsWindow:_prioritise_all_blessings()
 	mod:echo("Set all blessing buffs to priority buff bar")
 end
 
-function BuffSettingsWindow:_set_all_negative()
+function BuffSettingsWindow:_prioritise_all_negative()
 	for _, buff_template in pairs(self._buffs) do
 		if buff_template.is_negative then
 			mod:set(buff_template.name .. "_priority", true)
