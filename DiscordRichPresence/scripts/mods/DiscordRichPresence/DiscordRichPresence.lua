@@ -1,4 +1,5 @@
 local mod = get_mod("DiscordRichPresence")
+local SoloPlay = get_mod("SoloPlay")
 
 local PresenceSettings = require("scripts/settings/presence/presence_settings")
 local Missions = require("scripts/settings/mission/mission_templates")
@@ -22,7 +23,14 @@ function mod.get_mission_name()
 	end
 end
 
-function set_presence()
+local function is_soloplay()
+	if SoloPlay and SoloPlay.is_soloplay() then
+		return true
+	end
+	return false
+end
+
+local function set_presence()
 	if not Managers.presence then
 		return
 	end
@@ -36,7 +44,7 @@ function set_presence()
 	DarktideDiscord.set_start_time()
 
 	-- I want to show map name so this needs a special case
-	if activity_id == "mission" then
+	if activity_id == "mission" or is_soloplay() then
 		local mission_name = mod.get_mission_name()
 		DarktideDiscord.set_details(mission_name)
 
@@ -87,7 +95,7 @@ mod:hook_safe("PresenceManager", "_update_my_presence", set_presence)
 function mod.on_game_state_changed()
 	local presence = Managers.presence._myself
 	local activity_id = presence:activity_id()
-	if activity_id == "mission" then
+	if activity_id == "mission" or is_soloplay() then
 		local challenge = Managers.state and Managers.state.difficulty and Managers.state.difficulty:get_difficulty()
 			or 0
 		local danger_settings = DangerSettings.by_index[challenge]
@@ -98,3 +106,5 @@ function mod.on_game_state_changed()
 		end
 	end
 end
+
+set_presence()

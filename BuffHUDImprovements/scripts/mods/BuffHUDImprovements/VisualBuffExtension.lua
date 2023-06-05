@@ -151,27 +151,39 @@ VisualBuffExtension.destroy = function(self)
 end
 
 mod:hook_safe("PlayerUnitBuffExtension", "init", function(_self, extension_init_context, unit, extension_init_data)
-	if pt.visual_buff_extension then
-		pt.visual_buff_extension:destroy()
+	local player = Managers.player:local_player(1)
+	local player_unit = player.player_unit
+	if unit == player_unit then
+		if pt.visual_buff_extension then
+			pt.visual_buff_extension:destroy()
+		end
+		pt.visual_buff_extension = VisualBuffExtension:new(
+			unit,
+			extension_init_data.player,
+			extension_init_context.world,
+			extension_init_context.physics_world,
+			extension_init_context.wwise_world
+		)
 	end
-	pt.visual_buff_extension = VisualBuffExtension:new(
-		unit,
-		extension_init_data.player,
-		extension_init_context.world,
-		extension_init_context.physics_world,
-		extension_init_context.wwise_world
-	)
 end)
 
 mod:hook_safe("PlayerUnitBuffExtension", "fixed_update", function(_self, unit, dt, t)
-	if pt.visual_buff_extension then
-		pt.visual_buff_extension:update(unit, dt, t)
+	local player = Managers.player:local_player(1)
+	local player_unit = player.player_unit
+	if unit == player_unit then
+		if pt.visual_buff_extension then
+			pt.visual_buff_extension:update(unit, dt, t)
+		end
 	end
 end)
 
-mod:hook_safe("PlayerUnitBuffExtension", "destroy", function()
-	if pt.visual_buff_extension then
-		pt.visual_buff_extension:destroy()
+mod:hook_safe("PlayerUnitBuffExtension", "destroy", function(self)
+	local player = Managers.player:local_player(1)
+	local player_unit = player.player_unit
+	if self._unit == player_unit then
+		if pt.visual_buff_extension then
+			pt.visual_buff_extension:destroy()
+		end
 	end
 end)
 
