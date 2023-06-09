@@ -11,4 +11,8 @@ return {
 		en = "Open window",
 		["zh-cn"] = "打开窗口",
 	},
+	ui_scale = {
+		en = "Set font and window size",
+		["zh-cn"] = "设置 UI 大小缩放",
+	},
 }

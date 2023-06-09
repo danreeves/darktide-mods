@@ -1,7 +1,15 @@
 local mod = get_mod("LuaScratchpad")
 
 local LuaScratchpad = class("LuaScratchpad")
+local ui_scale = mod:get("ui_scale")
+local WIDTH = 500
+local HEIGHT = 750
+local OFFSET = 50
+local PADDING = 16
 local first_run = true
+local window_width = math.min(WIDTH * ui_scale, RESOLUTION_LOOKUP.width - OFFSET)
+local window_height = math.min(HEIGHT * ui_scale, RESOLUTION_LOOKUP.height - OFFSET)
+local padded_width = window_width - PADDING
 
 function LuaScratchpad:init()
 	self._is_open = false
@@ -54,9 +62,9 @@ function LuaScratchpad:update()
 		return
 	end
 
-	Imgui.set_next_window_size(500, 750)
+	Imgui.set_next_window_size(window_width, window_height)
 	if first_run then
-		Imgui.set_next_window_pos(50, 50)
+		Imgui.set_next_window_pos(OFFSET, OFFSET)
 		first_run = false
 	end
 	local _, closed = Imgui.begin_window("Lua Scratchpad", "always_auto_resize")
@@ -65,10 +73,12 @@ function LuaScratchpad:update()
 		self:close()
 	end
 
-	Imgui.push_item_width(500 - 16)
+	Imgui.set_window_font_scale(ui_scale)
+
+	Imgui.push_item_width(padded_width)
 	self._lua_string = Imgui.input_text_multiline("", self._lua_string)
 
-	if Imgui.button("Run lua", 500 - 16) then
+	if Imgui.button("Run lua", padded_width) then
 		Mods.lua.loadstring(self._lua_string)()
 	end
 
