@@ -59,7 +59,7 @@ function LuaScratchpad:update()
 		Imgui.set_next_window_pos(50, 50)
 		first_run = false
 	end
-	local _, closed = Imgui.begin_window("Lua Scratchpath", "always_auto_resize")
+	local _, closed = Imgui.begin_window("Lua Scratchpad", "always_auto_resize")
 
 	if closed then
 		self:close()
