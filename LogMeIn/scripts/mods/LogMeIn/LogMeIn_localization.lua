@@ -7,4 +7,7 @@ return {
 		en = "Press to cancel auto character selection",
 		["zh-cn"] = "按键取消自动选择角色",
 	},
+	auto_character_select = {
+		en = "Select your most recently played character automatically",
+	},
 }

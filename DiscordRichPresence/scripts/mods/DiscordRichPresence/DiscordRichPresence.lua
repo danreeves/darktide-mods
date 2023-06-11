@@ -106,5 +106,3 @@ function mod.on_game_state_changed()
 		end
 	end
 end
-
-set_presence()

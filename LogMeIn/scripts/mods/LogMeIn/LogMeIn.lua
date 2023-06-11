@@ -21,7 +21,7 @@ mod:hook_safe(TitleView, "on_enter", function(self)
 end)
 
 mod:hook_safe("MainMenuView", "_set_waiting_for_characters", function(self, waiting)
-	if state.first_load and not waiting then
+	if mod:get("auto_character_select") and state.first_load and not waiting then
 		cancel()
 		self:_on_play_pressed()
 	end
