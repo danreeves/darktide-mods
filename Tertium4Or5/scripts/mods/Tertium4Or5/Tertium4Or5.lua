@@ -94,9 +94,9 @@ end
 
 -- mod.on_game_state_changed("enter", "StateLoading")
 
-mod:hook("GameModeCoopCompleteObjective", "_num_available_bot_slots", function(func, self, ...)
+mod:hook("PlayerUnitSpawnManager", "_num_available_bot_slots", function(func, self, ...)
 	local num = func(self, ...)
-	if num > 1 and mod:get("four_bots") then
+	if mod:get("four_bots") then
 		return num + 1
 	end
 	return num
