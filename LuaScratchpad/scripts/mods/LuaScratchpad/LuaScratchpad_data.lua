@@ -14,6 +14,13 @@ return {
 				keybind_type = "function_call",
 				function_name = "toggle_editor",
 			},
+			{
+				setting_id = "ui_scale",
+				type = "numeric",
+				default_value = 1.5,
+				range = { 1, 5 },
+				decimals_number = 1,
+			},
 		},
 	},
 }

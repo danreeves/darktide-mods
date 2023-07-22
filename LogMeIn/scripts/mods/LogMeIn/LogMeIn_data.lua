@@ -7,6 +7,11 @@ return {
 	options = {
 		widgets = {
 			{
+				setting_id = "auto_character_select",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
 				setting_id = "cancel_auto_character_select",
 				type = "keybind",
 				default_value = { "space" },

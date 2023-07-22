@@ -341,13 +341,13 @@ local function hud_init_with_features(
 	definition_path,
 	definition_settings
 )
-	if data.player:is_human_controlled() then
-		if definition_path == TEAM_PANEL_DEF_PATH then
-			definition_settings.feature_list.health_text = mod:get("health_text")
-			definition_settings.feature_list.toughness_text = mod:get("toughness_text")
-		end
-		definition_settings.feature_list.level = mod:get("level")
+	-- if data.player:is_human_controlled() then
+	if definition_path == TEAM_PANEL_DEF_PATH then
+		definition_settings.feature_list.health_text = mod:get("health_text")
+		definition_settings.feature_list.toughness_text = mod:get("toughness_text")
 	end
+	definition_settings.feature_list.level = mod:get("level")
+	-- end
 
 	return func(self, parent, draw_layer, start_scale, data, definition_path, definition_settings)
 end
@@ -455,9 +455,9 @@ end
 mod:hook("HudElementPlayerPanelBase", "init", hud_init_with_features)
 
 mod:hook_safe("HudElementPlayerPanelBase", "destroy", function(self)
-	if not self._data.player:is_human_controlled() then
-		return
-	end
+	-- if not self._data.player:is_human_controlled() then
+	-- 	return
+	-- end
 
 	local player_extensions = self:_player_extensions(self._data.player)
 
@@ -491,9 +491,9 @@ end)
 local function update_numericui_player_features(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
 
-	if not player:is_human_controlled() then
-		return
-	end
+	-- if not player:is_human_controlled() then
+	-- 	return
+	-- end
 
 	local ammo_text_widget = self._widgets_by_name.numeric_ui_ammo_text
 	local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
@@ -586,16 +586,16 @@ mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_nume
 mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_numericui_player_features)
 
 mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, _parent, _draw_layer, _start_scale, data)
-	if not data.player:is_human_controlled() then
-		if self._widgets_by_name.numeric_ui_ammo_text then
-			self._widgets_by_name.numeric_ui_ammo_text.content.text = " "
-		end
-
-		if self._widgets_by_name.ability_bar then
-			self._widgets_by_name.ability_bar.visible = false
-		end
-		return
-	end
+	-- if not data.player:is_human_controlled() then
+	-- 	if self._widgets_by_name.numeric_ui_ammo_text then
+	-- 		self._widgets_by_name.numeric_ui_ammo_text.content.text = " "
+	-- 	end
+	--
+	-- 	if self._widgets_by_name.ability_bar then
+	-- 		self._widgets_by_name.ability_bar.visible = false
+	-- 	end
+	-- 	return
+	-- end
 
 	local player_extensions = self:_player_extensions(data.player)
 
