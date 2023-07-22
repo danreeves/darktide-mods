@@ -1,7 +1,7 @@
 local mod = get_mod("TrueSoloQoL")
 local PlayerMovement = require("scripts/utilities/player_movement")
 
-mod:hook("GameModeCoopCompleteObjective", "_num_available_bot_slots", function(func, ...)
+mod:hook("PlayerUnitSpawnManager", "_num_available_bot_slots", function(func, ...)
 	if mod:get("disable_bots") then
 		return 0
 	end
