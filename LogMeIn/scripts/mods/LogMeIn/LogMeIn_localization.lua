@@ -9,5 +9,6 @@ return {
 	},
 	auto_character_select = {
 		en = "Select your most recently played character automatically",
+		["zh-cn"] = "自动选择最近玩过的角色",
 	},
 }
