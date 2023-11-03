@@ -15,6 +15,7 @@ function LuaScratchpad:init()
 	self._is_open = false
 	self._lua_string = "local mod = get_mod('LuaScratchpad'); mod:echo('hi')"
 	self._global = "Managers"
+	self._inspect_value = nil
 end
 
 function LuaScratchpad:open()
@@ -82,16 +83,24 @@ function LuaScratchpad:update()
 		Mods.lua.loadstring(self._lua_string)()
 	end
 
-	self._global = Imgui.input_text("inspect", self._global)
-	local global_script = Mods.lua.loadstring("return " .. self._global)
-	local global = nil
-	if global_script then
-		global = global_script()
+	local inspect_label
+	local inspect_value
+
+	if self._inspect_value then
+		inspect_label = "Inspecting.."
+		inspect_value = self._inspect_value
+	else
+		self._global = Imgui.input_text("inspect", self._global)
+		inspect_label = self._global
+		local global_script = Mods.lua.loadstring("return " .. self._global)
+		if global_script then
+			inspect_value = global_script()
+		end
 	end
 
-	if Imgui.tree_node(self._global, true) then
-		if global then
-			table_to_tree(global)
+	if Imgui.tree_node(inspect_label, true) then
+		if inspect_value then
+			table_to_tree(inspect_value)
 		else
 			Imgui.text("nil")
 		end
@@ -112,6 +121,15 @@ function mod.toggle_editor()
 		editor:close()
 	else
 		editor:open()
+	end
+end
+
+function mod.inspect(...)
+	if editor then
+		editor._inspect_value = select("#", ...) > 1 and {...} or ...
+		if not editor._is_open then
+			editor:open()
+		end
 	end
 end
 
