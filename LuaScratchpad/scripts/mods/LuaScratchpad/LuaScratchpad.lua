@@ -42,7 +42,10 @@ function LuaScratchpad:close()
 end
 
 local function table_to_tree(tbl)
-	for key, value in pairs(tbl) do
+	local keys = table.keys(tbl)
+	table.sort(keys)
+	for i, key in ipairs(keys) do
+		local value = tbl[key]
 		if Imgui.tree_node(key) then
 			local typeof = type(value)
 
