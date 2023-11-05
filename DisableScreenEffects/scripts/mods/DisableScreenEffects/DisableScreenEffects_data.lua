@@ -23,7 +23,7 @@ for _, effect in ipairs(mod.screenspace_effects) do
 end
 
 for buff_name, template in pairs(BuffTemplates) do
-	if template.player_effects and not string.match(buff_name, "shade") then
+	if template.player_effects then
 		add(buff_name)
 	end
 end

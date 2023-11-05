@@ -41,7 +41,7 @@ function LobbyView:__modded_cb_on_weapon_swap_pressed()
 	end
 end
 
-mod:hook("LobbyView", "_setup_loadout_widgets", function(func, self, spawn_slot)
+mod:hook("LobbyView", "_setup_weapon_widgets", function(func, self, spawn_slot)
 	spawn_slot.default_slot = mod:get("default_slot")
 	return func(self, spawn_slot)
 end)
