@@ -31,12 +31,10 @@ end
 for mood_type, _ in pairs(mood_types) do
 	local mood = moods[mood_type]
 	if
-		(
-			mood.shading_environment
-			or mood.particle_effects_on_enter
-			or mood.particle_effects_looping
-			or mood.particle_effects_on_exit
-		) and mood_type ~= "stealth"
+		mood.shading_environment
+		or mood.particle_effects_on_enter
+		or mood.particle_effects_looping
+		or mood.particle_effects_on_exit
 	then
 		add(mood_type)
 	end
