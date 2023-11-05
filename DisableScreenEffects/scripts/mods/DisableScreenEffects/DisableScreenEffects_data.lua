@@ -11,7 +11,7 @@ local function add(name)
 	widgets[#widgets + 1] = {
 		setting_id = name,
 		type = "checkbox",
-		default_value = true,
+		default_value = false,
 	}
 end
 
