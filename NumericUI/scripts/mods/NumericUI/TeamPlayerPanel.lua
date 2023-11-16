@@ -5,9 +5,8 @@ local backups = mod:persistent_table("team_hud_backups")
 backups.team_hud_definitions = backups.team_hud_definitions or mod:original_require(TEAM_HUD_DEF_PATH)
 
 local UIWidget = require("scripts/managers/ui/ui_widget")
-local HudElementTeamPlayerPanelSettings = require(
-	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings"
-)
+local HudElementTeamPlayerPanelSettings =
+	require("scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings")
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local FixedFrame = require("scripts/utilities/fixed_frame")
@@ -19,15 +18,12 @@ if false then
 		"_add_panel",
 		function(self, unique_id, ui_renderer, fixed_scenegraph_id)
 			local PlayerCompositions = require("scripts/utilities/players/player_compositions")
-			local HudElementPersonalPlayerPanelHub = require(
-				"scripts/ui/hud/elements/personal_player_panel_hub/hud_element_personal_player_panel_hub"
-			)
-			local HudElementTeamPlayerPanelHub = require(
-				"scripts/ui/hud/elements/team_player_panel_hub/hud_element_team_player_panel_hub"
-			)
-			local HudElementTeamPlayerPanel = require(
-				"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel"
-			)
+			local HudElementPersonalPlayerPanelHub =
+				require("scripts/ui/hud/elements/personal_player_panel_hub/hud_element_personal_player_panel_hub")
+			local HudElementTeamPlayerPanelHub =
+				require("scripts/ui/hud/elements/team_player_panel_hub/hud_element_team_player_panel_hub")
+			local HudElementTeamPlayerPanel =
+				require("scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel")
 			local player_composition_name = self._player_composition_name
 			local player = PlayerCompositions.player_from_unique_id(player_composition_name, unique_id)
 			local scale = ui_renderer.scale or 1
@@ -441,11 +437,8 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 
 		if show_ability_bar then
 			ability_bar_widget.style.texture.color = Color.terminal_background_gradient_selected(255, true)
-			local cd_progress = math.clamp(
-				ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()],
-				0,
-				1.0
-			)
+			local cd_progress =
+				math.clamp(ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()], 0, 1.0)
 			ability_bar_widget.style.texture.size[1] = bar_size[1] * cd_progress
 			ability_bar_widget.dirty = true
 		end

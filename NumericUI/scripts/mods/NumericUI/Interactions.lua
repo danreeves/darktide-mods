@@ -14,6 +14,12 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 			local interactor_extension = self._active_presentation_data.interactor_extension
 			local description_widget = self._widgets_by_name.description_text
 
+			local hud_description = interactor_extension:hud_description()
+
+			if hud_description == nil then
+				return
+			end
+
 			local player = Managers.player:local_player(1)
 			local player_unit = player.player_unit
 			local unit_data_ext = ScriptUnit.extension(player_unit, "unit_data_system")
@@ -40,8 +46,6 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 			local current_ammo = ammo_clip + ammo_reserve
 			local small_clip_gain = small_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, small_clip_data)
 			local large_clip_gain = large_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, large_clip_data)
-
-			local hud_description = interactor_extension:hud_description()
 
 			if description_widget and max_ammo then
 				local missing_ammo = max_ammo - current_ammo
@@ -73,12 +77,8 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 					or show_ammo_gain and not show_ammo_wasted and "%s {#color(0,255,0,200);}(+%d)"
 					or "%s"
 
-				description_widget.content.text = string.format(
-					desc_str,
-					Localize(hud_description),
-					ammo_gain,
-					ammo_wasted
-				)
+				description_widget.content.text =
+					string.format(desc_str, Localize(hud_description), ammo_gain, ammo_wasted)
 				description_widget.dirty = true
 			end
 		end
