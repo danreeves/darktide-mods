@@ -214,4 +214,13 @@ return {
 		["zh-cn"] = "显示 Boss 生命值数字",
 		ru = "Показывать цифры здоровья босса",
 	},
+	marker_settings = {
+		en = "Marker settings",
+	},
+	show_ping_skull = {
+		en = "Show tag skull",
+	},
+	show_vet_ping_skull = {
+		en = "Show Veteran tag skull",
+	},
 }

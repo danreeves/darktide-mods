@@ -12,6 +12,7 @@ mod:io_dofile("NumericUI/scripts/mods/NumericUI/Nameplates")
 -- mod:io_dofile("NumericUI/scripts/mods/NumericUI/MissionIntroView")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/MedicalCrate")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/BossHealth")
+mod:io_dofile("NumericUI/scripts/mods/NumericUI/PingMarkers")
 
 local hud_elements = {
 	{
@@ -86,6 +87,3 @@ end
 mod.on_setting_changed = function()
 	recreate_hud()
 end
-
--- Presence.set_presence("steam_player_group", "Hello there")
--- Presence.set_presence("steam_player_group_size", nil)

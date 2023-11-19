@@ -209,6 +209,24 @@ return {
 					},
 				},
 			},
+			{
+				setting_id = "marker_settings",
+				type = "group",
+				sub_widgets = {
+
+					{
+						setting_id = "show_ping_skull",
+						type = "checkbox",
+						default_value = true,
+					},
+
+					{
+						setting_id = "show_vet_ping_skull",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
+			},
 		},
 	},
 }
