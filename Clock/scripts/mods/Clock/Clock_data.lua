@@ -40,6 +40,7 @@ return {
 				setting_id = "digital_clock",
 				type = "checkbox",
 				default_value = false,
+				tooltip = "digital_clock_tooltip",
 			},
 			{
 				setting_id = "font",

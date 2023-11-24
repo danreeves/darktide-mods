@@ -20,8 +20,11 @@ local localizations = {
 		["zh-cn"] = "在 HUD 上添加时钟",
 	},
 	digital_clock = {
-		en = "Digital clock",
+		en = "Digital clock font",
 		["zh-cn"] = "数字时钟",
+	},
+	digital_clock_tooltip = {
+		en = "Uses a special digital clock font for the numbers",
 	},
 	font_size = {
 		en = "Font size",
