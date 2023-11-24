@@ -26,7 +26,7 @@ return {
 	options = {
 		widgets = {
 			{
-				setting_id = "digital_clock",
+				setting_id = "twentyfour_hour",
 				type = "checkbox",
 				default_value = false,
 			},
@@ -35,6 +35,11 @@ return {
 				type = "numeric",
 				default_value = 25,
 				range = { 0, 255 },
+			},
+			{
+				setting_id = "digital_clock",
+				type = "checkbox",
+				default_value = false,
 			},
 			{
 				setting_id = "font",

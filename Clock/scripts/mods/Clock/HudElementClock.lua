@@ -55,7 +55,8 @@ end
 
 HudElementClock.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 	HudElementClock.super.update(self, dt, t, ui_renderer, render_settings, input_service)
-	local time = os.date("%I:%M:%S")
+	local hours = mod:get("twentyfour_hour") and "H" or "I"
+	local time = os.date("%" .. hours .. ":%M:%S")
 	local symbols_text = ""
 
 	for c in time:gmatch(".") do
@@ -70,6 +71,7 @@ HudElementClock.update = function(self, dt, t, ui_renderer, render_settings, inp
 
 	self._widgets_by_name.clock.style.text.font_size = mod:get("font_size") or 25
 	self._widgets_by_name.clock.style.text_color = Color[mod:get("color")](255, true)
+	self._widgets_by_name.clock.style.font_type = mod:get("font") or "machine_medium"
 	self._widgets_by_name.clock.content.text = mod:get("digital_clock") and symbols_text or time
 end
 

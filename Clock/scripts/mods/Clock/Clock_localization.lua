@@ -35,6 +35,9 @@ local localizations = {
 		en = "Color",
 		["zh-cn"] = "颜色",
 	},
+	twentyfour_hour = {
+		en = "24 hour clock",
+	},
 }
 
 for font_name, _ in pairs(FontDefinitions.fonts) do
