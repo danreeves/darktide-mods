@@ -1,3 +1,5 @@
+require("scripts/foundation/utilities/color")
+
 local mod = get_mod("Clock")
 local FontDefinitions = require("scripts/managers/ui/ui_fonts_definitions")
 
@@ -9,7 +11,6 @@ for font_name, _ in pairs(FontDefinitions.fonts) do
 	})
 end
 
-require("scripts/foundation/utilities/color")
 local color_options = {}
 for _, color in ipairs(Color.list) do
 	table.insert(color_options, {

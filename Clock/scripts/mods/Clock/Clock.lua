@@ -23,8 +23,6 @@ function add_hud_element(elements)
 	end
 end
 
-mod:hook_require("scripts/ui/hud/hud_elements_player_hub", add_hud_element)
 mod:hook_require("scripts/ui/hud/hud_elements_player", add_hud_element)
-
--- require("scripts/ui/hud/hud_elements_player")
--- require("scripts/ui/hud/hud_elements_player_hub")
+mod:hook_require("scripts/ui/hud/hud_elements_player_hub", add_hud_element)
+mod:hook_require("scripts/ui/hud/hud_elements_player_onboarding", add_hud_element)

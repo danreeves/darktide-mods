@@ -1,4 +1,5 @@
 require("scripts/foundation/utilities/color")
+
 local FontDefinitions = require("scripts/managers/ui/ui_fonts_definitions")
 
 function firstToUpper(str)

@@ -1,3 +1,5 @@
+require("scripts/foundation/utilities/color")
+
 local mod = get_mod("Clock")
 local UISettings = require("scripts/settings/ui/ui_settings")
 
