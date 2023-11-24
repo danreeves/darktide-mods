@@ -216,11 +216,14 @@ return {
 	},
 	marker_settings = {
 		en = "Marker settings",
+		["zh-cn"] = "标记设置",
 	},
 	show_ping_skull = {
 		en = "Show tag skull",
+		["zh-cn"] = "显示标记骷髅图标",
 	},
 	show_vet_ping_skull = {
 		en = "Show Veteran tag skull",
+		["zh-cn"] = "显示老兵标记骷髅图标",
 	},
 }

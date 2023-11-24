@@ -11,20 +11,29 @@ function underscoreToSpace(str)
 end
 
 local localizations = {
+	mod_name = {
+		en = "Clock",
+		["zh-cn"] = "时钟",
+	},
 	mod_description = {
 		en = "Adds a clock to the HUD",
+		["zh-cn"] = "在 HUD 上添加时钟",
 	},
 	digital_clock = {
 		en = "Digital clock",
+		["zh-cn"] = "数字时钟",
 	},
 	font_size = {
 		en = "Font size",
+		["zh-cn"] = "字号",
 	},
 	font = {
 		en = "Font",
+		["zh-cn"] = "字体",
 	},
 	color = {
 		en = "Color",
+		["zh-cn"] = "颜色",
 	},
 }
 
