@@ -1,6 +1,7 @@
 return {
 	mod_name = {
 		en = "Log Me In",
+		["zh-cn"] = "快捷登录",
 		ru = "Впусти меня",
 	},
 	mod_description = {
