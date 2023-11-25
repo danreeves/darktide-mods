@@ -64,3 +64,12 @@ mod:hook_safe(
 		end
 	end
 )
+
+mod.textures = { bleed = "https://darkti.de/mod-assets/bleed.png", burn = "https://darkti.de/mod-assets/burn.png" }
+mod.colors = { bleed = { 255, 255, 0, 0 }, burn = { 255, 255, 102, 0 } }
+
+for k, v in pairs(mod.textures) do
+	Managers.url_loader:load_texture(v):next(function(data)
+		mod.textures[k] = data.texture
+	end)
+end

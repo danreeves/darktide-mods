@@ -188,11 +188,8 @@ template.create_widget_defintion = function(template, scenegraph_id)
 					end
 
 					if ui_content.dead then
-						local damage_has_started_position = Vector3(
-							x_position,
-							y_position - damage_number_settings.dps_y_offset,
-							z_position
-						)
+						local damage_has_started_position =
+							Vector3(x_position, y_position - damage_number_settings.dps_y_offset, z_position)
 						local dps = ui_content.damage_has_started_timer > 1
 								and ui_content.damage_taken / ui_content.damage_has_started_timer
 							or ui_content.damage_taken
@@ -364,6 +361,134 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				},
 			},
 		},
+
+		{
+			pass_type = "texture",
+			style_id = "status_icon_1",
+			value_id = "status_icon_1",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20,
+					-20,
+					4,
+				},
+				size = {
+					20,
+					20,
+				},
+				material_values = {
+					use_placeholder_texture = 0,
+				},
+				color = {
+					255,
+					255,
+					0,
+					0,
+				},
+			},
+			visibility_function = function(content, style)
+				if style.material_values.texture_map then
+					return true
+				end
+
+				return false
+			end,
+		},
+		{
+			pass_type = "text",
+			style_id = "status_stacks_1",
+			value_id = "status_stacks_1",
+			value = "",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 20,
+					-20,
+					4,
+				},
+				size = {
+					20,
+					20,
+				},
+				font_type = header_font_settings.font_type,
+				font_size = 14,
+				text_color = {
+					255,
+					255,
+					0,
+					0,
+				},
+			},
+		},
+
+		{
+			pass_type = "texture",
+			style_id = "status_icon_2",
+			value_id = "status_icon_2",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 20 + 20,
+					-20,
+					4,
+				},
+				size = {
+					20,
+					20,
+				},
+				material_values = {
+					use_placeholder_texture = 0,
+				},
+				color = {
+					255,
+					255,
+					102,
+					0,
+				},
+			},
+			visibility_function = function(content, style)
+				if style.material_values.texture_map then
+					return true
+				end
+
+				return false
+			end,
+		},
+		{
+			pass_type = "text",
+			style_id = "status_stacks_2",
+			value_id = "status_stacks_2",
+			value = "",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 20 + 20 + 20,
+					-20,
+					4,
+				},
+				size = {
+					20,
+					20,
+				},
+				font_type = header_font_settings.font_type,
+				font_size = 14,
+				text_color = {
+					255,
+					255,
+					102,
+					0,
+				},
+			},
+		},
 	}, scenegraph_id)
 end
 
@@ -393,6 +518,72 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local health_percent = is_dead and 0 or health_extension:current_health_percent()
 	local max_health = Managers.state.difficulty:get_minion_max_health(content.breed.name)
 	local damage_taken = nil
+
+	local buff_extension = ScriptUnit.extension(unit, "buff_system")
+
+	if buff_extension then
+		local is_bleeding = buff_extension:has_buff_using_buff_template("bleed")
+		local bleed_stacks = buff_extension:current_stacks("bleed")
+
+		local is_on_regularfire = buff_extension:has_buff_using_buff_template("flamer_assault")
+		local regularfire_stacks = buff_extension:current_stacks("flamer_assault")
+
+		local is_on_warpfire = buff_extension:has_buff_using_buff_template("warp_fire")
+		local warpfire_stacks = buff_extension:current_stacks("warp_fire")
+
+		local is_on_fire = is_on_regularfire or is_on_warpfire
+		local burn_stacks = regularfire_stacks + warpfire_stacks
+
+		marker.debuffs = marker.debuffs or {}
+
+		if mod:get("bleed") then
+			local i, debuff = table.find_by_key(marker.debuffs, "type", "bleed")
+			if debuff then
+				debuff.stacks = bleed_stacks
+				if not bleed_stacks or bleed_stacks == 0 then
+					table.remove(marker.debuffs, i)
+				end
+			else
+				if is_bleeding then
+					table.insert(marker.debuffs, { type = "bleed", stacks = bleed_stacks })
+				end
+			end
+		end
+
+		if mod:get("burn") then
+			local i, debuff = table.find_by_key(marker.debuffs, "type", "burn")
+			if debuff then
+				debuff.stacks = burn_stacks
+				if not burn_stacks or burn_stacks == 0 then
+					table.remove(marker.debuffs, i)
+				end
+			else
+				if is_on_fire then
+					table.insert(marker.debuffs, { type = "burn", stacks = burn_stacks })
+				end
+			end
+		end
+
+		if marker.debuffs[1] then
+			style.status_icon_1.material_values.texture_map = mod.textures[marker.debuffs[1].type]
+			style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
+			style.status_stacks_1.text_color = mod.colors[marker.debuffs[1].type]
+			content.status_stacks_1 = marker.debuffs[1].stacks
+		else
+			style.status_icon_1.material_values.texture_map = nil
+			content.status_stacks_1 = ""
+		end
+
+		if marker.debuffs[2] then
+			style.status_icon_2.material_values.texture_map = mod.textures[marker.debuffs[2].type]
+			style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
+			style.status_stacks_2.text_color = mod.colors[marker.debuffs[2].type]
+			content.status_stacks_2 = marker.debuffs[2].stacks
+		else
+			style.status_icon_2.material_values.texture_map = nil
+			content.status_stacks_2 = ""
+		end
+	end
 
 	if ALIVE[unit] and marker.head_offset == 0 then
 		local root_position = Unit.world_position(unit, 1)

@@ -58,6 +58,16 @@ local widgets = {
 				type = "checkbox",
 				default_value = true,
 			},
+			{
+				setting_id = "bleed",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "burn",
+				type = "checkbox",
+				default_value = true,
+			},
 		},
 	},
 	{

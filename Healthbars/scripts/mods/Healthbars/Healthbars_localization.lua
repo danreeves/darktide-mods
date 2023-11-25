@@ -51,6 +51,12 @@ local localization = {
 		["zh-cn"] = "怪物/连长",
 		ru = "монстр/капитан",
 	},
+	bleed = {
+		en = "Show bleed stacks",
+	},
+	burn = {
+		en = "Show burn stacks",
+	},
 }
 
 for breed_name, breed in pairs(Breeds) do
