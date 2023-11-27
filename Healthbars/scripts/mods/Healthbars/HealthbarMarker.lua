@@ -376,8 +376,8 @@ template.create_widget_defintion = function(template, scenegraph_id)
 					4,
 				},
 				size = {
-					20,
-					20,
+					25,
+					25,
 				},
 				material_values = {
 					use_placeholder_texture = 0,
@@ -440,8 +440,8 @@ template.create_widget_defintion = function(template, scenegraph_id)
 					4,
 				},
 				size = {
-					20,
-					20,
+					25,
+					25,
 				},
 				material_values = {
 					use_placeholder_texture = 0,

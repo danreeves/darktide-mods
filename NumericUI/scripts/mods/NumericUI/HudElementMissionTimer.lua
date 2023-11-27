@@ -1,6 +1,5 @@
 local mod = get_mod("NumericUI")
 
-local Text = require("scripts/utilities/ui/text")
 local UIWorkspaceSettings = require("scripts/settings/ui/ui_workspace_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 

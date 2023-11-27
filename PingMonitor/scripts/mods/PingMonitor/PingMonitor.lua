@@ -81,47 +81,41 @@ mod:hook_safe("HudElementTacticalOverlay", "update", function(self)
 end)
 
 -- Inject ping UI into tactical overlay
-mod:hook(_G, "require", function(func, path, ...)
-	local result = func(path, ...)
+mod:hook_require("scripts/ui/hud/elements/tactical_overlay/hud_element_tactical_overlay_definitions", function(instance)
+	instance.scenegraph_definition.ping_panel = {
+		parent = "background",
+		vertical_alignment = "center",
+		horizontal_alignment = "right",
+		size = { 100, 100 },
+		position = { 0, 0, 1 },
+	}
 
-	if path == "scripts/ui/hud/elements/tactical_overlay/hud_element_tactical_overlay_definitions" then
-		result.scenegraph_definition.ping_panel = {
-			parent = "background",
-			vertical_alignment = "center",
-			horizontal_alignment = "right",
-			size = { 100, 100 },
-			position = { 0, 0, 1 },
-		}
-
-		result.widget_definitions.ping_monitor = UIWidget.create_definition({
-			{
-				pass_type = "texture",
-				value = "content/ui/materials/symbols/new_item_indicator",
-				style_id = "ping_icon",
-				style = {
-					vertical_alignment = "center",
-					horizontal_alignment = "left",
-					color = Color.online_green(255, true),
-					offset = { -75, 0, 0 },
-					size = { 100, 100 },
-				},
+	instance.widget_definitions.ping_monitor = UIWidget.create_definition({
+		{
+			pass_type = "texture",
+			value = "content/ui/materials/symbols/new_item_indicator",
+			style_id = "ping_icon",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "left",
+				color = Color.online_green(255, true),
+				offset = { -75, 0, 0 },
+				size = { 100, 100 },
 			},
-			{
-				pass_type = "text",
-				value_id = "ping_text",
-				style_id = "ping_text",
-				style = {
-					vertical_alignment = "center",
-					text_vertical_alignment = "center",
-					horizontal_alignment = "center",
-					text_horizontal_alignment = "left",
-					offset = { 0, 0, 0 },
-					size = { 100, 100 },
-					text_color = Color.online_green(255, true),
-				},
+		},
+		{
+			pass_type = "text",
+			value_id = "ping_text",
+			style_id = "ping_text",
+			style = {
+				vertical_alignment = "center",
+				text_vertical_alignment = "center",
+				horizontal_alignment = "center",
+				text_horizontal_alignment = "left",
+				offset = { 0, 0, 0 },
+				size = { 100, 100 },
+				text_color = Color.online_green(255, true),
 			},
-		}, "ping_panel")
-	end
-
-	return result
+		},
+	}, "ping_panel")
 end)

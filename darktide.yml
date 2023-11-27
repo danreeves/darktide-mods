@@ -57,6 +57,9 @@ globals:
     args:
       - type: table
       - type: table
+  math.easeInCubic:
+    args: 
+      - type: number
   math.round_with_precision:
     args:
       - type: number
