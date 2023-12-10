@@ -221,7 +221,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 					text_vertical_alignment = "center",
 					text_horizontal_alignment = "left",
 					vertical_alignment = "center",
-					offset = { 60, -16, 3 },
+					offset = { 80, -16, 3 },
 					size = { bar_size[1] * 1.5, bar_size[2] },
 					font_type = hud_body_font_settings.font_type,
 					text_color = UIHudSettings.color_tint_main_2,
