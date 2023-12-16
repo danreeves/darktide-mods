@@ -21,10 +21,11 @@ local localizations = {
 	},
 	digital_clock = {
 		en = "Digital clock font",
-		["zh-cn"] = "数字时钟",
+		["zh-cn"] = "数字时钟字体",
 	},
 	digital_clock_tooltip = {
 		en = "Uses a special digital clock font for the numbers",
+		["zh-cn"] = "使用指定的数字时钟字体",
 	},
 	font_size = {
 		en = "Font size",
@@ -40,6 +41,7 @@ local localizations = {
 	},
 	twentyfour_hour = {
 		en = "24 hour clock",
+		["zh-cn"] = "24 小时时钟",
 	},
 }
 

@@ -53,9 +53,11 @@ local localization = {
 	},
 	bleed = {
 		en = "Show bleed stacks",
+		["zh-cn"] = "显示流血层数",
 	},
 	burn = {
 		en = "Show burn stacks",
+		["zh-cn"] = "显示燃烧层数",
 	},
 }
 
