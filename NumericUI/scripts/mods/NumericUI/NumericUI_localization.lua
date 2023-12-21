@@ -217,13 +217,32 @@ return {
 	marker_settings = {
 		en = "Marker settings",
 		["zh-cn"] = "标记设置",
+		ru = "Настройки маркера",
 	},
 	show_ping_skull = {
 		en = "Show tag skull",
 		["zh-cn"] = "显示标记骷髅图标",
+		ru = "Показывать череп пометки",
 	},
 	show_vet_ping_skull = {
 		en = "Show Veteran tag skull",
 		["zh-cn"] = "显示老兵标记骷髅图标",
+		ru = "Показывать череп пометки Ветерана",
+	},
+	ammo_text_font_size = {
+		en = "Ammo text font size",
+		ru = "Размер шрифта текста боеприпасов",
+	},
+	ammo_text_offset_y = {
+		en = "Ammo text offset Y",
+		ru = "Смещение текста боеприпасов по вертикали",
+	},
+	ammo_text_offset_x = {
+		en = "Ammo text offset X",
+		ru = "Смещение текста боеприпасов по горизонтали",
+	},
+	ability_cooldown_font_size = {
+		en = "Ability text font size",
+		ru = "Размер шрифта текста способности",
 	},
 }
