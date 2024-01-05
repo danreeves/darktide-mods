@@ -35,7 +35,7 @@ local function _load_portrait_icon(self)
 
 	if platform == "xbox" then
 		local xuid = Steam.id_hex_to_dec(player_info:platform_user_id())
-		local url = "https://xboxapi.mrmicky.workers.dev/profiles/" .. xuid
+		local url = "https://xboxapi-workers.dnrvs.workers.dev/profiles/" .. xuid
 		Managers.backend:url_request(url):next(function(profile_request)
 			Managers.url_loader
 				:load_texture(profile_request.body.gamerpic)
