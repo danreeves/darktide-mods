@@ -5,6 +5,8 @@ globals:
     any: true
   DarktideDiscord:
     any: true
+  DarktideWs:
+    any: true
   HAS_STEAM:
     any: true
   IS_WINDOWS:

@@ -22,8 +22,9 @@ mod:hook_require(
 					.. ")}"
 				local archetype = profile and profile.archetype
 				local string_symbol = archetype and archetype.string_symbol or ""
+				local reset_string = mod:get("color_nameplate") and "" or "{#reset()}"
 
-				content.header_text = color_string .. string_symbol .. "{#reset()} " .. data:name()
+				content.header_text = color_string .. string_symbol .. reset_string .. " " .. data:name()
 				content.icon_text = color_string .. string_symbol .. "{#reset()}"
 			end
 		end)

@@ -25,6 +25,7 @@ mod:hook_safe("MainMenuView", "_set_waiting_for_characters", function(self, wait
 		cancel()
 		self:_on_play_pressed()
 	end
+	state.first_load = false
 end)
 
 mod.cancel_auto_character_select = function()

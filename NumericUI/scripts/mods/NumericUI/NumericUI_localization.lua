@@ -164,6 +164,11 @@ return {
 		["zh-cn"] = "在名称标签内使用职业图标",
 		ru = "Использовать значки классов в табличках с именами",
 	},
+	color_nameplate = {
+		en = "Colour nameplate text same as icon",
+		ru = "Цвет текста таблички с именем совпадает с цветом значка",
+		["zh-cn"] = "使名称标签文本与图标颜色相同",
+	},
 	loading_screens = {
 		en = "Loading screens",
 		ru = "Экран загрузки",
