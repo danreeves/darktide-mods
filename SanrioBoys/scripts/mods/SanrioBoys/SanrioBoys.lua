@@ -98,17 +98,3 @@ mod:hook_safe("MissionBoardView", "_set_selected_mission", function(self, missio
 	end
 	style.speaker_icon.material_values.texture_map = character.texture
 end)
-
--- mod:hook_require("scripts/ui/views/mission_board_view/mission_board_view_definitions", function(instance)
--- 	local objective_1 = instance.widget_definitions.objective_1
-
--- 	local function _has_speaker(content)
--- 		return content.speaker_text
--- 	end
-
--- 	for _, pass in ipairs(objective_1.passes) do
--- 		if pass.style_id == "speaker_icon" or pass.style_id == "speaker_text" then
--- 			pass.visibility_function = _has_speaker
--- 		end
--- 	end
--- end)
