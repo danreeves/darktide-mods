@@ -31,4 +31,10 @@ return {
 		en = "Bot 4",
 		["zh-cn"] = "机器人 4",
 	},
+	gender_male_abbreviation = {
+		en = "(m)",
+	},
+	gender_female_abbreviation = {
+		en = "(f)",
+	},
 }
