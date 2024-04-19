@@ -32,7 +32,7 @@ mod:hook_origin("HudElementCombatFeed", "event_combat_feed_kill", function(self,
 	local unit_data_extension = ScriptUnit.has_extension(attacked_unit, "unit_data_system")
 	local breed_or_nil = unit_data_extension and unit_data_extension:breed()
 
-	if not mod:get(breed_or_nil.name) then
+	if not breed_or_nil or not mod:get(breed_or_nil.name) then
 		return
 	end
 
