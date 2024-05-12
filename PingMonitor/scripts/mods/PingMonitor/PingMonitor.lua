@@ -68,54 +68,13 @@ mod:hook_safe("PingReporter", "_take_measure", function(self)
 	-- mod:echo("latest: %d, avg: %d, jitter: %d, measures: %d", latest_ping, mod.ping, mod.jitter, #mod.measurements)
 end)
 
--- Update tab menu widgets
-mod:hook_safe("HudElementTacticalOverlay", "update", function(self)
-	if self._active then
-		local color = mod.ping_color(mod.jitter, mod.ping)
-		local ping_widget = self._widgets_by_name.ping_monitor
-		ping_widget.content.ping_text = mod.ping ~= mod.ping and "" or mod.ping
-		ping_widget.style.ping_text.text_color = color
-		ping_widget.style.ping_icon.color = color
-		ping_widget.dirty = true
-	end
-end)
+local hud_element_settings = {
+	class_name = "HudElementPingMonitor",
+	filename = "PingMonitor/scripts/mods/PingMonitor/HudElementPingMonitor",
+	use_hud_scale = true,
+	visibility_groups = {
+		"tactical_overlay",
+	},
+}
 
--- Inject ping UI into tactical overlay
-mod:hook_require("scripts/ui/hud/elements/tactical_overlay/hud_element_tactical_overlay_definitions", function(instance)
-	instance.scenegraph_definition.ping_panel = {
-		parent = "background",
-		vertical_alignment = "center",
-		horizontal_alignment = "right",
-		size = { 100, 100 },
-		position = { 0, 0, 1 },
-	}
-
-	instance.widget_definitions.ping_monitor = UIWidget.create_definition({
-		{
-			pass_type = "texture",
-			value = "content/ui/materials/symbols/new_item_indicator",
-			style_id = "ping_icon",
-			style = {
-				vertical_alignment = "center",
-				horizontal_alignment = "left",
-				color = Color.online_green(255, true),
-				offset = { -75, 0, 0 },
-				size = { 100, 100 },
-			},
-		},
-		{
-			pass_type = "text",
-			value_id = "ping_text",
-			style_id = "ping_text",
-			style = {
-				vertical_alignment = "center",
-				text_vertical_alignment = "center",
-				horizontal_alignment = "center",
-				text_horizontal_alignment = "left",
-				offset = { 0, 0, 0 },
-				size = { 100, 100 },
-				text_color = Color.online_green(255, true),
-			},
-		},
-	}, "ping_panel")
-end)
+mod:register_hud_element(hud_element_settings)

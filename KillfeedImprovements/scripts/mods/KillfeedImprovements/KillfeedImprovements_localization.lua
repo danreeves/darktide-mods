@@ -16,11 +16,6 @@ local localizations = {
 		["zh-cn"] = "在击杀面板显示",
 		ru = "Показывать в ленте убийств",
 	},
-	enable_in_psykanium = {
-		en = "Enable in Psykanium",
-		["zh-cn"] = "在灵能室启用",
-		ru = "Включить в Псайканиуме",
-	},
 }
 
 for name, breed in pairs(Breeds) do

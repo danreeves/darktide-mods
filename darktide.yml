@@ -310,7 +310,9 @@ globals:
     args:
       - type: table
       - type: table
-# World.create_line_object(self._world)
   World.create_line_object:
+    args:
+      - type: table
+  table.average:
     args:
       - type: table
