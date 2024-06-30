@@ -2,6 +2,7 @@ local mod = get_mod("Tertium4Or5")
 local WeaponTemplates = require("scripts/settings/equipment/weapon_templates/weapon_templates")
 local ProfileUtils = require("scripts/utilities/profile_utils")
 local profiles = mod:persistent_table("profiles")
+local Personalities = require("scripts/settings/character/personalities")
 
 for _, weapon_template in pairs(WeaponTemplates) do
 	if table.array_contains(weapon_template.keywords, "ranged") then
@@ -44,8 +45,19 @@ mod:hook("ProfilesService", "fetch_all_profiles", function(func, ...)
 			profile.original_name = profile.name
 			profiles[profile.character_id] = profile
 
+			local gender_text = mod:localize("gender_female_abbreviation")
+			if profile.gender == "male" then
+				gender_text = mod:localize("gender_male_abbreviation")
+			end
+
+			local archetype = profile.archetype
+  			local archetype_raw_name = Localize(archetype.archetype_name)
+  			archetype_name = archetype_raw_name:sub(1,1):upper() .. archetype_raw_name:sub(2)
+
+  			local personality_name = Localize(Personalities[profile.lore.backstory.personality].display_name)
+
 			table.insert(mod.character_options, {
-				text = profile.original_name,
+				text = profile.original_name .. " " .. gender_text .. " " .. personality_name .. " " .. archetype_name,
 				value = profile.character_id,
 			})
 		end
