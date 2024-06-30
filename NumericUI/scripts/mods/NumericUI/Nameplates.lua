@@ -1,5 +1,4 @@
 local mod = get_mod("NumericUI")
-local UISettings = require("scripts/settings/ui/ui_settings")
 
 mod:hook_require(
 	"scripts/ui/hud/elements/world_markers/templates/world_marker_template_nameplate_combat",
@@ -10,22 +9,12 @@ mod:hook_require(
 				local data = marker.data
 				local content = widget.content
 				local profile = data:profile()
-				local player_slot = data:slot()
-				local player_slot_color = UISettings.player_slot_colors[player_slot]
-					or Color.ui_hud_green_light(255, true)
-				local color_string = "{#color("
-					.. player_slot_color[2]
-					.. ","
-					.. player_slot_color[3]
-					.. ","
-					.. player_slot_color[4]
-					.. ")}"
 				local archetype = profile and profile.archetype
-				local string_symbol = archetype and archetype.string_symbol or ""
-				local reset_string = mod:get("color_nameplate") and "" or "{#reset()}"
+				local symbol_string = archetype and archetype.string_symbol or ""
+				local replace_string = mod:get("color_nameplate") and "{#reset%(%)}" or ""
 
-				content.header_text = color_string .. string_symbol .. reset_string .. " " .. data:name()
-				content.icon_text = color_string .. string_symbol .. "{#reset()}"
+				content.header_text = content.header_text:gsub(replace_string, symbol_string)
+				content.icon_text = content.icon_text:gsub(replace_string, symbol_string)
 			end
 		end)
 	end
