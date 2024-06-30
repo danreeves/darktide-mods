@@ -1,5 +1,5 @@
 local mod = get_mod("CustomCrosshairColor")
-local AttackSettings = require("scripts/settings/damage/attack_settings")
+local _AttackSettings = require("scripts/settings/damage/attack_settings")
 local CrosshairSettings = require("scripts/ui/hud/elements/crosshair/hud_element_crosshair_settings")
 local _hit_indicator_colors = table.clone(CrosshairSettings.hit_indicator_colors)
 
@@ -7,6 +7,8 @@ local crosshair_parts = {
 	"center",
 	"up",
 	"down",
+	"top",
+	"bottom",
 	"left",
 	"right",
 	"up_left",
@@ -22,12 +24,11 @@ mod:hook_safe("HudElementCrosshair", "_sync_active_crosshair", function(self)
 	if widget then
 		for _, part in ipairs(crosshair_parts) do
 			if widget.style[part] then
-				widget.style[part].color = {
-					mod:get("crosshair_opacity"),
-					mod:get("crosshair_r"),
-					mod:get("crosshair_g"),
-					mod:get("crosshair_b"),
-				}
+				local color = widget.style[part].color
+				color[1] = mod:get("crosshair_opacity")
+				color[2] = mod:get("crosshair_r")
+				color[3] = mod:get("crosshair_g")
+				color[4] = mod:get("crosshair_b")
 			end
 		end
 	end
