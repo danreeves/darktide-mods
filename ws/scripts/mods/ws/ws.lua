@@ -1,4 +1,5 @@
 local mod = get_mod("ws")
+local pt = mod:persistent_table("pt")
 
 local tojson = cjson.encode
 local fromjson = cjson.decode
@@ -9,14 +10,8 @@ if not WebSockets then
 end
 
 local mods = {}
-local connection
 
-local function on_connect()
-	connection:send(tojson({
-		type = "connect",
-		id = Managers.player:players():account_id(),
-	}))
-end
+local function on_connect() end
 
 local function on_message(message)
 	local msg = fromjson(message)
@@ -32,32 +27,39 @@ local function on_close()
 	mod:echo("Disconnected from WebSocket server")
 end
 
-connection = WebSockets.connect("wss://ws.darkti.de", on_connect, on_message, on_close)
-
-function mod.on_unload()
-	connection.close()
+if pt.connection == nil then
+	pt.connection = WebSockets.connect("wss://ws.darkti.de", on_connect, on_message, on_close)
 end
 
-mod:hook_safe("MultiplayerSession", "joined_host", function()
-	if connection then
-		local session_id = Managers.connection:session_id()
-		connection:send(tojson({ type = "join", room = session_id }))
+Managers.event:register(mod, "event_multiplayer_session_joined_host", "_event_multiplayer_session_joined_host")
+function mod:_event_multiplayer_session_joined_host()
+	if pt.connection then
+		pt.connection:send(tojson({
+			type = "join",
+			id = Managers.player:local_player(1):account_id(),
+			room = Managers.connection:session_id(),
+		}))
 	end
-end)
+end
 
-mod:hook_safe("MultiplayerSession", "disconnected_from_host ", function()
-	if connection then
-		connection:send(tojson({ type = "leave" }))
+Managers.event:register(
+	mod,
+	"event_multiplayer_session_disconnected_from_host",
+	"_event_multiplayer_session_disconnected_from_host"
+)
+function mod:_event_multiplayer_session_disconnected_from_host()
+	if pt.connection then
+		pt.connection:send(tojson({ type = "leave" }))
 	end
-end)
+end
 
 local function send_message(self, data, optional_to)
-	if connection then
+	if pt.connection then
 		local to = optional_to == nil and "all" or optional_to
-		connection:send(tojson({
+		pt.connection:send(tojson({
 			type = "data",
 			mod = self:get_name(),
-			from = Managers.player:players():account_id(),
+			from = Managers.player:local_player(1):account_id(),
 			to = to,
 			data = data,
 		}))
