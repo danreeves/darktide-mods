@@ -40,6 +40,10 @@ globals:
   table.clear:
     args:
       - type: table
+  table.clear_array:
+    args:
+      - type: table
+      - type: number
   table.find_by_key:
     args:
       - type: table
@@ -59,6 +63,16 @@ globals:
     args:
       - type: table
       - type: table
+  table.map:
+    args:
+      - type: table
+      - type: function
+      - type: table
+        required: false
+  table.filter:
+    args: 
+      - type: table
+      - type: function
   math.easeInCubic:
     args: 
       - type: number
