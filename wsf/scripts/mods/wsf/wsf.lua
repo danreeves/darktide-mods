@@ -1,4 +1,4 @@
-local mod = get_mod("ws")
+local mod = get_mod("wsf")
 
 if not WebSockets then
 	mod:echo("darktide_ws_plugin missing.")
@@ -8,7 +8,7 @@ end
 local pt = mod:persistent_table("pt")
 local tojson = cjson.encode
 local fromjson = cjson.decode
-local registered_mod_names = {}
+local registered_mod_names = { nil }
 local mods = {}
 local peers = {}
 local player_by_account_id = {}
@@ -105,11 +105,16 @@ local join_message = {
 	mods = registered_mod_names,
 }
 function mod:_event_multiplayer_session_joined_host()
-	if pt.connection then
+	if pt.connection and #registered_mod_names > 0 then
 		join_message.id = Managers.player:local_player(1):account_id()
 		join_message.room = Managers.connection:session_id()
 		join_message.mods = registered_mod_names
 		pt.connection:send(tojson(join_message))
+	end
+
+	if #registered_mod_names == 0 then
+		pt.connection:close()
+		pt.connection = nil
 	end
 end
 
