@@ -112,6 +112,7 @@ function mod:_event_multiplayer_session_joined_host()
 		pt.connection:send(tojson(join_message))
 	end
 
+	-- There are no registered mods, close the connection
 	if #registered_mod_names == 0 then
 		pt.connection:close()
 		pt.connection = nil
