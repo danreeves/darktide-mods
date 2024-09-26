@@ -51,7 +51,7 @@ local function pre_unit_destroyed(unit)
 end
 
 mod:hook_require("scripts/extension_systems/unit_templates", function(instance)
-	mod:hook_safe(instance.medical_crate_deployable, "local_init", function(unit)
+	mod:hook_safe(instance.medical_crate_deployable, "husk_init", function(unit)
 		unit_spawned(unit, false)
 	end)
 
