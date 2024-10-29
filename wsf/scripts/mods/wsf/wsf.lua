@@ -47,7 +47,7 @@ local function on_message(message)
 			mods_by_account_id[peer.id] = peer.mods
 
 			-- Notify mods that someone joined
-			for _, mod_name in ipairs(msg.mods) do
+			for _, mod_name in ipairs(peer.mods) do
 				local otherMod = mods[mod_name]
 				if otherMod and otherMod.player_joined then
 					otherMod:player_joined(player)
