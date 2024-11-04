@@ -107,6 +107,10 @@ globals:
       - type: string
       - type: string
         required: false
+  Application.back_buffer_size:
+    args: []
+  Profiler.lua_stats:
+    args: []
   Color:
     any: true
   Managers:
