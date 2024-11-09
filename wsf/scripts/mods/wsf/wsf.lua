@@ -5,23 +5,24 @@ if not WebSockets then
 	return
 end
 
-local pt = mod:persistent_table("pt")
+local connections = mod:persistent_table("connections")
+local peers = mod:persistent_table("peers")
+local state = mod:persistent_table("state")
 local tojson = cjson.encode
 local fromjson = cjson.decode
-local registered_mod_names = { nil }
-local mods = {}
-local peers = {}
+
+local registered_mods = { wsf = mod }
+local registered_mod_names = { "wsf" }
+
 local player_by_account_id = {}
 local mods_by_account_id = {}
-
-local function on_connect() end
 
 local function get_player_by_account_id(account_id)
 	if player_by_account_id[account_id] then
 		return player_by_account_id[account_id]
 	end
 
-	for _, player in ipairs(Managers.player:players()) do
+	for _, player in pairs(Managers.player:players()) do
 		if player:account_id() == account_id then
 			player_by_account_id[account_id] = player
 			return player
@@ -31,38 +32,66 @@ local function get_player_by_account_id(account_id)
 	return nil
 end
 
-local function on_message(message)
+local sync_message = {
+	type = "sync",
+	player = "",
+	mods = registered_mod_names,
+}
+local function _on_message(room, message)
 	local msg = fromjson(message)
 
 	if msg.type == "joined" then
-		for _, peer in ipairs(msg.peers) do
-			local player = get_player_by_account_id(peer.id)
+		mods_by_account_id[msg.player] = msg.mods
 
-			-- Save player as peer
-			if not table.array_contains(peers, player) then
-				table.insert(peers, player)
+		if peers[room] == nil then
+			peers[room] = {}
+		end
+
+		table.insert(peers[room], msg.player)
+
+		local connection = connections[room]
+		if connection then
+			sync_message.player = Managers.player:local_player(1):account_id()
+			sync_message.mods = registered_mod_names
+			connection:send(tojson(sync_message))
+		end
+
+		-- Notify mods that someone joined
+		for _, mod_name in ipairs(msg.mods) do
+			local otherMod = registered_mods[mod_name]
+			if otherMod and otherMod.player_joined then
+				otherMod:player_joined(get_player_by_account_id(msg.player))
 			end
+		end
+	end
 
-			-- Store mods for peer so we can filter later in get_peers
-			mods_by_account_id[peer.id] = peer.mods
+	if msg.type == "sync" then
+		mods_by_account_id[msg.player] = msg.mods
 
-			-- Notify mods that someone joined
-			for _, mod_name in ipairs(peer.mods) do
-				local otherMod = mods[mod_name]
-				if otherMod and otherMod.player_joined then
-					otherMod:player_joined(player)
-				end
+		if peers[room] == nil then
+			peers[room] = {}
+		end
+
+		table.insert(peers[room], msg.player)
+
+		-- Notify mods that someone joined
+		for _, mod_name in ipairs(msg.mods) do
+			local otherMod = registered_mods[mod_name]
+			if otherMod and otherMod.player_joined then
+				otherMod:player_joined(get_player_by_account_id(msg.player))
 			end
 		end
 	end
 
 	if msg.type == "left" then
-		local player = get_player_by_account_id(msg.id)
-
-		-- Remove player as peer
-		peers = table.filter(peers, function(p)
-			return p == player
-		end)
+		if peers[room] == nil then
+			peers[room] = {}
+		else
+			-- Remove player as peer
+			peers[room] = table.filter(peers[room], function(p)
+				return p == msg.player
+			end)
+		end
 
 		-- Clean up player cache
 		player_by_account_id[msg.id] = nil
@@ -70,20 +99,20 @@ local function on_message(message)
 		-- Clean up mods for peer
 		mods_by_account_id[msg.id] = nil
 
-		-- Notify mods that someone joined
+		-- Notify mods that someone left
 		for _, mod_name in ipairs(msg.mods) do
-			local otherMod = mods[mod_name]
+			local otherMod = registered_mods[mod_name]
 			if otherMod and otherMod.player_left then
-				otherMod:player_left(msg.id)
+				otherMod:player_left(get_player_by_account_id(msg.player))
 			end
 		end
 	end
 
 	if msg.type == "data" then
 		if msg.mod then
-			local otherMod = mods[msg.mod]
+			local otherMod = registered_mods[msg.mod]
 			if otherMod and otherMod.on_message then
-				otherMod:on_message(msg.data, get_player_by_account_id(msg.from))
+				otherMod:on_message(msg.data, get_player_by_account_id(msg.player))
 			end
 		end
 	end
@@ -93,79 +122,96 @@ local function on_close()
 	mod:echo("Disconnected from WebSocket server")
 end
 
-if pt.connection == nil then
-	pt.connection = WebSockets.connect("wss://ws.darkti.de", on_connect, on_message, on_close)
-end
-
-Managers.event:register(mod, "event_multiplayer_session_joined_host", "_event_multiplayer_session_joined_host")
 local join_message = {
-	type = "join",
-	id = "",
-	room = "",
+	type = "joined",
+	player = "",
 	mods = registered_mod_names,
 }
-function mod:_event_multiplayer_session_joined_host()
-	if pt.connection and #registered_mod_names > 0 then
-		join_message.id = Managers.player:local_player(1):account_id()
-		join_message.room = Managers.connection:session_id()
+mod:hook("MultiplayerSession", "joined_host", function(func, self, channel_id, host_peer_id, host_type)
+	local room = host_peer_id
+	state.current_room = room
+	peers[room] = {}
+
+	if #registered_mod_names == 0 then
+		return
+	end
+
+	local connection = connections[room]
+
+	if connection == nil then
+		function on_connect()
+			join_message.player = Managers.player:local_player(1):account_id()
+			join_message.mods = registered_mod_names
+			connection:send(tojson(join_message))
+		end
+		function on_message(message)
+			_on_message(room, message)
+		end
+		connection = WebSockets.connect("wss://ws.darkti.de/" .. room, on_connect, on_message, on_close)
+		connections[room] = connection
+	else
+		join_message.player = Managers.player:local_player(1):account_id()
 		join_message.mods = registered_mod_names
-		pt.connection:send(tojson(join_message))
+		connection:send(tojson(join_message))
 	end
 
-	-- There are no registered mods, close the connection
-	if pt.connection and #registered_mod_names == 0 then
-		pt.connection:close()
-		pt.connection = nil
-	end
-end
+	return func(self, channel_id, host_peer_id, host_type)
+end)
 
-Managers.event:register(
-	mod,
-	"event_multiplayer_session_disconnected_from_host",
-	"_event_multiplayer_session_disconnected_from_host"
-)
-local leave_message = tojson({ type = "leave" })
-function mod:_event_multiplayer_session_disconnected_from_host()
-	if pt.connection then
-		pt.connection:send(leave_message)
-	end
-end
+local leave_message = {
+	type = "left",
+	player = "",
+}
+mod:hook("MultiplayerSession", "disconnected_from_host", function(func, self, ...)
+	state.current_room = nil
+	local room = self._joined_host_peer_id
+	local connection = connections[room]
 
-local to_list = {}
+	if connection then
+		leave_message.player = Managers.player:local_player(1):account_id()
+		-- connection:send(tojson(leave_message))
+		connection:close()
+		connection = nil
+		connections[room] = nil
+	end
+
+	return func(self, ...)
+end)
+
 local data_message = {
 	type = "data",
 	mod = "",
-	from = "",
-	to = to_list,
+	player = "",
 	data = nil,
 }
-local function send_message(self, data, optional_to)
-	if pt.connection then
-		table.clear_array(to_list, #to_list)
-		local to = optional_to == nil and "all"
-			or table.map(optional_to, function(player)
-				return player:account_id()
-			end, to_list)
+local function send_message(self, data, optional_room)
+	local room = optional_room or state.current_room
+	local connection = connections[room]
+	if connection then
 		data_message.mod = self:get_name()
-		data_message.to = to
-		data_message.from = Managers.player:local_player(1):account_id()
+		data_message.player = Managers.player:local_player(1):account_id()
 		data_message.data = data
-		pt.connection:send(tojson(data_message))
+		connection:send(tojson(data_message))
 	end
 end
 
-local function get_peers(self)
+local function get_peers(self, optional_room)
+	local room = optional_room or state.current_room
 	local mod_name = self:get_name()
-	return table.filter(peers, function(player)
-		local account_id = player:account_id()
-		return table.array_contains(mods_by_account_id[account_id], mod_name)
-	end)
+	return table.map(
+		table.filter(peers[room], function(account_id)
+			return table.array_contains(mods_by_account_id[account_id], mod_name)
+		end),
+		function(account_id)
+			return get_player_by_account_id(account_id)
+		end
+	)
 end
 
 function mod:register(other_mod)
 	local mod_name = other_mod:get_name()
 	registered_mod_names[#registered_mod_names + 1] = mod_name
-	mods[mod_name] = other_mod
+	registered_mods[mod_name] = other_mod
 	other_mod.send_message = send_message
 	other_mod.get_peers = get_peers
 end

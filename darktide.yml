@@ -334,3 +334,16 @@ globals:
   table.average:
     args:
       - type: table
+  math.easeOutCubic:
+    args:
+      - type: number
+  math.lerp:
+    args:
+      - type: number
+      - type: number
+      - type: number
+  math.ease_exp:
+    args:
+      - type: number
+      - type: number
+      - type: number
