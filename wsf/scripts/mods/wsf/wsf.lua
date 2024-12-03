@@ -53,7 +53,7 @@ local function _on_message(room, message)
 		if connection then
 			sync_message.player = Managers.player:local_player(1):account_id()
 			sync_message.mods = registered_mod_names
-			connection:send(tojson(sync_message))
+			WebSockets.send(connection, tojson(sync_message))
 		end
 
 		-- Notify mods that someone joined
@@ -118,10 +118,6 @@ local function _on_message(room, message)
 	end
 end
 
-local function on_close()
-	mod:echo("Disconnected from WebSocket server")
-end
-
 local join_message = {
 	type = "joined",
 	player = "",
@@ -139,20 +135,21 @@ mod:hook("MultiplayerSession", "joined_host", function(func, self, channel_id, h
 	local connection = connections[room]
 
 	if connection == nil then
-		function on_connect()
-			join_message.player = Managers.player:local_player(1):account_id()
-			join_message.mods = registered_mod_names
-			connection:send(tojson(join_message))
-		end
 		function on_message(message)
 			_on_message(room, message)
 		end
-		connection = WebSockets.connect("wss://ws.darkti.de/" .. room, on_connect, on_message, on_close)
+		mod:echo("Connecting to darktide_ws_plugin")
+		print("Connecting to darktide_ws_plugin")
+		connection = WebSockets.connect("wss://ws.darkti.de/" .. room, on_message)
 		connections[room] = connection
+
+		join_message.player = Managers.player:local_player(1):account_id()
+		join_message.mods = registered_mod_names
+		WebSockets.send(connection, tojson(join_message))
 	else
 		join_message.player = Managers.player:local_player(1):account_id()
 		join_message.mods = registered_mod_names
-		connection:send(tojson(join_message))
+		WebSockets.send(connection, tojson(join_message))
 	end
 
 	return func(self, channel_id, host_peer_id, host_type)
@@ -169,8 +166,8 @@ mod:hook("MultiplayerSession", "disconnected_from_host", function(func, self, ..
 
 	if connection then
 		leave_message.player = Managers.player:local_player(1):account_id()
-		-- connection:send(tojson(leave_message))
-		connection:close()
+		WebSockets.send(connection, tojson(leave_message))
+		WebSockets.close(connection)
 		connection = nil
 		connections[room] = nil
 	end
@@ -191,7 +188,7 @@ local function send_message(self, data, optional_room)
 		data_message.mod = self:get_name()
 		data_message.player = Managers.player:local_player(1):account_id()
 		data_message.data = data
-		connection:send(tojson(data_message))
+		WebSockets.send(connection, tojson(data_message))
 	end
 end
 

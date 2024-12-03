@@ -5,5 +5,10 @@ globals:
     args:
       - type: string
       - type: function
-      - type: function
-      - type: function
+  WebSockets.send:
+    args:
+      - type: any
+      - type: string
+  WebSockets.close:
+    args:
+      - type: any
