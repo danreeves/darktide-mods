@@ -123,7 +123,7 @@ local function modify_player_icon_widget(instance)
 end
 
 local definitions = {
-	"scripts/ui/hud/elements/personal_player_panel_hub/hud_element_personal_player_panel_definitions",
+	"scripts/ui/hud/elements/personal_player_panel/hud_element_personal_player_panel_definitions",
 	"scripts/ui/hud/elements/personal_player_panel_hub/hud_element_personal_player_panel_hub_definitions",
 	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions",
 	"scripts/ui/hud/elements/team_player_panel_hub/hud_element_team_player_panel_hub_definitions",
