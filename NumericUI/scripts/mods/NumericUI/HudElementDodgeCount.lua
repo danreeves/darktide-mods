@@ -17,8 +17,8 @@ local scenegraph_definition = {
 }
 
 local color_efficient = Color.terminal_text_header(255, true)
-local color_inefficient = Color.ui_hud_overcharge_low(255, true)
-local color_limit = Color.ui_hud_overcharge_high(255, true)
+local color_inefficient = Color.ui_hud_warp_charge_low(255, true)
+local color_limit = Color.ui_hud_warp_charge_high(255, true)
 
 local style = {
 	line_spacing = 1.2,
