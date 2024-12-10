@@ -3,6 +3,7 @@ return {
 		en = "Numeric UI",
 		ru = "Числовой интерфейс",
 		["zh-cn"] = "数显界面",
+		fr = "Interface utilisateur Numérique",
 	},
 	mod_description = {
 		en = "Adds numbers to your HUD",
