@@ -187,10 +187,10 @@ return {
 		fr = "Affiche le temps seulement sur la fenêtre tactique",
 	},
 	nameplates = {
-		en = "Nom d'affichage",
+		en = "Nameplates",
 		["zh-cn"] = "名称标签",
 		ru = "Таблички с именами",
-		fr ="Nom et titre",
+		fr ="Nom d'affichage",
 	},
 	archetype_icons_in_nameplates = {
 		en = "Use class icons in nameplates",
