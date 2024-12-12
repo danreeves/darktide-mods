@@ -3,6 +3,7 @@ return {
 		en = "Numeric UI",
 		ru = "Числовой интерфейс",
 		["zh-cn"] = "数显界面",
+		fr = "Numeric UI",
 	},
 	mod_description = {
 		en = "Adds numbers to your HUD",
@@ -75,7 +76,7 @@ return {
 		en = "Show peril icon",
 		["zh-cn"] = "显示危机值图标",
 		ru = "Показывать значок опасности",
-		fr = "Affiche l'icone du péril",
+		fr = "Affiche l'icône du péril",
 	},
 	max_ammo_text = {
 		en = "Show maximum ammo text",
@@ -87,7 +88,7 @@ return {
 		en = "Show icon for your own ammo",
 		["zh-cn"] = "显示自己的弹药图标",
 		ru = "Показывать иконку ваших боеприпасов",
-		fr = "Affiche l'icone pour vos munitions",
+		fr = "Affiche l'icône pour vos munitions",
 	},
 	show_munitions_gained = {
 		en = "Show amount of ammo and grenades gained",
@@ -261,7 +262,7 @@ return {
 		en = "Show boss health numbers",
 		["zh-cn"] = "显示 Boss 生命值数字",
 		ru = "Показывать цифры здоровья босса",
-		fr = "Affiche le nombre de point de vie des monstruosité",
+		fr = "Affiche le nombre de point de vie des monstruosités",
 	},
 	marker_settings = {
 		en = "Marker settings",
