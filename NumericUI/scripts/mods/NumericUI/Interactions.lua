@@ -25,6 +25,7 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 			local unit_data_ext = ScriptUnit.extension(player_unit, "unit_data_system")
 			local visual_loadout_extension = ScriptUnit.extension(player_unit, "visual_loadout_system")
 			local weapon_slot_configuration = visual_loadout_extension:slot_configuration_by_type("weapon")
+			local ammo_modifier = Managers.state.difficulty:get_ammo_modifier()
 
 			local max_ammo_reserve = 0
 			local ammo_reserve = 0
@@ -44,6 +45,10 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 
 			local max_ammo = max_ammo_reserve + max_ammo_clip
 			local current_ammo = ammo_clip + ammo_reserve
+
+			small_clip_data.modifier = ammo_modifier
+			large_clip_data.modifier = ammo_modifier
+
 			local small_clip_gain = small_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, small_clip_data)
 			local large_clip_gain = large_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, large_clip_data)
 
