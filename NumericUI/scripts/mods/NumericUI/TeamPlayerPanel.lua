@@ -11,66 +11,6 @@ local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local FixedFrame = require("scripts/utilities/fixed_frame")
 
--- Force team hud for yourself
-if false then
-	mod:hook_origin(
-		"HudElementTeamPanelHandler",
-		"_add_panel",
-		function(self, unique_id, ui_renderer, fixed_scenegraph_id)
-			local PlayerCompositions = require("scripts/utilities/players/player_compositions")
-			local HudElementPersonalPlayerPanelHub =
-				require("scripts/ui/hud/elements/personal_player_panel_hub/hud_element_personal_player_panel_hub")
-			local HudElementTeamPlayerPanelHub =
-				require("scripts/ui/hud/elements/team_player_panel_hub/hud_element_team_player_panel_hub")
-			local HudElementTeamPlayerPanel =
-				require("scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel")
-			local player_composition_name = self._player_composition_name
-			local player = PlayerCompositions.player_from_unique_id(player_composition_name, unique_id)
-			local scale = ui_renderer.scale or 1
-			local scenegraph_id = fixed_scenegraph_id or self:_get_available_scenegraph()
-			local draw_layer = self._draw_layer
-			local parent = self._parent
-			local is_my_player = self._my_player == player
-			local data = {
-				synced = false,
-				unique_id = unique_id,
-				player = player,
-				is_my_player = is_my_player,
-				local_player = self._my_player,
-				scenegraph_id = scenegraph_id,
-				using_fixed_scenegraph_id = fixed_scenegraph_id ~= nil,
-			}
-			local panel = nil
-			local host_type = Managers.connection:host_type()
-			local game_mode_name = Managers.state.game_mode and Managers.state.game_mode:game_mode_name()
-			local is_in_hub = host_type == "hub_server" or game_mode_name == "hub"
-			local is_in_training_grounds = game_mode_name == "shooting_range"
-
-			if is_in_training_grounds then
-				if is_my_player then
-					panel = HudElementTeamPlayerPanel:new(parent, draw_layer, scale, data)
-				else
-					panel = HudElementTeamPlayerPanelHub:new(parent, draw_layer, scale, data)
-				end
-			elseif is_in_hub then
-				if is_my_player then
-					panel = HudElementPersonalPlayerPanelHub:new(parent, draw_layer, scale, data)
-				else
-					panel = HudElementTeamPlayerPanelHub:new(parent, draw_layer, scale, data)
-				end
-			else
-				panel = HudElementTeamPlayerPanel:new(parent, draw_layer, scale, data)
-			end
-
-			data.panel = panel
-			self._player_panels_array[#self._player_panels_array + 1] = data
-			self._player_panel_by_unique_id[unique_id] = data
-			self._unique_id_by_scenegraph[scenegraph_id] = unique_id
-			self._num_panels = self._num_panels + 1
-		end
-	)
-end
-
 local bar_size = HudElementTeamPlayerPanelSettings.size
 local hud_body_font_setting_name = "hud_body"
 local hud_body_font_settings = UIFontSettings[hud_body_font_setting_name]
@@ -326,28 +266,6 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	end
 end)
 
-local TEAM_PANEL_DEF_PATH = "scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions"
-local function hud_init_with_features(
-	func,
-	self,
-	parent,
-	draw_layer,
-	start_scale,
-	data,
-	definition_path,
-	definition_settings
-)
-	-- if data.player:is_human_controlled() then
-	if definition_path == TEAM_PANEL_DEF_PATH then
-		definition_settings.feature_list.health_text = mod:get("health_text")
-		definition_settings.feature_list.toughness_text = mod:get("toughness_text")
-	end
-	definition_settings.feature_list.level = mod:get("level")
-	-- end
-
-	return func(self, parent, draw_layer, start_scale, data, definition_path, definition_settings)
-end
-
 local function update_numericui_ability_cd(self, player, ability_bar_widget, ability_text_widget, ability_component, dt)
 	if not ability_cooldown_timer[player:name()] then
 		ability_cooldown_timer[player:name()] = 0
@@ -445,13 +363,7 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 	end
 end
 
-mod:hook("HudElementPlayerPanelBase", "init", hud_init_with_features)
-
 mod:hook_safe("HudElementPlayerPanelBase", "destroy", function(self)
-	-- if not self._data.player:is_human_controlled() then
-	-- 	return
-	-- end
-
 	local player_extensions = self:_player_extensions(self._data.player)
 
 	if mod:get("ability_cd_bar") or mod:get("ability_cd_text") then
@@ -483,10 +395,6 @@ end)
 
 local function update_numericui_player_features(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
-
-	-- if not player:is_human_controlled() then
-	-- 	return
-	-- end
 
 	local ammo_text_widget = self._widgets_by_name.numeric_ui_ammo_text
 	local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
@@ -578,17 +486,12 @@ end
 mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_numericui_player_features)
 mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_numericui_player_features)
 
-mod:hook_safe("HudElementTeamPlayerPanel", "init", function(self, _parent, _draw_layer, _start_scale, data)
-	-- if not data.player:is_human_controlled() then
-	-- 	if self._widgets_by_name.numeric_ui_ammo_text then
-	-- 		self._widgets_by_name.numeric_ui_ammo_text.content.text = " "
-	-- 	end
-	--
-	-- 	if self._widgets_by_name.ability_bar then
-	-- 		self._widgets_by_name.ability_bar.visible = false
-	-- 	end
-	-- 	return
-	-- end
+mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _draw_layer, _start_scale, data)
+	HudElementTeamPlayerPanelSettings.feature_list.health_text = mod:get("health_text")
+	HudElementTeamPlayerPanelSettings.feature_list.toughness_text = mod:get("toughness_text")
+	HudElementTeamPlayerPanelSettings.feature_list.level = mod:get("level")
+
+	func(self, _parent, _draw_layer, _start_scale, data)
 
 	local player_extensions = self:_player_extensions(data.player)
 
