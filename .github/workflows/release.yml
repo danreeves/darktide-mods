@@ -21,6 +21,8 @@ jobs:
           gh issue edit 107 --body "$(cat <<EOF
           # Download the latest releases before they hit Nexus
           These links will open an external website and and will automatically download the latest zip.
+          These are pre-release versions and may contain bugs or unfinished features. It's recommended to use the Nexus releases for a more stable experience.
+          [My Nexus Mods](https://next.nexusmods.com/profile/dnrvs/mods)
 
           $FOLDERS
 
