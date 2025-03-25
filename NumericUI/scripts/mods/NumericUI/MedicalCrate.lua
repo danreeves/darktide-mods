@@ -1,6 +1,6 @@
 local mod = get_mod("NumericUI")
 local decals = mod:persistent_table("medical_crate_decals")
-local medical_crate_config = require("scripts/settings/deployables/medical_crate")
+local medical_crate_config = require("scripts/settings/pickup/pickups/deployable/medical_crate_deployable_pickup")
 local decal_unit_name = "content/levels/training_grounds/fx/decal_aoe_indicator"
 local package_name = "content/levels/training_grounds/missions/mission_tg_basic_combat_01"
 
