@@ -2,8 +2,8 @@ name: Release
 
 on: 
   push:
-    tags:
-      - "*"
+    branches:
+      - main
 
 jobs:
   build:
@@ -11,15 +11,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Zip
-        uses: montudor/action-zip@v1
-      - name: Zip each directory
+      - name: Update Issue Description
         run: |
-          for dir in */; do
-          zip -qq -r "${dir%/}.zip" "$dir"
-          done
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: "*.zip"
+          REPO_URL="https://github.com/danreeves/darktide-mods"
+          FOLDERS=$(find . -maxdepth 1 -type d ! -name '.*' -exec basename {} \; | while read folder; do
+            MOD_DATE=$(find "$folder" -type f -exec stat -c '%Y' {} + | sort -nr | head -n 1 | xargs -I{} date -d @{} '+%Y-%m-%d')
+            echo "- [Download ${folder}](https://download-directory.github.io/?url=${REPO_URL}/tree/main/${folder}&filename=${folder}) (Last modified: ${MOD_DATE})"
+          done)
+          gh issue edit 107 --body "$(cat <<EOF
+          # Download the latest releases before they hit Nexus
+          These links will open an external website and and will automatically download the latest zip.
+
+          $FOLDERS
+
+          Last updated: $(date '+%Y-%m-%d %H:%M:%S')
+          EOF
+          )"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
