@@ -15,7 +15,7 @@ jobs:
         run: |
           REPO_URL="https://github.com/danreeves/darktide-mods"
           FOLDERS=$(find . -maxdepth 1 -type d ! -name '.*' -exec basename {} \; | while read folder; do
-            MOD_DATE=$(find "$folder" -type f -exec stat -c '%Y' {} + | sort -nr | head -n 1 | xargs -I{} date -d @{} '+%Y-%m-%d')
+            MOD_DATE=$(git log -1 --format="%cs" -- "$folder")
             echo "- [Download ${folder}](https://download-directory.github.io/?url=${REPO_URL}/tree/main/${folder}&filename=${folder}) (Last modified: ${MOD_DATE})"
           done)
           gh issue edit 107 --body "$(cat <<EOF
