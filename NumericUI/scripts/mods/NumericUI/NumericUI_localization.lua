@@ -40,7 +40,6 @@ return {
 		["zh-cn"] = "显示生命值",
 		ru = "Показывать текст здоровья",
 		fr = "Affiche la quantité de Santé",
-		
 	},
 	toughness_text = {
 		en = "Show toughness text",
@@ -70,7 +69,7 @@ return {
 		en = "Show ammo text",
 		["zh-cn"] = "显示弹药量",
 		ru = "Показывать текст боеприпасов",
-		fr = "Affiche la quantité actuelle de munitions"
+		fr = "Affiche la quantité actuelle de munitions",
 	},
 	peril_icon = {
 		en = "Show peril icon",
@@ -200,20 +199,20 @@ return {
 	},
 	color_nameplate = {
 		en = "Colour nameplate text same as icon",
-		ru = "Цвет текста таблички с именем совпадает с цветом значка",
 		["zh-cn"] = "使名称标签文本与图标颜色相同",
+		ru = "Цвет текста таблички с именем совпадает с цветом значка",
 		fr = "Le nom d'affichage est de la même couleur que l'icône",
 	},
 	loading_screens = {
 		en = "Loading screens",
-		ru = "Экран загрузки",
 		["zh-cn"] = "加载界面",
+		ru = "Экран загрузки",
 		fr = "Temps de chargement",
 	},
 	mission_title_on_intro = {
 		en = "Show mission title on loading screen",
-		ru = "Показывать название миссии на экране загрузки",
 		["zh-cn"] = "在加载界面显示任务详情",
+		ru = "Показывать название миссии на экране загрузки",
 		fr = "Affiche le nom de la mission durant le temps de chargement",
 	},
 	show_efficient_dodges = {
@@ -267,16 +266,19 @@ return {
 	marker_settings = {
 		en = "Marker settings",
 		["zh-cn"] = "标记设置",
+		ru = "Настройки маркера",
 		fr= "Paramètre de marquage",
 	},
 	show_ping_skull = {
 		en = "Show tag skull",
 		["zh-cn"] = "显示标记骷髅图标",
+		ru = "Показывать череп пометки",
 		fr = "Affiche le marqueur de crâne au dessus des ennemis",
 	},
 	show_vet_ping_skull = {
 		en = "Show Veteran tag skull",
 		["zh-cn"] = "显示老兵标记骷髅图标",
+		ru = "Показывать череп пометки Ветерана",
 		fr = "Affiche le marqueur de crâne au dessus des ennemis de la clé de voûte \"Ciblage\" du Vétéran",
 	},
 }
