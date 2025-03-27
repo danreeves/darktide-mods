@@ -26,6 +26,11 @@ mod.on_setting_changed = function()
 end
 
 local function should_enable_healthbar(unit)
+	local game_mode_name = Managers.state.game_mode:game_mode_name()
+	if game_mode_name == "shooting_range" and not get_mod("creature_spawner") then
+		return false
+	end
+
 	local unit_data_extension = ScriptUnit.extension(unit, "unit_data_system")
 	local breed = unit_data_extension:breed()
 

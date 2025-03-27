@@ -22,17 +22,10 @@ return {
 	is_togglable = true,
 	options = {
 		widgets = {
-
 			{
 				setting_id = "include_breeds",
 				type = "group",
 				sub_widgets = breed_toggles,
-			},
-
-			{
-				setting_id = "enable_in_psykanium",
-				type = "checkbox",
-				default_value = false,
 			},
 		},
 	},

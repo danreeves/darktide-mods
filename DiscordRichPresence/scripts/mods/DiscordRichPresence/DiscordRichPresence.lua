@@ -1,5 +1,6 @@
 local mod = get_mod("DiscordRichPresence")
 local SoloPlay = get_mod("SoloPlay")
+local TrueLevel = get_mod("true_level")
 
 local PresenceSettings = require("scripts/settings/presence/presence_settings")
 local Missions = require("scripts/settings/mission/mission_templates")
@@ -74,19 +75,19 @@ local function set_presence()
 	local profile = player:profile()
 	local name = player:name()
 	local level = profile.current_level
+
+	if TrueLevel then
+		local true_levels, is_me = TrueLevel.get_true_levels(profile.character_id)
+		if true_levels and is_me then
+			level = true_levels.current_level + true_levels.additional_level
+		end
+	end
+
 	local archetype_name = player:archetype_name()
 	local archetype = Archetypes[archetype_name]
-	local specialization_name = profile.specialization
-	local specialization = archetype.specializations[specialization_name]
-	local details = string.format(
-		"%s - %s %s %d",
-		name,
-		Localize(archetype.archetype_name),
-		Localize(specialization.title),
-		level
-	)
-	DarktideDiscord.set_class(archetype_name, details)
+	local details = string.format("%s - %s %d", name, Localize(archetype.archetype_name), level)
 
+	DarktideDiscord.set_class(archetype_name, details)
 	DarktideDiscord.update()
 end
 

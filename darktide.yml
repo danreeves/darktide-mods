@@ -5,6 +5,8 @@ globals:
     any: true
   DarktideDiscord:
     any: true
+  DarktideWs:
+    any: true
   HAS_STEAM:
     any: true
   IS_WINDOWS:
@@ -38,6 +40,10 @@ globals:
   table.clear:
     args:
       - type: table
+  table.clear_array:
+    args:
+      - type: table
+      - type: number
   table.find_by_key:
     args:
       - type: table
@@ -57,6 +63,16 @@ globals:
     args:
       - type: table
       - type: table
+  table.map:
+    args:
+      - type: table
+      - type: function
+      - type: table
+        required: false
+  table.filter:
+    args: 
+      - type: table
+      - type: function
   math.easeInCubic:
     args: 
       - type: number
@@ -91,6 +107,10 @@ globals:
       - type: string
       - type: string
         required: false
+  Application.back_buffer_size:
+    args: []
+  Profiler.lua_stats:
+    args: []
   Color:
     any: true
   Managers:
@@ -186,3 +206,144 @@ globals:
       - type: any
   callback:
     any: true
+  LineObject.add_line:
+    args:
+      - type: table
+      - type: table
+      - type: table
+      - type: table
+  LineObject.reset:
+    args:
+      - type: table
+  LineObject.dispatch:
+    args:
+      - type: table
+      - type: table
+  LineObject.set_color:
+    args:
+      - type: table 
+  LineObject.add_sphere:
+    args:
+      - type: table
+      - type: table
+      - type: table
+      - type: number 
+      - type: number 
+      - type: number
+  LineObject.add_capsule:
+    args:
+      - type: table
+      - type: table
+      - type: table
+      - type: table
+      - type: number
+  LineObject.add_box:
+    args:
+      - type: table
+      - type: table
+      - type: table
+      - type: table
+  LineObject.add_cone:
+    args:
+      - type: table
+      - type: table
+      - type: table
+      - type: table
+      - type: number
+      - type: number
+      - type: number
+  LineObject.add_circle:
+    args:
+      - type: table
+      - type: table
+      - type: number
+      - type: number
+      - type: number
+      - type: number
+  Unit.world_rotation:
+    args:
+      - type: table
+      - type: number
+  Unit.box:
+    args:
+      - type: table
+  Matrix4x4.rotation:
+    args:
+      - type: table
+  Matrix4x4.translation:
+    args:
+      - type: table
+  Quaternion.up:
+    args:
+      - type: table
+  Quaternion.forward:
+    args:
+      - type: table
+  Quaternion.right:
+    args:
+      - type: table
+  Vector3.make_axes:
+    args:
+      - type: table
+  Vector3.normalize:
+    args:
+      - type: table
+  Vector3.length:
+    args:
+      - type: table
+  Vector3.up:
+    args: []
+  Vector3.forward:
+    args: []
+  Vector3.right:
+    args: []
+  Vector3.cross:
+    args:
+      - type: table
+      - type: table
+  Actor.debug_draw:
+    args:
+      - type: table
+      - type: table
+      - type: table
+      - type: table
+  Matrix4x4.right:
+    args:
+      - type: table
+  Matrix4x4.forward:
+    args:
+      - type: table
+  Matrix4x4.up:
+    args:
+      - type: table
+  Matrix4x4.from_quaternion_position:
+    args:
+      - type: table
+      - type: table
+  fassert:
+    args:
+      - type: bool
+      - type: string
+  World.destroy_gui:
+    args:
+      - type: table
+      - type: table
+  World.create_line_object:
+    args:
+      - type: table
+  table.average:
+    args:
+      - type: table
+  math.easeOutCubic:
+    args:
+      - type: number
+  math.lerp:
+    args:
+      - type: number
+      - type: number
+      - type: number
+  math.ease_exp:
+    args:
+      - type: number
+      - type: number
+      - type: number

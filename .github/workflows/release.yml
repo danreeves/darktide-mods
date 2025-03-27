@@ -1,0 +1,34 @@
+name: Release
+
+on: 
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Update Issue Description
+        run: |
+          REPO_URL="https://github.com/danreeves/darktide-mods"
+          FOLDERS=$(find . -maxdepth 1 -type d ! -name '.*' -exec basename {} \; | while read folder; do
+            MOD_DATE=$(git log -1 --format="%cs" -- "$folder")
+            echo "- [Download ${folder}](https://download-directory.github.io/?url=${REPO_URL}/tree/main/${folder}&filename=${folder}) (Last modified: ${MOD_DATE})"
+          done)
+          gh issue edit 107 --body "$(cat <<EOF
+          # Download the latest releases before they hit Nexus
+          These are pre-release versions and may contain bugs or unfinished features. 
+          It's recommended to use the [Nexus Mods](https://next.nexusmods.com/profile/dnrvs/mods) releases for a more stable experience.
+
+          $FOLDERS
+
+          Last updated: $(date '+%Y-%m-%d %H:%M:%S')
+          EOF
+          )"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

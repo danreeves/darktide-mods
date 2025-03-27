@@ -224,6 +224,11 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
+					{
+						setting_id = "color_nameplate",
+						type = "checkbox",
+						default_value = false,
+					},
 				},
 			},
 			-- {
