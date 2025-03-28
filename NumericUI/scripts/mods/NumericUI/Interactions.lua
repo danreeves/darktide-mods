@@ -4,6 +4,8 @@
 local mod = get_mod("NumericUI")
 
 local Pickups = require("scripts/settings/pickup/pickups")
+local Havoc = require("scripts/utilities/havoc")
+local HavocSettings = require("scripts/settings/havoc_settings")
 
 local small_clip_data = Pickups.by_name["small_clip"]
 local large_clip_data = Pickups.by_name["large_clip"]
@@ -25,7 +27,20 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 			local unit_data_ext = ScriptUnit.extension(player_unit, "unit_data_system")
 			local visual_loadout_extension = ScriptUnit.extension(player_unit, "visual_loadout_system")
 			local weapon_slot_configuration = visual_loadout_extension:slot_configuration_by_type("weapon")
-			local ammo_modifier = Managers.state.difficulty:get_ammo_modifier()
+			local ammo_modifier = 1
+			if Managers.mechanism._mechanism then
+				local mechanism_data = Managers.mechanism._mechanism._mechanism_data
+				if mechanism_data.havoc_data then
+					local parsed = Havoc.parse_data(mechanism_data.havoc_data)
+					if parsed.modifiers then
+						for _, modifier in ipairs(parsed.modifiers) do
+							if modifier.name == "ammo_pickup_modifier" then
+								ammo_modifier = HavocSettings.modifier_templates.ammo_pickup_modifier[modifier.level].ammo_pickup_modifier or 1
+							end
+						end
+					end
+				end
+			end
 
 			local max_ammo_reserve = 0
 			local ammo_reserve = 0
