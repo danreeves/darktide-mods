@@ -279,22 +279,26 @@ return {
 		en = "Show Veteran tag skull",
 		["zh-cn"] = "显示老兵标记骷髅图标",
 		ru = "Показывать череп пометки Ветерана",
+		fr = "Affiche le marqueur de crâne au dessus des ennemis de la clé de voûte \"Ciblage\" du Vétéran",
 	},
 	ammo_text_font_size = {
 		en = "Ammo text font size",
 		ru = "Размер шрифта текста боеприпасов",
+		["zh-cn"] = "弹药文本字体大小",
 	},
 	ammo_text_offset_y = {
 		en = "Ammo text offset Y",
 		ru = "Смещение текста боеприпасов по вертикали",
+		["zh-cn"] = "弹药文本 Y 轴偏移",
 	},
 	ammo_text_offset_x = {
 		en = "Ammo text offset X",
 		ru = "Смещение текста боеприпасов по горизонтали",
+		["zh-cn"] = "弹药文本 X 轴偏移",
 	},
 	ability_cooldown_font_size = {
 		en = "Ability text font size",
 		ru = "Размер шрифта текста способности",
-		fr = "Affiche le marqueur de crâne au dessus des ennemis de la clé de voûte \"Ciblage\" du Vétéran",
+		["zh-cn"] = "技能文本字体大小",
 	},
 }
