@@ -51,8 +51,17 @@ local function pre_unit_destroyed(unit)
 end
 
 mod:hook_require("scripts/extension_systems/unit_templates", function(instance)
+	-- As a client
 	mod:hook_safe(instance.medical_crate_deployable, "husk_init", function(unit)
 		unit_spawned(unit, false)
+	end)
+
+	-- As a server
+	mod:hook_safe(instance.medical_crate_deployable, "local_init", function(unit, _config, template_context)
+		local is_server = template_context.is_server
+		if is_server then
+			unit_spawned(unit, false)
+		end
 	end)
 
 	if instance.medical_crate_deployable.pre_unit_destroyed then
