@@ -106,15 +106,15 @@ return {
 					{
 						setting_id = "ammo_text_font_size",
 						type = "numeric",
-						default_value = 18,
-						range = { 18, 150 },
+						default_value = 16,
+						range = { 10, 150 },
 						step_size_value = 1,
 						change = function(new_value)
-							mod:set(ammo_text_font_size)
+							mod:set("ammo_text_font_size", new_value)
 						end,
 						get = function()
-							return mod:get(ammo_text_font_size) or 18
-						end
+							return mod:get("ammo_text_font_size") or 16
+						end,
 					},
 					{
 						setting_id = "ammo_text_offset_y",
@@ -127,7 +127,7 @@ return {
 						end,
 						get = function()
 							return mod:get("ammo_text_offset_y") or -16
-						end
+						end,
 					},
 					{
 						setting_id = "ammo_text_offset_x",
@@ -140,7 +140,7 @@ return {
 						end,
 						get = function()
 							return mod:get("ammo_text_offset_x") or 80
-						end
+						end,
 					},
 					{
 						setting_id = "show_ammo_icon",
@@ -193,8 +193,8 @@ return {
 							mod:set("ability_cooldown_font_size", new_value)
 						end,
 						get = function()
-							return mod:get(ability_cooldown_font_size) or 30
-						end
+							return mod:get("ability_cooldown_font_size") or 30
+						end,
 					},
 				},
 			},

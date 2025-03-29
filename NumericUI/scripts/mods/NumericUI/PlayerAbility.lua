@@ -1,7 +1,6 @@
 local mod = get_mod("NumericUI")
-local HudElementPlayerAbilitySettings = require(
-	"scripts/ui/hud/elements/player_ability/hud_element_player_ability_settings"
-)
+local HudElementPlayerAbilitySettings =
+	require("scripts/ui/hud/elements/player_ability/hud_element_player_ability_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 
@@ -9,7 +8,7 @@ local style = table.clone(UIFontSettings.hud_body)
 style.text_horizontal_alignment = "center"
 style.text_vertical_alignment = "center"
 
-style.font_size = mod:get("ability_cooldown_font_size"),
+style.font_size = mod:get("ability_cooldown_font_size")
 
 -- selene: allow(global_usage)
 mod:hook(_G, "dofile", function(func, path)

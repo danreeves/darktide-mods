@@ -51,7 +51,7 @@ return {
 		en = "Show team's ability cooldown as progress bar",
 		["zh-cn"] = "显示团队技能冷却进度条",
 		ru = "Показывать время восст. способности команды в виде полосы прогреccа",
-		fr = "Affiche le temps de recharge des capacités avec une barre de progrès", 
+		fr = "Affiche le temps de recharge des capacités avec une barre de progrès",
 	},
 	ability_cd_text = {
 		en = "Show team's ability cooldown as numeric counter",
@@ -105,7 +105,7 @@ return {
 		en = "Show ammo amount from packs and tins",
 		["zh-cn"] = "显示弹药包内的弹药数",
 		ru = "Показывать количество боеприпасов в контейнерах и коробках",
-		fr = "Affiche les munitions contenus dans les boîtes de munitions", 
+		fr = "Affiche les munitions contenus dans les boîtes de munitions",
 	},
 	dodge_count = {
 		en = "Show dodge count",
@@ -189,7 +189,7 @@ return {
 		en = "Nameplates",
 		["zh-cn"] = "名称标签",
 		ru = "Таблички с именами",
-		fr ="Nom d'affichage",
+		fr = "Nom d'affichage",
 	},
 	archetype_icons_in_nameplates = {
 		en = "Use class icons in nameplates",
@@ -225,7 +225,7 @@ return {
 		en = "Fade out when at max dodges",
 		["zh-cn"] = "最大闪避数时隐藏",
 		ru = "Скрывать при максимальном количестве уклонений",
-		fr = "S'efface en ayant le maximum d'esquive", 
+		fr = "S'efface en ayant le maximum d'esquive",
 	},
 	peril_text = {
 		en = "Show peril percent text",
@@ -267,7 +267,7 @@ return {
 		en = "Marker settings",
 		["zh-cn"] = "标记设置",
 		ru = "Настройки маркера",
-		fr= "Paramètre de marquage",
+		fr = "Paramètre de marquage",
 	},
 	show_ping_skull = {
 		en = "Show tag skull",
@@ -279,7 +279,7 @@ return {
 		en = "Show Veteran tag skull",
 		["zh-cn"] = "显示老兵标记骷髅图标",
 		ru = "Показывать череп пометки Ветерана",
-		fr = "Affiche le marqueur de crâne au dessus des ennemis de la clé de voûte \"Ciblage\" du Vétéran",
+		fr = 'Affiche le marqueur de crâne au dessus des ennemis de la clé de voûte "Ciblage" du Vétéran',
 	},
 	ammo_text_font_size = {
 		en = "Ammo text font size",
