@@ -1,13 +1,14 @@
 local mod = get_mod("NumericUI")
-local HudElementPlayerAbilitySettings = require(
-	"scripts/ui/hud/elements/player_ability/hud_element_player_ability_settings"
-)
+local HudElementPlayerAbilitySettings =
+	require("scripts/ui/hud/elements/player_ability/hud_element_player_ability_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 
 local style = table.clone(UIFontSettings.hud_body)
 style.text_horizontal_alignment = "center"
 style.text_vertical_alignment = "center"
+
+style.font_size = mod:get("ability_cooldown_font_size")
 
 -- selene: allow(global_usage)
 mod:hook(_G, "dofile", function(func, path)
@@ -60,9 +61,9 @@ mod:hook_safe("HudElementPlayerAbility", "update", function(self)
 				local time = Managers.time:time("gameplay")
 				local time_remaining = ability_state_component.cooldown - time
 				if time_remaining <= 1 then
-					text_widget.content.text = string.format("%.1fs", time_remaining)
+					text_widget.content.text = string.format("%.1f", time_remaining)
 				else
-					text_widget.content.text = string.format("%ds", time_remaining)
+					text_widget.content.text = string.format("%d", time_remaining)
 				end
 			else
 				text_widget.content.text = " "

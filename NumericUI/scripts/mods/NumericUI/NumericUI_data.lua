@@ -104,6 +104,45 @@ return {
 						default_value = true,
 					},
 					{
+						setting_id = "ammo_text_font_size",
+						type = "numeric",
+						default_value = 16,
+						range = { 10, 150 },
+						step_size_value = 1,
+						change = function(new_value)
+							mod:set("ammo_text_font_size", new_value)
+						end,
+						get = function()
+							return mod:get("ammo_text_font_size") or 16
+						end,
+					},
+					{
+						setting_id = "ammo_text_offset_y",
+						type = "numeric",
+						default_value = -16,
+						range = { -500, 500 },
+						step_size_value = 1,
+						change = function(new_value)
+							mod:set("ammo_text_offset_y", new_value)
+						end,
+						get = function()
+							return mod:get("ammo_text_offset_y") or -16
+						end,
+					},
+					{
+						setting_id = "ammo_text_offset_x",
+						type = "numeric",
+						default_value = 80,
+						range = { -500, 500 },
+						step_size_value = 1,
+						change = function(new_value)
+							mod:set("ammo_text_offset_x", new_value)
+						end,
+						get = function()
+							return mod:get("ammo_text_offset_x") or 80
+						end,
+					},
+					{
 						setting_id = "show_ammo_icon",
 						type = "checkbox",
 						default_value = true,
@@ -143,6 +182,19 @@ return {
 						setting_id = "disable_ability_background_progress",
 						type = "checkbox",
 						default_value = true,
+					},
+					{
+						setting_id = "ability_cooldown_font_size",
+						type = "numeric",
+						default_value = 30,
+						range = { 20, 50 },
+						step_size_value = 1,
+						change = function(new_value)
+							mod:set("ability_cooldown_font_size", new_value)
+						end,
+						get = function()
+							return mod:get("ability_cooldown_font_size") or 30
+						end,
 					},
 				},
 			},
