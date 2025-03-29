@@ -5,10 +5,21 @@ local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
 local HealthExtension = require("scripts/extension_systems/health/health_extension")
 
-local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarMarker")
+local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/CopiedDamageIndicator")
+
+mod.screen_offset_x = 0
+mod.screen_offset_y = 0
+
+mod:hook("HudElementWorldMarkers", "_get_screen_offset", function(func, self, scale)
+	local x, y = func(self, scale)
+	mod.screen_offset_x = x
+	mod.screen_offset_y = y
+	return x, y
+end)
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
+	mod.marker_templates = self._marker_templates
 end)
 
 local show = {}
@@ -21,8 +32,14 @@ end
 
 get_toggles()
 
-mod.on_setting_changed = function()
+function mod.on_setting_changed()
 	get_toggles()
+
+	MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/CopiedDamageIndicator")
+
+	if mod.marker_templates then
+		mod.marker_templates[MarkerTemplate.name] = MarkerTemplate
+	end
 end
 
 local function should_enable_healthbar(unit)
@@ -70,11 +87,12 @@ mod:hook_safe(
 	end
 )
 
-mod.textures = { bleed = "https://darkti.de/mod-assets/bleed.png", burn = "https://darkti.de/mod-assets/burn.png" }
-mod.colors = { bleed = { 255, 255, 0, 0 }, burn = { 255, 255, 102, 0 } }
+-- mod.textures = { bleed = "https://darkti.de/mod-assets/bleed.png", burn = "https://darkti.de/mod-assets/burn.png" }
+-- mod.colors = { bleed = { 255, 255, 0, 0 }, burn = { 255, 255, 102, 0 } }
 
-for k, v in pairs(mod.textures) do
-	Managers.url_loader:load_texture(v):next(function(data)
-		mod.textures[k] = data.texture
-	end)
-end
+-- for k, v in pairs(mod.textures) do
+-- 	Managers.url_loader:load_texture(v):next(function(data)
+-- 		mod:echo("Loaded texture: " .. k)
+-- 		mod.textures[k] = data.texture
+-- 	end)
+-- end

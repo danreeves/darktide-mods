@@ -534,6 +534,8 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		local is_on_fire = is_on_regularfire or is_on_warpfire
 		local burn_stacks = regularfire_stacks + warpfire_stacks
 
+		mod:echo(is_on_fire)
+
 		marker.debuffs = marker.debuffs or {}
 
 		if mod:get("bleed") then

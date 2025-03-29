@@ -59,15 +59,31 @@ local widgets = {
 				default_value = true,
 			},
 			{
-				setting_id = "bleed",
-				type = "checkbox",
-				default_value = true,
+				setting_id = "damage_number_type",
+				type = "dropdown",
+				default_value = "readable",
+				options = {
+					{ text = "readable", value = "readable" },
+					{ text = "floating", value = "floating" },
+					{ text = "flashy", value = "flashy" },
+				},
 			},
 			{
-				setting_id = "burn",
-				type = "checkbox",
-				default_value = true,
+				setting_id = "max_distance",
+				type = "numeric",
+				default_value = 25,
+				range = { 1, 100 },
 			},
+			-- {
+			-- 	setting_id = "bleed",
+			-- 	type = "checkbox",
+			-- 	default_value = true,
+			-- },
+			-- {
+			-- 	setting_id = "burn",
+			-- 	type = "checkbox",
+			-- 	default_value = true,
+			-- },
 		},
 	},
 	{
