@@ -232,23 +232,23 @@ return {
 	},
 	color_nameplate = {
 		en = "Colour nameplate text same as icon",
-		ru = "Цвет текста таблички с именем совпадает с цветом значка",
 		["zh-cn"] = "使名称标签文本与图标颜色相同",
 		["zh-tw"] = "名稱標籤文字與圖示顏色相同",
+		ru = "Цвет текста таблички с именем совпадает с цветом значка",
 		fr = "Le nom d'affichage est de la même couleur que l'icône",
 	},
 	loading_screens = {
 		en = "Loading screens",
-		ru = "Экран загрузки",
 		["zh-cn"] = "加载界面",
 		["zh-tw"] = "加載畫面",
+		ru = "Экран загрузки",
 		fr = "Temps de chargement",
 	},
 	mission_title_on_intro = {
 		en = "Show mission title on loading screen",
-		ru = "Показывать название миссии на экране загрузки",
 		["zh-cn"] = "在加载界面显示任务详情",
 		["zh-tw"] = "在加載畫面顯示任務標題",
+		ru = "Показывать название миссии на экране загрузки",
 		fr = "Affiche le nom de la mission durant le temps de chargement",
 	},
 	show_efficient_dodges = {
