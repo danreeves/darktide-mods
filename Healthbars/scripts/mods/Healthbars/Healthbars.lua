@@ -4,11 +4,25 @@
 local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
 local HealthExtension = require("scripts/extension_systems/health/health_extension")
-
 local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarMarker")
+
+mod.textures = {
+	bleed = "https://danreeves.github.io/darktide-mods/Healthbars/assets/bleed.png",
+	burn = "https://danreeves.github.io/darktide-mods/Healthbars/assets/burn.png",
+}
+mod.colors = { bleed = { 255, 255, 0, 0 }, burn = { 255, 255, 102, 0 } }
+mod.textures_loaded = false
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
+	if not mod.textures_loaded then
+		for k, v in pairs(mod.textures) do
+			Managers.url_loader:load_texture(v):next(function(data)
+				mod.textures[k] = data.texture
+			end)
+		end
+		mod.textures_loaded = true
+	end
 end)
 
 local show = {}
@@ -69,16 +83,3 @@ mod:hook_safe(
 		end
 	end
 )
-
-mod.textures = {
-	bleed = "https://danreeves.github.io/darktide-mods/Healthbars/assets/bleed.png",
-	burn = "https://danreeves.github.io/darktide-mods/Healthbars/assets/burn.png",
-}
-mod.colors = { bleed = { 255, 255, 0, 0 }, burn = { 255, 255, 102, 0 } }
-
-for k, v in pairs(mod.textures) do
-	Managers.url_loader:load_texture(v):next(function(data)
-		mod:echo("Loaded texture %s", v)
-		mod.textures[k] = data.texture
-	end)
-end
