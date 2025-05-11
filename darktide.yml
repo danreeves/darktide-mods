@@ -138,6 +138,12 @@ globals:
       - type: string
   XboxLive.user_id:
     args: []
+  XboxLive.xuid_hex_to_dec:
+    args:
+      - type: string
+  Application.hex64_to_dec:
+    args:
+      - type: string
   Backend.AUTH_METHOD_STEAM:
     any: true
   Steam.retrieve_auth_session_ticket:
