@@ -1,8 +1,12 @@
 local mod = get_mod("Sprays")
 local rtc = get_mod("rtc")
-local SprayMarkerTemplate = mod:io_dofile("Sprays/scripts/mods/Sprays/SprayMarkerTemplate")
 local function noop() end
 mod.textures = mod:persistent_table("textures")
+
+local SprayMarkerTemplate = mod:io_dofile("Sprays/scripts/mods/Sprays/SprayMarkerTemplate")
+mod:hook_safe("HudElementWorldMarkers", "init", function(self)
+	self._marker_templates[SprayMarkerTemplate.name] = SprayMarkerTemplate
+end)
 
 rtc.register(mod, "add_spray", function(player, data)
 	local url = data.url
@@ -15,10 +19,6 @@ rtc.register(mod, "add_spray", function(player, data)
 			{ url = url }
 		)
 	end
-end)
-
-mod:hook_safe("HudElementWorldMarkers", "init", function(self)
-	self._marker_templates[SprayMarkerTemplate.name] = SprayMarkerTemplate
 end)
 
 local url = "https://cdn.7tv.app/emote/01FS5ZCFG0000500DPPCXJWCP8/2x.png"
