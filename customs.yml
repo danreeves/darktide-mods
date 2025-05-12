@@ -1,14 +1,17 @@
 ---
 base: lua51 # We will be extending off of Lua 5.1.
 globals:
-  WebSockets.connect:
+  RTC.connect:
     args:
       - type: string
       - type: function
-  WebSockets.send:
+      - type: function
+      - type: function
+  RTC.send:
     args:
-      - type: any
       - type: string
-  WebSockets.close:
+      - type: string
+      - type: string
+  RTC.disconnect:
     args:
-      - type: any
+      - type: string

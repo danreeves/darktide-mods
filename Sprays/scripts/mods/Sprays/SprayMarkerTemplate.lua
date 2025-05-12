@@ -78,7 +78,7 @@ template.on_enter = function(widget, marker)
 	local url = marker.data.url
 	if mod.textures[url] == nil then
 		Managers.url_loader:load_texture(url):next(function(data)
-			mod:echo("loaded")
+			mod:echo("loaded texture " .. url)
 			mod.textures[url] = data.texture
 			-- mod:echo("%dx%d", data.width, data.height)
 		end)
