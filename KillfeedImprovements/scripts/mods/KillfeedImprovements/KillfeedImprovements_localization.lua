@@ -16,6 +16,24 @@ local localizations = {
 		["zh-cn"] = "在击杀面板显示",
 		ru = "Показывать в ленте убийств",
 	},
+	merge_kills = {
+		en = "Merge kills",
+	},
+	enable_in_psykanium = {
+		en = "Enable in Psykanium",
+	},
+	alignment = {
+		en = "Alignment",
+	},
+	left = {
+		en = "Left",
+	},
+	center = {
+		en = "Center",
+	},
+	right = {
+		en = "Right",
+	},
 }
 
 for name, breed in pairs(Breeds) do

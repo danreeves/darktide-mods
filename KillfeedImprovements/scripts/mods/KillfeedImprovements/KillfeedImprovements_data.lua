@@ -23,6 +23,35 @@ return {
 	options = {
 		widgets = {
 			{
+				setting_id = "enable_in_psykanium",
+				type = "checkbox",
+				default_value = false,
+			},
+			{
+				setting_id = "alignment",
+				type = "dropdown",
+				options = {
+					{
+						value = "left",
+						text = "left",
+					},
+					{
+						value = "center",
+						text = "center",
+					},
+					{
+						value = "right",
+						text = "right",
+					},
+				},
+				default_value = "left",
+			},
+			{
+				setting_id = "merge_kills",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
 				setting_id = "include_breeds",
 				type = "group",
 				sub_widgets = breed_toggles,

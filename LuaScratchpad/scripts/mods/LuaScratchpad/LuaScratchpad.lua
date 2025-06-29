@@ -13,7 +13,7 @@ local padded_width = window_width - PADDING
 
 function LuaScratchpad:init()
 	self._is_open = false
-	self._lua_string = "local mod = get_mod('LuaScratchpad'); mod:echo('hi')"
+	self._lua_string = "local mod = get_mod('LuaScratchpad');\nmod:echo('hi')"
 	self._global = "Managers"
 	self._inspect_value = nil
 end
@@ -45,7 +45,7 @@ end
 local function table_to_tree(tbl)
 	local keys = table.keys(tbl)
 	table.sort(keys)
-	for i, key in ipairs(keys) do
+	for _i, key in ipairs(keys) do
 		local value = tbl[key]
 		if Imgui.tree_node(key) then
 			local typeof = type(value)
@@ -129,7 +129,7 @@ end
 
 function mod.inspect(...)
 	if editor then
-		editor._inspect_value = select("#", ...) > 1 and {...} or ...
+		editor._inspect_value = select("#", ...) > 1 and { ... } or ...
 		if not editor._is_open then
 			editor:open()
 		end

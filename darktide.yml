@@ -15,6 +15,8 @@ globals:
     any: true
   ALIVE:
     any: true
+  RESOLUTION_LOOKUP:
+    any: true
   class:
     args:
       - type: string
