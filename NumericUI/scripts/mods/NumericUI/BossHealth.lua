@@ -119,7 +119,7 @@ mod:hook_safe("HudElementBossHealth", "update", function(self)
 	if mod:get("show_boss_health_numbers") then
 		local widget_groups = self._widget_groups
 		local active_targets_array = self._active_targets_array
-		local num_active_targets = math.min(2, #active_targets_array)
+		local num_active_targets = math.min(#widget_groups - 1, #active_targets_array)
 
 		for i = 1, num_active_targets do
 			local widget_group_index = num_active_targets > 1 and i + 1 or i
