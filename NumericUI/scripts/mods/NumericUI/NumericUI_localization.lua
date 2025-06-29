@@ -237,20 +237,6 @@ return {
 		ru = "Цвет текста таблички с именем совпадает с цветом значка",
 		fr = "Le nom d'affichage est de la même couleur que l'icône",
 	},
-	loading_screens = {
-		en = "Loading screens",
-		["zh-cn"] = "加载界面",
-		["zh-tw"] = "加載畫面",
-		ru = "Экран загрузки",
-		fr = "Temps de chargement",
-	},
-	mission_title_on_intro = {
-		en = "Show mission title on loading screen",
-		["zh-cn"] = "在加载界面显示任务详情",
-		["zh-tw"] = "在加載畫面顯示任務標題",
-		ru = "Показывать название миссии на экране загрузки",
-		fr = "Affiche le nom de la mission durant le temps de chargement",
-	},
 	show_efficient_dodges = {
 		en = "Show number of efficient dodges",
 		["zh-cn"] = "显示有效闪避数",
@@ -328,6 +314,9 @@ return {
 		ru = "Показывать череп пометки Ветерана",
 		fr = 'Affiche le marqueur de crâne au dessus des ennemis de la clé de voûte "Ciblage" du Vétéran',
 	},
+	show_arb_ping_skull = {
+		en = "Show Arbites tag skull",
+	},
 	ammo_text_font_size = {
 		en = "Ammo text font size",
 		ru = "Размер шрифта текста боеприпасов",
@@ -351,5 +340,14 @@ return {
 		ru = "Размер шрифта текста способности",
 		["zh-cn"] = "技能文本字体大小",
 		["zh-tw"] = "技能文字字體大小",
+	},
+	companion_nameplates_icon = {
+		en = "Show companion icon",
+	},
+	companion_nameplates_name = {
+		en = "Show companion name",
+	},
+	companion_nameplates_screen_clamp = {
+		en = "Clamp companion nameplates to screen",
 	},
 }

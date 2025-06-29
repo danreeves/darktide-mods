@@ -229,24 +229,27 @@ return {
 						type = "checkbox",
 						default_value = false,
 					},
+					{
+						setting_id = "companion_nameplates_icon",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "companion_nameplates_name",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "companion_nameplates_screen_clamp",
+						type = "checkbox",
+						default_value = true,
+					},
 				},
 			},
-			-- {
-			-- 	setting_id = "loading_screens",
-			-- 	type = "group",
-			-- 	sub_widgets = {
-			-- 		{
-			-- 			setting_id = "mission_title_on_intro",
-			-- 			type = "checkbox",
-			-- 			default_value = true,
-			-- 		},
-			-- 	},
-			-- },
 			{
 				setting_id = "pickup_settings",
 				type = "group",
 				sub_widgets = {
-
 					{
 						setting_id = "show_medical_crate_radius",
 						type = "checkbox",
@@ -258,7 +261,6 @@ return {
 				setting_id = "boss_health_settings",
 				type = "group",
 				sub_widgets = {
-
 					{
 						setting_id = "show_boss_health_numbers",
 						type = "checkbox",
@@ -270,15 +272,18 @@ return {
 				setting_id = "marker_settings",
 				type = "group",
 				sub_widgets = {
-
 					{
 						setting_id = "show_ping_skull",
 						type = "checkbox",
 						default_value = true,
 					},
-
 					{
 						setting_id = "show_vet_ping_skull",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "show_arb_ping_skull",
 						type = "checkbox",
 						default_value = true,
 					},
