@@ -5,7 +5,7 @@ mod.input_blocked = false
 
 function input_get_hook(func, self, action_name)
 	-- Don't impact the non gameplay input services
-	if self.type == "Ingame" then
+	if self.type == "Ingame" and action_name ~= "voip_push_to_talk" then
 		-- When checking if action_two_hold is held
 		if action_name == "action_two_hold" then
 			local unit = Managers.player:local_player(1).player_unit
