@@ -1,5 +1,20 @@
 local mod = get_mod("NumericUI")
 
+local color_options = {}
+for _, color_name in ipairs(Color.list) do
+  table.insert(color_options, {
+    text = color_name,
+    value = color_name
+  })
+end
+table.sort(color_options, function(a, b)
+  return a.text < b.text
+end)
+
+local function get_color_options()
+  return table.clone(color_options)
+end
+
 return {
 	name = mod:localize("mod_name"),
 	description = mod:localize("mod_description"),
@@ -89,6 +104,54 @@ return {
 					},
 					{
 						setting_id = "debug_dodge_count",
+						type = "checkbox",
+						default_value = false,
+					},
+				},
+			},
+			{
+				setting_id = "dodge_count_timer_items",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "dodge_timer",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
+						setting_id = "color_start",
+						type = "dropdown",
+						default_value = "ui_orange_light",
+						options = get_color_options()
+					},
+					{
+						setting_id = "color_end",
+						type = "dropdown",
+						default_value = "ui_red_light",
+						options = get_color_options()
+					},
+					{
+						setting_id = "dodge_timer_y_offset",
+						type = "numeric",
+						default_value = 30,
+						range = {-50, 50},
+						step_size_value = 2,
+					},
+					{
+						setting_id = "dodge_timer_width",
+						type = "numeric",
+						default_value = 208,
+						range = {0, 500},
+						step_size_value = 4,
+					},
+					{
+						setting_id = "dodge_timer_height",
+						type = "numeric",
+						default_value = 9,
+						range = {0, 20},
+					},
+					{
+						setting_id = "dodge_timer_hide_full",
 						type = "checkbox",
 						default_value = false,
 					},

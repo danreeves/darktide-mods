@@ -1,4 +1,18 @@
-return {
+local InputUtils = require("scripts/managers/input/input_utils")
+
+local function readable(text)
+  local readable_string = ""
+  local tokens = string.split(text, "_")
+  for _, token in ipairs(tokens) do
+    local first_letter = string.sub(token, 1, 1)
+    token = string.format("%s%s", string.upper(first_letter), string.sub(token, 2))
+    readable_string = string.trim(string.format("%s %s", readable_string, token))
+  end
+
+  return readable_string
+end
+
+local loc = {
 	mod_name = {
 		en = "Numeric UI",
 		ru = "Числовой интерфейс",
@@ -33,6 +47,11 @@ return {
 		["zh-tw"] = "閃避計數 HUD",
 		ru = "Интерфейс счётчика уклонений",
 		fr = "ATH pour le nombre d'esquive",
+	},
+	dodge_count_timer_items = {
+		-- Needs loc
+		en = "Dodge Count Reset Timer HUD",
+		fr = "ATH pour le temps de réinitialisation du nombre d'esquive",
 	},
 	team_hud_items = {
 		en = "Team HUD",
@@ -131,6 +150,66 @@ return {
 		["zh-tw"] = "顯示閃避計數",
 		ru = "Показывать количество уклонений",
 		fr = "Affiche la quantité d'esquive",
+	},
+	dodge_timer = {
+		-- Needs loc
+		en = "Show dodge count reset timer",
+		fr = "Affiche une barre de progrès pour la réinitialisation du nombre d'esquive",
+	},
+	color_start = {
+		-- Needs loc
+		en = "Timer color - Start",
+		fr = "Couleur de la barre - Début",
+	},
+	color_start_description = {
+		-- Needs loc
+		en = "\nDefault value: UI Orange Light",
+		fr = "\nValeur par défaut : UI Orange Light",
+	},
+	color_end = {
+		-- Needs loc
+		en = "Timer color - End",
+		fr = "Couleur de la barre - Fin"
+	},
+	color_end_description = {
+		-- Needs loc
+		en = "\nDefault value: UI Red Light",
+		fr = "\nValeur par défaut : UI Red Light",
+	},
+	dodge_timer_y_offset = {
+		-- Needs loc
+		en = "Vertical offset",
+		fr = "Décalage vertical",
+	},
+	dodge_timer_y_offset_description = {
+		-- Needs loc
+		en = "\nDefault value: 30\n\nA higher vertical offset value moves the timer bar down",
+		fr = "\nValeur par défaut : 30\n\nUn décalage plus grand déplace la barre vers le bas",
+	},
+	dodge_timer_width = {
+		-- Needs loc
+		en = "Width",
+		fr = "Largeur",
+	},
+	dodge_timer_width_description = {
+		-- Needs loc
+		en = "\nDefault value: 208",
+		fr = "\nValeur par défaut : 208",
+	},
+	dodge_timer_height = {
+		-- Needs loc
+		en = "Height",
+		fr = "Hauteur",
+	},
+	dodge_timer_height_description = {
+		-- Needs loc
+		en = "\nDefault value: 9",
+		fr = "\nValeur par défaut : 9",
+	},
+	dodge_timer_hide_full = {
+		-- Needs loc
+		en = "Hide dodge count reset timer when full",
+		fr = "Cacher la barre elle est au maximum",
 	},
 	debug_dodge_count = {
 		en = "Show debug dodge info",
@@ -351,3 +430,14 @@ return {
 		en = "Clamp companion nameplates to screen",
 	},
 }
+
+local color_names = Color.list
+for _, color_name in ipairs(color_names) do
+  local color_values = Color[color_name](255, true)
+  local text = InputUtils.apply_color_to_input_text(readable(color_name), color_values)
+  loc[color_name] = {
+    en = text
+  }
+end
+
+return loc
