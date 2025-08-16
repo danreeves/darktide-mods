@@ -16,14 +16,6 @@ local function add(tbl, breed_name, default_value)
 end
 
 for breed_name, breed in pairs(Breeds) do
-	-- if breed.tags and breed.tags.minion then
-		-- local tag_list = {}
-		-- for tag, _ in pairs(breed.tags) do
-			-- tag_list[#tag_list + 1] = tag
-		-- end
-		-- local tags_string = table.concat(tag_list, ", ")
-		-- mod:echo("%s: %s", breed_name, tags_string)
-	-- end
 	if breed.tags.minion then
 		local default_value = false
 		if breed.tags.elite or breed.tags.special or breed.tags.ritualist then
