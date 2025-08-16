@@ -9,10 +9,10 @@ mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerWeapon")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/Interactions")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/Nameplates")
--- mod:io_dofile("NumericUI/scripts/mods/NumericUI/MissionIntroView")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/MedicalCrate")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/BossHealth")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PingMarkers")
+mod:io_dofile("NumericUI/scripts/mods/NumericUI/CompanionNameplates")
 
 local hud_elements = {
 	{
