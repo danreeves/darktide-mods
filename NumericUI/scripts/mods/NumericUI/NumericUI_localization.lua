@@ -51,6 +51,7 @@ local loc = {
 	dodge_count_timer_items = {
 		-- Needs loc
 		en = "Dodge Count Reset Timer HUD",
+		["zh-cn"] = "闪避计数重置时间 HUD",
 		fr = "ATH pour le temps de réinitialisation du nombre d'esquive",
 	},
 	team_hud_items = {
@@ -154,61 +155,73 @@ local loc = {
 	dodge_timer = {
 		-- Needs loc
 		en = "Show dodge count reset timer",
+		["zh-cn"] = "显示闪避计数重置时间",
 		fr = "Affiche une barre de progrès pour la réinitialisation du nombre d'esquive",
 	},
 	color_start = {
 		-- Needs loc
 		en = "Timer color - Start",
+		["zh-cn"] = "计时器颜色 - 起始",
 		fr = "Couleur de la barre - Début",
 	},
 	color_start_description = {
 		-- Needs loc
 		en = "\nDefault value: UI Orange Light",
+		["zh-cn"] = "\n默认值：UI Orange Light",
 		fr = "\nValeur par défaut : UI Orange Light",
 	},
 	color_end = {
 		-- Needs loc
 		en = "Timer color - End",
-		fr = "Couleur de la barre - Fin"
+		["zh-cn"] = "计时器颜色 - 结束",
+		fr = "Couleur de la barre - Fin",
 	},
 	color_end_description = {
 		-- Needs loc
 		en = "\nDefault value: UI Red Light",
+		["zh-cn"] = "\n默认值：UI Red Light",
 		fr = "\nValeur par défaut : UI Red Light",
 	},
 	dodge_timer_y_offset = {
 		-- Needs loc
 		en = "Vertical offset",
+		["zh-cn"] = "垂直偏移量",
 		fr = "Décalage vertical",
 	},
 	dodge_timer_y_offset_description = {
 		-- Needs loc
 		en = "\nDefault value: 30\n\nA higher vertical offset value moves the timer bar down",
+		["zh-cn"] = "\n默认值：30\n\n增大垂直偏移量会使计时器向下移动",
 		fr = "\nValeur par défaut : 30\n\nUn décalage plus grand déplace la barre vers le bas",
 	},
 	dodge_timer_width = {
 		-- Needs loc
 		en = "Width",
+		["zh-cn"] = "宽度",
 		fr = "Largeur",
 	},
 	dodge_timer_width_description = {
 		-- Needs loc
 		en = "\nDefault value: 208",
+		["zh-cn"] = "\n默认值：208",
 		fr = "\nValeur par défaut : 208",
 	},
 	dodge_timer_height = {
 		-- Needs loc
 		en = "Height",
+		["zh-cn"] = "高度",
 		fr = "Hauteur",
 	},
 	dodge_timer_height_description = {
 		-- Needs loc
 		en = "\nDefault value: 9",
+		["zh-cn"] = "\n默认值：9",
 		fr = "\nValeur par défaut : 9",
 	},
 	dodge_timer_hide_full = {
 		-- Needs loc
 		en = "Hide dodge count reset timer when full",
+		["zh-cn"] = "闪避计数重置时间为满时隐藏",
 		fr = "Cacher la barre elle est au maximum",
 	},
 	debug_dodge_count = {
@@ -395,6 +408,7 @@ local loc = {
 	},
 	show_arb_ping_skull = {
 		en = "Show Arbites tag skull",
+		["zh-cn"] = "显示法务官标记骷髅图标",
 	},
 	ammo_text_font_size = {
 		en = "Ammo text font size",
@@ -422,12 +436,15 @@ local loc = {
 	},
 	companion_nameplates_icon = {
 		en = "Show companion icon",
+		["zh-cn"] = "显示伙伴图标",
 	},
 	companion_nameplates_name = {
 		en = "Show companion name",
+		["zh-cn"] = "显示伙伴名称",
 	},
 	companion_nameplates_screen_clamp = {
 		en = "Clamp companion nameplates to screen",
+		["zh-cn"] = "使伙伴名牌不超出屏幕边缘",
 	},
 }
 
