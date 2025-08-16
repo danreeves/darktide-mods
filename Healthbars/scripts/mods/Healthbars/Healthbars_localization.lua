@@ -90,9 +90,11 @@ local localization = {
 local unlocalized_breeds = {
 	chaos_lesser_mutated_poxwalker = {
 		en = "Show Lesser mutated poxwalker health",
+		ru = "Показывать здоровье малого мутировавшего чумного ходока",
 	},
 	chaos_mutated_poxwalker = {
 		en = "Show Mutated poxwalker health",
+		ru = "Показывать здоровье мутировавшего чумного ходока",
 	},
 }
 
