@@ -24,7 +24,7 @@ function mod.load_profile_image(player_info, cb)
 	local xuid, url, get_image_url
 
 	if platform == "steam" then
-		xuid = Steam.id_hex_to_dec(player_info:platform_user_id())
+		xuid = Application.hex64_to_dec(player_info:platform_user_id())
 		url = "https://steam-profile-json.deno.dev/" .. xuid
 		get_image_url = function(response)
 			return response.body.profile.avatarFull
@@ -32,8 +32,8 @@ function mod.load_profile_image(player_info, cb)
 	end
 
 	if platform == "xbox" then
-		xuid = Steam.id_hex_to_dec(player_info:platform_user_id())
-		url = "https://xboxapi.mrmicky.workers.dev/profiles/" .. xuid
+		xuid = Application.hex64_to_dec(player_info:platform_user_id())
+		url = "https://xboxapi-workers.dnrvs.workers.dev/profiles/" .. xuid
 		get_image_url = function(response)
 			return response.body.gamerpic
 		end

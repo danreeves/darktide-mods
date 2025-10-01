@@ -67,6 +67,12 @@ local localization = {
 		["zh-tw"] = "怪物/連長",
 		ru = "Монстр/капитан",
 	},
+	ritualist_breeds = {
+		en = "Ritualist",
+		["zh-cn"] = "仪式师",
+		["zh-tw"] = "儀式師",
+		ru = "Ритуалист",
+	},
 	bleed = {
 		en = "Show bleed stacks",
 		["zh-cn"] = "显示流血层数",
@@ -81,15 +87,40 @@ local localization = {
 	},
 }
 
+local unlocalized_breeds = {
+	chaos_lesser_mutated_poxwalker = {
+		en = "Show Lesser mutated poxwalker health",
+		ru = "Показывать здоровье малого мутировавшего чумного ходока",
+	},
+	chaos_mutated_poxwalker = {
+		en = "Show Mutated poxwalker health",
+		ru = "Показывать здоровье мутировавшего чумного ходока",
+	},
+}
+
 for breed_name, breed in pairs(Breeds) do
-	if breed.tags.minion then
+	if breed.tags and breed.tags.minion then
 		local display_name = Localize(breed.display_name)
-		localization[breed_name] = {
-			en = "Show " .. display_name .. " health",
-			["zh-cn"] = "显示" .. display_name .. "的血量",
-			["zh-tw"] = "顯示" .. display_name .. "的血量",
-			ru = "Показать здоровье:\n" .. display_name,
-		}
+
+		if string.find(display_name, "<unlocalized") then
+			if unlocalized_breeds[breed_name] then
+				localization[breed_name] = unlocalized_breeds[breed_name]
+			else
+				localization[breed_name] = {
+					en = "Show " .. breed_name .. " health",
+					["zh-cn"] = "显示" .. breed_name .. "的血量",
+					["zh-tw"] = "顯示" .. breed_name .. "的血量",
+					ru = "Показать здоровье:\n" .. breed_name,
+				}
+			end
+		else
+			localization[breed_name] = {
+				en = "Show " .. display_name .. " health",
+				["zh-cn"] = "显示" .. display_name .. "的血量",
+				["zh-tw"] = "顯示" .. display_name .. "的血量",
+				ru = "Показать здоровье:\n" .. display_name,
+			}
+		end
 	end
 end
 

@@ -1,5 +1,5 @@
 local mod = get_mod("ShowEquippedInLobby")
-local BaseView = require("scripts/ui/views/base_view") -- needs to be required before creating a class from it
+local _BaseView = require("scripts/ui/views/base_view") -- needs to be required before creating a class from it
 local LobbyView = require("scripts/ui/views/lobby_view/lobby_view")
 
 local legend_input_definition = {

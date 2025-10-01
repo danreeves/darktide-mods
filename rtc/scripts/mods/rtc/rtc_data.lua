@@ -1,7 +1,7 @@
-local mod = get_mod("PlayerList")
+local mod = get_mod("rtc")
 
 return {
-	name = "PlayerList",
+	name = "rtc",
 	description = mod:localize("mod_description"),
 	is_togglable = true,
 }

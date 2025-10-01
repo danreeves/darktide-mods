@@ -1,5 +1,5 @@
 return {
 	mod_description = {
-		en = "PlayerList description",
+		en = "rtc description",
 	},
 }
