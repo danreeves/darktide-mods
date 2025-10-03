@@ -16,7 +16,7 @@ local function add(tbl, breed_name, default_value)
 end
 
 for breed_name, breed in pairs(Breeds) do
-	if breed.tags.minion then
+	if breed.tags.minion and not string.match(breed_name, "mutator") then
 		local default_value = false
 		if breed.tags.elite or breed.tags.special or breed.tags.ritualist then
 			default_value = true
