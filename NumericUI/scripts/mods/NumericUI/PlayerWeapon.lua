@@ -3,6 +3,7 @@
 -- Author: groundskeeper Willie, raindish
 
 local mod = get_mod("NumericUI")
+local Ammo = require("scripts/utilities/ammo")
 local PLAYER_WEAPON_HUD_DEF_PATH = "scripts/ui/hud/elements/player_weapon/hud_element_player_weapon_definitions"
 
 local backups = mod:persistent_table("player_weapon_hud_backups")
@@ -22,7 +23,6 @@ local prev_grenade_charges = 0 --Keeps track of grenade amount in the previous l
 local grenade_gained_display_t = 0 --keeps track of how long the grenade gained widget has been displayed
 local grenade_gained_amount = 0 --Keeps track of the amount of grenades gained
 local ammo_gained_cumulative = false --When true, will use a single widget to show multiple ammo increments
-local static_prev_ammo = nil --Keeps track of ammo amount in the previous loop.
 local ammo_gained_available_widgets = {} --List of non-active ammo-gained widgets (for non-cumulative display)
 local ammo_gained_active_widgets = {}
 local ammo_gained_data = {
@@ -270,17 +270,18 @@ end
 
 mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_renderer)
 	local uses_ammo = self._uses_ammo and not self._infinite_ammo
+	local ability_type = self._ability and self._ability.ability_type
 
-	if not self._ability_type then
+	if not ability_type then
 		local slot_component = self._slot_component
 
 		if slot_component and uses_ammo then
 			local ammo_text_widget = self._widgets_by_name.ammo_text
 			local icon_widget = self._widgets_by_name.ammo_icon
 
-			local max_clip = slot_component.max_ammunition_clip or 0
+			local max_clip = Ammo.max_ammo_in_clips(slot_component) or 0
 			local max_reserve = slot_component.max_ammunition_reserve or 0
-			local current_clip = slot_component.current_ammunition_clip or 0
+			local current_clip = Ammo.current_ammo_in_clips(slot_component) or 0
 			local current_reserve = slot_component.current_ammunition_reserve or 0
 
 			local total_current_ammo = current_clip + current_reserve
@@ -291,7 +292,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 				local style = ammo_text_widget.style
 				ammo_text_widget.content.max_ammo = ""
 
-				if mod:get("max_ammo_text") then
+				if mod:get("max_ammo_text") and max_reserve then
 					local display_text = ""
 					if mod:get("show_max_ammo_as_percent") then
 						display_text = string.format("%d%%", math.min(total_current_ammo / total_max_ammo * 100, 100))
@@ -305,7 +306,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 					style.max_ammo.drop_shadow = true
 				end
 
-				if mod:get("show_ammo_icon") and icon_widget then
+				if mod:get("show_ammo_icon") and icon_widget and max_reserve then
 					icon_widget.content.ammo_icon = "content/ui/materials/hud/icons/party_ammo"
 
 					local color = nil
@@ -353,7 +354,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 
 			if mod:get("show_munitions_gained") then --this one checks for ammo gained
 				local total_ammo = self._total_ammo
-				local prev_ammo = static_prev_ammo or self._total_ammo
+				local prev_ammo = self._prev_ammo or self._total_ammo
 
 				if ammo_gained_cumulative then
 					local ammo_gained_widget = self._widgets_by_name.ammo_gained_1
@@ -401,7 +402,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 					end
 				end
 
-				static_prev_ammo = total_ammo
+				self._prev_ammo = total_ammo
 			end
 		end
 	elseif mod:get("show_munitions_gained") and uses_ammo then --This one checks for grenades gained
