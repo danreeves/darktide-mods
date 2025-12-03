@@ -1,5 +1,6 @@
 local mod = get_mod("NumericUI")
 local TEAM_HUD_DEF_PATH = "scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions"
+local Ammo = require("scripts/utilities/ammo")
 
 local backups = mod:persistent_table("team_hud_backups")
 backups.team_hud_definitions = backups.team_hud_definitions or mod:original_require(TEAM_HUD_DEF_PATH)
@@ -435,10 +436,10 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 				local inventory_component = unit_data_extension:read_component(slot_id)
 
 				if inventory_component then
-					local max_clip = inventory_component.max_ammunition_clip or 0
-					local max_reserve = inventory_component.max_ammunition_reserve or 0
-					local current_clip = inventory_component.current_ammunition_clip or 0
-					local current_reserve = inventory_component.current_ammunition_reserve or 0
+					local max_clip = Ammo.max_ammo_in_clips(inventory_component) or 0
+					local max_reserve = Ammo.max_ammo_in_reserve(inventory_component) or 0
+					local current_clip = Ammo.current_ammo_in_clips(inventory_component) or 0
+					local current_reserve = Ammo.current_ammo_in_reserve(inventory_component) or 0
 					total_current_ammo = total_current_ammo + current_clip + current_reserve
 					total_max_ammo = total_max_ammo + max_clip + max_reserve
 				end
