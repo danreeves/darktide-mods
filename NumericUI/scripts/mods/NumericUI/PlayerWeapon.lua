@@ -298,14 +298,16 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 
 			local max_reserve = Ammo.max_ammo_in_reserve(slot_component) or 0
 			local current_reserve = Ammo.current_ammo_in_reserve(slot_component) or 0
+			local total_current_ammo = current_reserve
+			local total_max_ammo = max_reserve
 
 			for i = 1, NetworkConstants.clips_in_use.max_size do
 				local ammo_text_widget = self._widgets_by_name["ammo_text_" .. i]
 				local max_clip = Ammo.max_ammo_in_clips(slot_component, i) or 0
 				local current_clip = Ammo.current_ammo_in_clips(slot_component, i) or 0
 
-				local total_current_ammo = current_clip + current_reserve
-				local total_max_ammo = max_clip + max_reserve
+				total_current_ammo = current_clip + total_current_ammo
+				total_max_ammo = max_clip + total_max_ammo
 
 				if ammo_text_widget then
 					local content = ammo_text_widget.content
