@@ -301,10 +301,24 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 			local total_current_ammo = current_reserve
 			local total_max_ammo = max_reserve
 
+			local ammo_len = 2
+			local ammo_icon_size = HudElementTeamPlayerPanelSettings.ammo_size
+			local ammo_icon_font_type = "machine_medium"
+			local ammo_icon_offset_x = 0
+			local ammo_icon_offset_y = 0
+
 			for i = 1, NetworkConstants.clips_in_use.max_size do
 				local ammo_text_widget = self._widgets_by_name["ammo_text_" .. i]
 				local max_clip = Ammo.max_ammo_in_clips(slot_component, i) or 0
 				local current_clip = Ammo.current_ammo_in_clips(slot_component, i) or 0
+
+				if i == 1 then
+					ammo_len = max_clip >= 10 and 3 or 2
+					ammo_icon_size = ammo_text_widget.style.ammo_amount_1.font_size
+					ammo_icon_font_type = ammo_text_widget.style.ammo_amount_1.font_type
+					ammo_icon_offset_x = ammo_text_widget.offset[1]
+					ammo_icon_offset_y = ammo_text_widget.offset[2]
+				end
 
 				total_current_ammo = current_clip + total_current_ammo
 				total_max_ammo = max_clip + total_max_ammo
@@ -327,51 +341,50 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 						style.max_ammo.offset[2] = (style.ammo_amount_4.offset[2]) + (style.max_ammo.font_size * 1.1)
 						style.max_ammo.drop_shadow = true
 					end
+				end
+			end
 
-					if mod:get("show_ammo_icon") and icon_widget and max_reserve then
-						icon_widget.content.ammo_icon = "content/ui/materials/hud/icons/party_ammo"
+			if mod:get("show_ammo_icon") and icon_widget and max_reserve then
+				icon_widget.content.ammo_icon = "content/ui/materials/hud/icons/party_ammo"
 
-						local color = nil
-						local weapon_ammo_fraction = 0
+				local color = nil
+				local weapon_ammo_fraction = 0
 
-						if total_max_ammo > 0 then
-							weapon_ammo_fraction = total_current_ammo / total_max_ammo
-						end
+				if total_max_ammo > 0 then
+					weapon_ammo_fraction = total_current_ammo / total_max_ammo
+				end
 
-						if weapon_ammo_fraction > 0.66 then
-							color = UIHudSettings.color_tint_main_1
-						elseif weapon_ammo_fraction > 0.33 then
-							color = UIHudSettings.color_tint_ammo_low
-						elseif weapon_ammo_fraction > 0 then
-							color = UIHudSettings.color_tint_ammo_medium
-						else
-							color = UIHudSettings.color_tint_ammo_high
-						end
+				if weapon_ammo_fraction > 0.66 then
+					color = UIHudSettings.color_tint_main_1
+				elseif weapon_ammo_fraction > 0.33 then
+					color = UIHudSettings.color_tint_ammo_low
+				elseif weapon_ammo_fraction > 0 then
+					color = UIHudSettings.color_tint_ammo_medium
+				else
+					color = UIHudSettings.color_tint_ammo_high
+				end
 
-						if color ~= icon_widget.style.ammo_icon.color then
-							icon_widget.style.ammo_icon.color = color
-							icon_widget.dirty = true
-						end
+				if color ~= icon_widget.style.ammo_icon.color then
+					icon_widget.style.ammo_icon.color = color
+					icon_widget.dirty = true
+				end
 
-						local ammo_len = max_clip < 10 and 2 or 3
-						local font_size = ammo_text_widget.style.ammo_amount_1.font_size
-						if ammo_len ~= prev_clip_ammo_char_len or prev_font_size ~= font_size then
-							local font_type = ammo_text_widget.style.ammo_amount_1.font_type
-							local text_width, text_height = UIRenderer.text_size(ui_renderer, "0", font_type, font_size)
-							local gap_size = font_size * 0.25
-							local icon_size = 12
-							local char_gap = (ammo_len - 1) * gap_size
-							local x_offset = ammo_text_widget.offset[1] - ((text_width * ammo_len) + char_gap)
-							local y_offset = ammo_text_widget.offset[2] - text_height + icon_size
+				local font_size = ammo_icon_size
+				if ammo_len ~= prev_clip_ammo_char_len or prev_font_size ~= font_size then
+					local font_type = ammo_icon_font_type
+					local text_width, text_height = UIRenderer.text_size(ui_renderer, "0", font_type, font_size)
+					local gap_size = font_size * 0.25
+					local icon_size = 12
+					local char_gap = (ammo_len - 1) * gap_size
+					local x_offset = ammo_icon_offset_x - ((text_width * ammo_len) + char_gap)
+					local y_offset = ammo_icon_offset_y - text_height + icon_size
 
-							icon_widget.offset[1] = x_offset
-							icon_widget.offset[2] = y_offset
+					icon_widget.offset[1] = x_offset
+					icon_widget.offset[2] = y_offset
 
-							icon_widget.dirty = true
-							prev_clip_ammo_char_len = ammo_len
-							prev_font_size = font_size
-						end
-					end
+					icon_widget.dirty = true
+					prev_clip_ammo_char_len = ammo_len
+					prev_font_size = font_size
 				end
 			end
 
