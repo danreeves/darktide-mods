@@ -85,6 +85,9 @@ local localization = {
 		["zh-tw"] = "顯示燃燒層數",
 		ru = "Заряды горения",
 	},
+	toxin = {
+		en = "Show toxin stacks",
+	},
 }
 
 local unlocalized_breeds = {

@@ -71,6 +71,11 @@ local widgets = {
 				type = "checkbox",
 				default_value = true,
 			},
+			{
+				setting_id = "toxin",
+				type = "checkbox",
+				default_value = true,
+			},
 		},
 	},
 	{

@@ -7,22 +7,18 @@ local HealthExtension = require("scripts/extension_systems/health/health_extensi
 local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarMarker")
 
 mod.textures = {
-	bleed = "https://danreeves.github.io/darktide-mods/Healthbars/assets/bleed.png",
-	burn = "https://danreeves.github.io/darktide-mods/Healthbars/assets/burn.png",
+	bleed = "content/ui/materials/icons/presets/preset_13",
+	burn = "content/ui/materials/icons/presets/preset_20",
+	toxin = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle",
 }
-mod.colors = { bleed = { 255, 255, 0, 0 }, burn = { 255, 255, 102, 0 } }
-mod.textures_loaded = false
+mod.colors = {
+	bleed = { 255, 255, 0, 0 },
+	burn = { 255, 255, 102, 0 },
+	toxin = { 255, 0, 255, 0 },
+}
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
-	if not mod.textures_loaded then
-		for k, v in pairs(mod.textures) do
-			Managers.url_loader:load_texture(v):next(function(data)
-				mod.textures[k] = data.texture
-			end)
-		end
-		mod.textures_loaded = true
-	end
 end)
 
 local show = {}
@@ -59,7 +55,6 @@ mod:hook_safe(
 	"HealthExtension",
 	"init",
 	function(_self, _extension_init_context, unit, _extension_init_data, _game_object_data)
-		-- Add custom healthbar marker
 		if should_enable_healthbar(unit) then
 			Managers.event:trigger("add_world_marker_unit", MarkerTemplate.name, unit)
 		end

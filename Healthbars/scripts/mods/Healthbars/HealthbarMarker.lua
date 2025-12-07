@@ -372,15 +372,12 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				position = { 0, 0, 0 },
 				offset = {
 					-(template.size[1] / 2) + 20,
-					-20,
-					4,
+					-40,
+					10,
 				},
 				size = {
 					25,
 					25,
-				},
-				material_values = {
-					use_placeholder_texture = 0,
 				},
 				color = {
 					255,
@@ -390,11 +387,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				},
 			},
 			visibility_function = function(content, style)
-				if style.material_values.texture_map then
-					return true
-				end
-
-				return false
+				return content.status_icon_1 ~= nil
 			end,
 		},
 		{
@@ -405,22 +398,24 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			style = {
 				vertical_alignment = "center",
 				horizontal_alignment = "right",
+				text_vertical_alignment = "center",
+				text_horizontal_alignment = "right",
 				position = { 0, 0, 0 },
 				offset = {
-					-(template.size[1] / 2) + 20 + 20,
-					-20,
-					4,
+					-(template.size[1] / 2) + 20 + 10,
+					-40,
+					10,
 				},
 				size = {
-					20,
-					20,
+					25,
+					25,
 				},
 				font_type = header_font_settings.font_type,
 				font_size = 14,
 				text_color = {
 					255,
 					255,
-					0,
+					255,
 					0,
 				},
 			},
@@ -435,16 +430,13 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				horizontal_alignment = "right",
 				position = { 0, 0, 0 },
 				offset = {
-					-(template.size[1] / 2) + 20 + 20 + 20,
-					-20,
-					4,
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10,
+					-40,
+					10,
 				},
 				size = {
 					25,
 					25,
-				},
-				material_values = {
-					use_placeholder_texture = 0,
 				},
 				color = {
 					255,
@@ -454,11 +446,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				},
 			},
 			visibility_function = function(content, style)
-				if style.material_values.texture_map then
-					return true
-				end
-
-				return false
+				return content.status_icon_2 ~= nil
 			end,
 		},
 		{
@@ -469,22 +457,83 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			style = {
 				vertical_alignment = "center",
 				horizontal_alignment = "right",
+				text_vertical_alignment = "center",
+				text_horizontal_alignment = "right",
 				position = { 0, 0, 0 },
 				offset = {
-					-(template.size[1] / 2) + 20 + 20 + 20 + 20,
-					-20,
-					4,
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10,
+					-40,
+					10,
 				},
 				size = {
-					20,
-					20,
+					25,
+					25,
 				},
 				font_type = header_font_settings.font_type,
 				font_size = 14,
 				text_color = {
 					255,
 					255,
-					102,
+					255,
+					0,
+				},
+			},
+		},
+
+		{
+			pass_type = "texture",
+			style_id = "status_icon_3",
+			value_id = "status_icon_3",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10,
+					-40,
+					10,
+				},
+				size = {
+					25,
+					25,
+				},
+				color = {
+					255,
+					0,
+					255,
+					0,
+				},
+			},
+			visibility_function = function(content, style)
+				return content.status_icon_3 ~= nil
+			end,
+		},
+		{
+			pass_type = "text",
+			style_id = "status_stacks_3",
+			value_id = "status_stacks_3",
+			value = "",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				text_vertical_alignment = "center",
+				text_horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10 + 10,
+					-40,
+					10,
+				},
+				size = {
+					25,
+					25,
+				},
+				font_type = header_font_settings.font_type,
+				font_size = 14,
+				text_color = {
+					255,
+					255,
+					255,
 					0,
 				},
 			},
@@ -534,6 +583,15 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		local is_on_fire = is_on_regularfire or is_on_warpfire
 		local burn_stacks = regularfire_stacks + warpfire_stacks
 
+		local is_toxin = buff_extension:has_buff_using_buff_template("neurotoxin_interval_buff")
+			or buff_extension:has_buff_using_buff_template("neurotoxin_interval_buff2")
+			or buff_extension:has_buff_using_buff_template("neurotoxin_interval_buff3")
+			or buff_extension:has_buff_using_buff_template("exploding_toxin_interval_buff")
+		local toxin_stacks = buff_extension:current_stacks("neurotoxin_interval_buff")
+			+ buff_extension:current_stacks("neurotoxin_interval_buff2")
+			+ buff_extension:current_stacks("neurotoxin_interval_buff3")
+			+ buff_extension:current_stacks("exploding_toxin_interval_buff")
+
 		marker.debuffs = marker.debuffs or {}
 
 		if mod:get("bleed") then
@@ -564,24 +622,45 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			end
 		end
 
+		if mod:get("toxin") then
+			local i, debuff = table.find_by_key(marker.debuffs, "type", "toxin")
+			if debuff then
+				debuff.stacks = toxin_stacks
+				if not toxin_stacks or toxin_stacks == 0 then
+					table.remove(marker.debuffs, i)
+				end
+			else
+				if is_toxin then
+					table.insert(marker.debuffs, { type = "toxin", stacks = toxin_stacks })
+				end
+			end
+		end
+
 		if marker.debuffs[1] then
-			style.status_icon_1.material_values.texture_map = mod.textures[marker.debuffs[1].type]
+			content.status_icon_1 = mod.textures[marker.debuffs[1].type]
 			style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
-			style.status_stacks_1.text_color = mod.colors[marker.debuffs[1].type]
 			content.status_stacks_1 = marker.debuffs[1].stacks
 		else
-			style.status_icon_1.material_values.texture_map = nil
+			content.status_icon_1 = nil
 			content.status_stacks_1 = ""
 		end
 
 		if marker.debuffs[2] then
-			style.status_icon_2.material_values.texture_map = mod.textures[marker.debuffs[2].type]
+			content.status_icon_2 = mod.textures[marker.debuffs[2].type]
 			style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
-			style.status_stacks_2.text_color = mod.colors[marker.debuffs[2].type]
 			content.status_stacks_2 = marker.debuffs[2].stacks
 		else
-			style.status_icon_2.material_values.texture_map = nil
+			content.status_icon_2 = nil
 			content.status_stacks_2 = ""
+		end
+
+		if marker.debuffs[3] then
+			content.status_icon_3 = mod.textures[marker.debuffs[3].type]
+			style.status_icon_3.color = mod.colors[marker.debuffs[3].type]
+			content.status_stacks_3 = marker.debuffs[3].stacks
+		else
+			content.status_icon_3 = nil
+			content.status_stacks_3 = ""
 		end
 	end
 
