@@ -17,6 +17,8 @@ globals:
     any: true
   RESOLUTION_LOOKUP:
     any: true
+  NetworkConstants:
+    any: true
   class:
     args:
       - type: string
@@ -34,6 +36,13 @@ globals:
   string.starts_with:
     args:
       - type: string
+      - type: string
+  string.split:
+    args:
+      - type: string
+      - type: string
+  string.trim:
+    args:
       - type: string
   table.array_contains:
     args:
