@@ -554,6 +554,8 @@ template.on_enter = function(widget, marker, template)
 	content.header_text = breed.name
 	content.breed = breed
 	marker.head_offset = 0
+	marker.debuff_check_timer = 0
+	marker.debuffs = {}
 end
 
 local HEAD_NODE = "j_head"
@@ -568,108 +570,73 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local max_health = Managers.state.difficulty:get_minion_max_health(content.breed.name)
 	local damage_taken = nil
 
-	local buff_extension = ScriptUnit.extension(unit, "buff_system")
+	marker.debuff_check_timer = marker.debuff_check_timer + dt
+	
+	if marker.debuff_check_timer >= 0.1 then
+		marker.debuff_check_timer = 0
+		local buff_extension = ScriptUnit.extension(unit, "buff_system")
 
-	if buff_extension then
-		local is_bleeding = buff_extension:has_buff_using_buff_template("bleed")
-		local bleed_stacks = buff_extension:current_stacks("bleed")
-
-		local is_on_regularfire = buff_extension:has_buff_using_buff_template("flamer_assault")
-		local regularfire_stacks = buff_extension:current_stacks("flamer_assault")
-
-		local is_on_warpfire = buff_extension:has_buff_using_buff_template("warp_fire")
-		local warpfire_stacks = buff_extension:current_stacks("warp_fire")
-
-		local is_on_fire = is_on_regularfire or is_on_warpfire
-		local burn_stacks = regularfire_stacks + warpfire_stacks
-
-		local is_toxin = buff_extension:has_buff_using_buff_template("neurotoxin_interval_buff")
-			or buff_extension:has_buff_using_buff_template("neurotoxin_interval_buff2")
-			or buff_extension:has_buff_using_buff_template("neurotoxin_interval_buff3")
-			or buff_extension:has_buff_using_buff_template("exploding_toxin_interval_buff")
-		local toxin_stacks = buff_extension:current_stacks("neurotoxin_interval_buff")
-			+ buff_extension:current_stacks("neurotoxin_interval_buff2")
-			+ buff_extension:current_stacks("neurotoxin_interval_buff3")
-			+ buff_extension:current_stacks("exploding_toxin_interval_buff")
-
-		marker.debuffs = marker.debuffs or {}
-
-		if mod:get("bleed") then
-			local i, debuff = table.find_by_key(marker.debuffs, "type", "bleed")
-			if debuff then
-				debuff.stacks = bleed_stacks
-				if not bleed_stacks or bleed_stacks == 0 then
-					table.remove(marker.debuffs, i)
+		if buff_extension then
+			table.clear(marker.debuffs)
+			
+			if mod:get("bleed") then
+				local bleed_stacks = buff_extension:current_stacks("bleed")
+				if bleed_stacks and bleed_stacks > 0 then
+					marker.debuffs[#marker.debuffs + 1] = { type = "bleed", stacks = bleed_stacks }
 				end
-			else
-				if is_bleeding then
-					table.insert(marker.debuffs, { type = "bleed", stacks = bleed_stacks })
+			end
+
+			if mod:get("burn") then
+				local burn_stacks = buff_extension:current_stacks("flamer_assault") + buff_extension:current_stacks("warp_fire")
+				if burn_stacks and burn_stacks > 0 then
+					marker.debuffs[#marker.debuffs + 1] = { type = "burn", stacks = burn_stacks }
+				end
+			end
+
+			if mod:get("toxin") then
+				local toxin_stacks = buff_extension:current_stacks("neurotoxin_interval_buff")
+					+ buff_extension:current_stacks("neurotoxin_interval_buff2")
+					+ buff_extension:current_stacks("neurotoxin_interval_buff3")
+					+ buff_extension:current_stacks("exploding_toxin_interval_buff")
+				if toxin_stacks and toxin_stacks > 0 then
+					marker.debuffs[#marker.debuffs + 1] = { type = "toxin", stacks = toxin_stacks }
 				end
 			end
 		end
+	end
 
-		if mod:get("burn") then
-			local i, debuff = table.find_by_key(marker.debuffs, "type", "burn")
-			if debuff then
-				debuff.stacks = burn_stacks
-				if not burn_stacks or burn_stacks == 0 then
-					table.remove(marker.debuffs, i)
-				end
-			else
-				if is_on_fire then
-					table.insert(marker.debuffs, { type = "burn", stacks = burn_stacks })
-				end
-			end
-		end
+	if marker.debuffs[1] then
+		content.status_icon_1 = mod.textures[marker.debuffs[1].type]
+		style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
+		content.status_stacks_1 = marker.debuffs[1].stacks
+	else
+		content.status_icon_1 = nil
+		content.status_stacks_1 = ""
+	end
 
-		if mod:get("toxin") then
-			local i, debuff = table.find_by_key(marker.debuffs, "type", "toxin")
-			if debuff then
-				debuff.stacks = toxin_stacks
-				if not toxin_stacks or toxin_stacks == 0 then
-					table.remove(marker.debuffs, i)
-				end
-			else
-				if is_toxin then
-					table.insert(marker.debuffs, { type = "toxin", stacks = toxin_stacks })
-				end
-			end
-		end
+	if marker.debuffs[2] then
+		content.status_icon_2 = mod.textures[marker.debuffs[2].type]
+		style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
+		content.status_stacks_2 = marker.debuffs[2].stacks
+	else
+		content.status_icon_2 = nil
+		content.status_stacks_2 = ""
+	end
 
-		if marker.debuffs[1] then
-			content.status_icon_1 = mod.textures[marker.debuffs[1].type]
-			style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
-			content.status_stacks_1 = marker.debuffs[1].stacks
-		else
-			content.status_icon_1 = nil
-			content.status_stacks_1 = ""
-		end
-
-		if marker.debuffs[2] then
-			content.status_icon_2 = mod.textures[marker.debuffs[2].type]
-			style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
-			content.status_stacks_2 = marker.debuffs[2].stacks
-		else
-			content.status_icon_2 = nil
-			content.status_stacks_2 = ""
-		end
-
-		if marker.debuffs[3] then
-			content.status_icon_3 = mod.textures[marker.debuffs[3].type]
-			style.status_icon_3.color = mod.colors[marker.debuffs[3].type]
-			content.status_stacks_3 = marker.debuffs[3].stacks
-		else
-			content.status_icon_3 = nil
-			content.status_stacks_3 = ""
-		end
+	if marker.debuffs[3] then
+		content.status_icon_3 = mod.textures[marker.debuffs[3].type]
+		style.status_icon_3.color = mod.colors[marker.debuffs[3].type]
+		content.status_stacks_3 = marker.debuffs[3].stacks
+	else
+		content.status_icon_3 = nil
+		content.status_stacks_3 = ""
 	end
 
 	if ALIVE[unit] and marker.head_offset == 0 then
 		local root_position = Unit.world_position(unit, 1)
 		local node = Unit.node(unit, HEAD_NODE)
 		local head_position = Unit.world_position(unit, node)
-		local head_offset = head_position.z - root_position.z + 0.4
-		marker.head_offset = head_offset
+		marker.head_offset = head_position.z - root_position.z + 0.4
 	end
 
 	if not is_dead then
