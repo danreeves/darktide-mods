@@ -25,7 +25,11 @@ local show = {}
 
 local function get_toggles()
 	for breed_name in pairs(Breeds) do
-		show[breed_name] = mod:get(breed_name)
+		if string.match(breed_name, "mutator") then
+			show[breed_name] = mod:get((breed_name):gsub("_mutator", ""))
+		else
+			show[breed_name] = mod:get(breed_name)
+		end
 	end
 end
 
