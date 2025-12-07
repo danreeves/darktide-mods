@@ -6,6 +6,7 @@ local mod = get_mod("NumericUI")
 local Pickups = require("scripts/settings/pickup/pickups")
 local Havoc = require("scripts/utilities/havoc")
 local HavocSettings = require("scripts/settings/havoc_settings")
+local Ammo = require("scripts/utilities/ammo")
 
 local small_clip_data = Pickups.by_name["small_clip"]
 local large_clip_data = Pickups.by_name["large_clip"]
@@ -50,10 +51,10 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 			for slot_name in pairs(weapon_slot_configuration) do
 				local wieldable_component = unit_data_ext:write_component(slot_name)
 				if wieldable_component.max_ammunition_reserve > 0 then
-					ammo_reserve = wieldable_component.current_ammunition_reserve
-					max_ammo_reserve = wieldable_component.max_ammunition_reserve
-					ammo_clip = wieldable_component.current_ammunition_clip
-					max_ammo_clip = wieldable_component.max_ammunition_clip
+					ammo_reserve = Ammo.current_ammo_in_reserve(wieldable_component)
+					max_ammo_reserve = Ammo.max_ammo_in_reserve(wieldable_component)
+					ammo_clip = Ammo.current_ammo_in_clips(wieldable_component)
+					max_ammo_clip = Ammo.max_ammo_in_clips(wieldable_component)
 					break
 				end
 			end
