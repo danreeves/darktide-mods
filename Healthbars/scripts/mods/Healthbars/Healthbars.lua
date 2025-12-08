@@ -17,6 +17,13 @@ mod.colors = {
 	toxin = { 255, 0, 255, 0 },
 }
 
+mod.on_game_state_changed = function(status, state_name)
+	-- Preload packages containing preset icons
+	Managers.package:load("packages/ui/views/inventory_view/inventory_view", "Healthbars", nil, true)
+	Managers.package:load("packages/ui/views/inventory_weapons_view/inventory_weapons_view", "Healthbars", nil, true)
+	Managers.package:load("packages/ui/views/inventory_background_view/inventory_background_view", "Healthbars", nil, true)
+end
+
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
 end)
