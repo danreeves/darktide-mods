@@ -34,9 +34,11 @@ end)
 
 -- Stop using the frame texture before it gets unloaded
 mod:hook("SocialMenuRosterView", "_queue_icons_for_unload", function(func, self, widget)
-	local portrait_style = widget.style.frame
-	portrait_style.material_values.texture_map = nil
-	return func(self, widget)
+    local portrait_style = widget.style.frame
+    if portrait_style then
+        portrait_style.material_values.texture_map = nil
+    end
+    return func(self, widget)
 end)
 
 mod:hook_require("scripts/ui/views/social_menu_roster_view/social_menu_roster_view_blueprints", function(instance)
