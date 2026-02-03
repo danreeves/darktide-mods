@@ -187,12 +187,12 @@ template.create_widget_defintion = function(template, scenegraph_id)
 						elseif not ui_content.dead then
 							ui_content.damage_has_started_timer = ui_content.damage_has_started_timer + ui_renderer.dt
 						end
-						
+
 						if ui_content.dead then
 							local damage_has_started_position =
 								Vector3(x_position, y_position - damage_number_settings.dps_y_offset, z_position)
 							local dps = ui_content.damage_has_started_timer > 1
-									and ui_content.damage_taken / ui_content.damage_has_started_timer
+								and ui_content.damage_taken / ui_content.damage_has_started_timer
 								or ui_content.damage_taken
 							local text = string.format("%d DPS", dps)
 
@@ -569,14 +569,14 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local damage_taken = nil
 
 	marker.debuff_check_timer = marker.debuff_check_timer + dt
-	
+
 	if marker.debuff_check_timer >= 0.1 then
 		marker.debuff_check_timer = 0
 		local buff_extension = ScriptUnit.extension(unit, "buff_system")
 
 		if buff_extension then
 			table.clear(marker.debuffs)
-			
+
 			if mod:get("bleed") then
 				local bleed_stacks = buff_extension:current_stacks("bleed")
 				if bleed_stacks and bleed_stacks > 0 then
@@ -585,7 +585,8 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			end
 
 			if mod:get("burn") then
-				local burn_stacks = buff_extension:current_stacks("flamer_assault") + buff_extension:current_stacks("warp_fire")
+				local burn_stacks = buff_extension:current_stacks("flamer_assault") +
+				buff_extension:current_stacks("warp_fire")
 				if burn_stacks and burn_stacks > 0 then
 					marker.debuffs[#marker.debuffs + 1] = { type = "burn", stacks = burn_stacks }
 				end

@@ -1,3 +1,8 @@
 {
-  "stylua.targetReleaseVersion": "latest"
+  "[lua]": {
+    "editor.defaultFormatter": "sumneko.lua"
+  },
+  "files.associations": {
+    "*.mod": "lua"
+  }
 }

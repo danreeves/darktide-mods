@@ -11,7 +11,7 @@ return {
 				type = "dropdown",
 				default_value = "slot_primary",
 				options = {
-					{ text = "slot_primary", value = "slot_primary" },
+					{ text = "slot_primary",   value = "slot_primary" },
 					{ text = "slot_secondary", value = "slot_secondary" },
 				},
 			},

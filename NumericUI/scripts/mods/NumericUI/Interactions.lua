@@ -36,7 +36,8 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 					if parsed.modifiers then
 						for _, modifier in ipairs(parsed.modifiers) do
 							if modifier.name == "ammo_pickup_modifier" then
-								ammo_modifier = HavocSettings.modifier_templates.ammo_pickup_modifier[modifier.level].ammo_pickup_modifier or 1
+								ammo_modifier = HavocSettings.modifier_templates.ammo_pickup_modifier[modifier.level]
+								.ammo_pickup_modifier or 1
 							end
 						end
 					end
@@ -93,8 +94,8 @@ mod:hook_safe("HudElementInteraction", "update", function(self)
 				local show_ammo_wasted = ammo_wasted > 0
 
 				local desc_str = show_ammo_gain
-						and show_ammo_wasted
-						and "%s {#color(0,255,0,200);}(+%d) {#color(255,0,0,200);}(%d)"
+					and show_ammo_wasted
+					and "%s {#color(0,255,0,200);}(+%d) {#color(255,0,0,200);}(%d)"
 					or show_ammo_gain and not show_ammo_wasted and "%s {#color(0,255,0,200);}(+%d)"
 					or "%s"
 

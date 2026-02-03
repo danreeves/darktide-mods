@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "workspace.library": [
+    "../Darktide-Source-Code/",
+    "../Darktide-Mod-Framework/"
+  ],
+  "workspace.checkThirdParty": "Disable",
+  "format.enable": true,
+  "runtime.version": "LuaJIT",
+  "hint.enable": false,
+  "diagnostics.libraryFiles": "Disable"
+}

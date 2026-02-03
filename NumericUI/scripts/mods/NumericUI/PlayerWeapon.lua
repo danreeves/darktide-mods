@@ -16,12 +16,12 @@ local HudElementTeamPlayerPanelSettings = require(
 )
 
 --Init global vars for mod: "show_munitions_gained"
-local prev_clip_ammo_char_len = 0 -- Tells where ammo icon should be generated
-local prev_font_size = nil -- checks to see if the font was changed in some way
-local prev_grenade_charges = 0 --Keeps track of grenade amount in the previous loop.
-local grenade_gained_display_t = 0 --keeps track of how long the grenade gained widget has been displayed
-local grenade_gained_amount = 0 --Keeps track of the amount of grenades gained
-local ammo_gained_cumulative = false --When true, will use a single widget to show multiple ammo increments
+local prev_clip_ammo_char_len = 0        -- Tells where ammo icon should be generated
+local prev_font_size = nil               -- checks to see if the font was changed in some way
+local prev_grenade_charges = 0           --Keeps track of grenade amount in the previous loop.
+local grenade_gained_display_t = 0       --keeps track of how long the grenade gained widget has been displayed
+local grenade_gained_amount = 0          --Keeps track of the amount of grenades gained
+local ammo_gained_cumulative = false     --When true, will use a single widget to show multiple ammo increments
 local ammo_gained_available_widgets = {} --List of non-active ammo-gained widgets (for non-cumulative display)
 local ammo_gained_active_widgets = {}
 local ammo_gained_data = {
@@ -174,7 +174,7 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 
 	local spare_ammo_style = table.clone(backups.definitions.widget_definitions.ammo_text_1.style.ammo_spare_1)
 	local modifier = 0.8
-	
+
 	for i = 1, NetworkConstants.clips_in_use.max_size do
 		local ammo_text_widget_orig = backups.definitions.widget_definitions["ammo_text_" .. i]
 		if ammo_text_widget_orig then

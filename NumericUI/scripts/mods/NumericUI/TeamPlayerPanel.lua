@@ -40,7 +40,7 @@ local tough_text_style = {
 	offset = { 0, -6, 2 },
 }
 
-local ability_max_cooldown = {} -- "player ID -> max cooldown"
+local ability_max_cooldown = {}   -- "player ID -> max cooldown"
 local ability_cooldown_timer = {} -- "player ID -> cooldown timer"
 
 mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)

@@ -18,16 +18,16 @@ mod.colors = {
 }
 
 function mod.on_all_mods_loaded()
-    -- Preload icon packages
-    local function load_package(package_name)
-        if not Managers.package:has_loaded(package_name) then
-            Managers.package:load(package_name, "Healthbars")
-        end
-    end
+	-- Preload icon packages
+	local function load_package(package_name)
+		if not Managers.package:has_loaded(package_name) then
+			Managers.package:load(package_name, "Healthbars")
+		end
+	end
 
-    load_package("packages/ui/views/inventory_view/inventory_view")
-    load_package("packages/ui/views/inventory_weapons_view/inventory_weapons_view")
-    load_package("packages/ui/hud/player_weapon/player_weapon")
+	load_package("packages/ui/views/inventory_view/inventory_view")
+	load_package("packages/ui/views/inventory_weapons_view/inventory_weapons_view")
+	load_package("packages/ui/hud/player_weapon/player_weapon")
 end
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)

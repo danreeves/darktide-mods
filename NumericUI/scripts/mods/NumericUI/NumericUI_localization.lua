@@ -1,15 +1,15 @@
 local InputUtils = require("scripts/managers/input/input_utils")
 
 local function readable(text)
-  local readable_string = ""
-  local tokens = string.split(text, "_")
-  for _, token in ipairs(tokens) do
-    local first_letter = string.sub(token, 1, 1)
-    token = string.format("%s%s", string.upper(first_letter), string.sub(token, 2))
-    readable_string = string.trim(string.format("%s %s", readable_string, token))
-  end
+	local readable_string = ""
+	local tokens = string.split(text, "_")
+	for _, token in ipairs(tokens) do
+		local first_letter = string.sub(token, 1, 1)
+		token = string.format("%s%s", string.upper(first_letter), string.sub(token, 2))
+		readable_string = string.trim(string.format("%s %s", readable_string, token))
+	end
 
-  return readable_string
+	return readable_string
 end
 
 local loc = {
@@ -467,11 +467,11 @@ local loc = {
 
 local color_names = Color.list
 for _, color_name in ipairs(color_names) do
-  local color_values = Color[color_name](255, true)
-  local text = InputUtils.apply_color_to_input_text(readable(color_name), color_values)
-  loc[color_name] = {
-    en = text
-  }
+	local color_values = Color[color_name](255, true)
+	local text = InputUtils.apply_color_to_input_text(readable(color_name), color_values)
+	loc[color_name] = {
+		en = text
+	}
 end
 
 return loc

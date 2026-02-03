@@ -244,7 +244,7 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 				"%d/%s/%s\nmodifier: x%.2f\ncooldown: %.2fs\ndodging: %s\nsliding: %s",
 				current_dodges,
 				num_efficient_dodges == math.huge and "inf"
-					or tostring(math.round_with_precision(num_efficient_dodges, 2)),
+				or tostring(math.round_with_precision(num_efficient_dodges, 2)),
 				num_efficient_dodges == math.huge and "inf" or tostring(math.floor(dr_limit + num_efficient_dodges)),
 				distance_modifier,
 				cooldown > 0 and cooldown or 0,

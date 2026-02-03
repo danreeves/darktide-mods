@@ -48,14 +48,19 @@ local function set_presence()
 	if activity_id == "mission" or is_soloplay() then
 		local mission_name = mod.get_mission_name()
 		DarktideDiscord.set_details(mission_name)
-
-		local current_difficulty = Managers.state
-				and Managers.state.difficulty
-				and Managers.state.difficulty:get_difficulty()
+		local initial_challenge = Managers.state
+			and Managers.state.difficulty
+			and Managers.state.difficulty:get_initial_challenge()
 			or 0
-		local danger_settings = DangerSettings.by_index[current_difficulty]
+		local initial_resistance = Managers.state and Managers.state.difficulty and
+			Managers.state.difficulty:get_initial_resistance() or 0
+		local danger_settings = DangerSettings[initial_challenge]
 		if danger_settings then
 			local difficulty_text = Localize(danger_settings.display_name)
+			-- Wacky way to set Auric difficulty but still
+			if initial_challenge >= 5 and initial_resistance >= 5 then
+				difficulty_text = Localize("loc_group_finder_difficulty_auric")
+			end
 			DarktideDiscord.set_state(difficulty_text)
 		end
 	else
@@ -97,11 +102,20 @@ function mod.on_game_state_changed()
 	local presence = Managers.presence._myself
 	local activity_id = presence:activity_id()
 	if activity_id == "mission" or is_soloplay() then
-		local challenge = Managers.state and Managers.state.difficulty and Managers.state.difficulty:get_difficulty()
-			or 0
-		local danger_settings = DangerSettings.by_index[challenge]
+		local challenge = Managers.state and Managers.state.difficulty and
+			Managers.state.difficulty:get_initial_challenge() or 0
+		local resistance = Managers.state and Managers.state.difficulty and
+			Managers.state.difficulty:get_initial_resistance() or 0
+		local i, danger_settings = table.find_func_array(DangerSettings, function(setting)
+			return setting.challenge == challenge
+		end)
 		if danger_settings then
 			local difficulty_text = Localize(danger_settings.display_name)
+			-- Wacky way to set Auric difficulty but still
+			if challenge >= 5 and resistance >= 5 then
+				difficulty_text = Localize("loc_group_finder_difficulty_auric")
+			end
+
 			DarktideDiscord.set_state(difficulty_text)
 			DarktideDiscord.update()
 		end
