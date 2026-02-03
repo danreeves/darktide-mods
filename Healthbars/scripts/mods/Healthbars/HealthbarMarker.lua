@@ -1,28 +1,3 @@
---[[-------------------------------------------------------------------------
-Healthbars - HealthbarMarker (v4_final)
-
-This file got a focused performance + stability pass.
-
-Why:
-  * Healthbar widgets run for every visible enemy, every frame.
-  * The original implementation did a lot of tiny-but-expensive work in hot paths:
-      - creating Color objects every draw call,
-      - repeated mod:get() lookups,
-      - repeated max-health lookups through Managers,
-      - frequent extension calls that can become invalid when units despawn,
-      - and extra allocations (tables/vectors) that increase GC pressure.
-
-What changed (high level):
-  * Heavy per-unit reads are throttled to ~10 Hz, while world-position tracking stays per-frame
-    so the bar doesn't "lag behind" fast-moving targets.
-  * Frequently reused values are cached (settings, resolution scale, max_health, colors).
-  * Temporary objects are reused where possible (debuff entries, Vector3Box).
-  * Defensive validation/pcall guards were added around extension access to avoid crashes
-    when an extension is destroyed mid-frame.
-
-Net result: smoother FPS, fewer spikes, and better resilience in hectic fights.
----------------------------------------------------------------------------]]
-
 local mod = get_mod("Healthbars")
 
 local HudHealthBarLogic = require("scripts/ui/hud/elements/hud_health_bar_logic")
@@ -128,164 +103,173 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				local y_position = position[2] + damage_number_settings.y_offset
 				local x_position = position[1] + damage_number_settings.x_offset
 				
-				-- V4 OPTIMIZATION: Cache resolution scale in content (draw function can't access marker)
-				local scale = ui_content.resolution_scale or RESOLUTION_LOOKUP.scale
-				
-				local default_font_size = damage_number_settings.default_font_size * scale
-				local dps_font_size = damage_number_settings.dps_font_size * scale
-				local hundreds_font_size = damage_number_settings.hundreds_font_size * scale
-				local font_type = ui_style.font_type
-				
-				-- V4 OPTIMIZATION: Use pre-cached Color objects instead of creating new ones every frame
-				-- Before: 4 allocations per enemy per frame (80 allocs/frame with 20 enemies = 4,800/sec)
-				-- After: Reuse cached colors, only copy when needed for modification
-				local cached_colors = template.cached_colors
-				local default_color = cached_colors.default_color
-				local crit_color = cached_colors.crit_color
-				local weakspot_color = cached_colors.weakspot_color
-				-- Create working copy for color modifications (unavoidable, but reduced from 4 to 1 allocation)
-				local text_color = { default_color[1], default_color[2], default_color[3], default_color[4] }
-				
-				local num_damage_numbers = #damage_numbers
+                -- V4 OPTIMIZATION: Cache resolution scale in content (draw function can't access marker)
+                local scale = ui_content.resolution_scale or RESOLUTION_LOOKUP.scale
 
-				for i = num_damage_numbers, 1, -1 do
-					local damage_number = damage_numbers[i]
-					local duration = damage_number.duration
-					local time = damage_number.time
-					local progress = math.clamp(time / duration, 0, 1)
+                local default_font_size = damage_number_settings.default_font_size * scale
+                local dps_font_size = damage_number_settings.dps_font_size * scale
+                local hundreds_font_size = damage_number_settings.hundreds_font_size * scale
+                local font_type = ui_style.font_type
 
-					if progress >= 1 then
-						table.remove(damage_numbers, i)
-					else
-						damage_number.time = damage_number.time + ui_renderer.dt
-					end
+                -- Determine whether to show damage numbers on this widget.  When disabled
+                -- we still maintain and age the damage number list, but we skip all of
+                -- the font, color and layout computations below.
+                -- settings_cache is always initialised in on_enter, so we can access its fields directly
+                local show_damage_numbers = ui_content.settings_cache.show_damage_numbers
 
-					if damage_number.was_critical then
-						text_color[2] = crit_color[2]
-						text_color[3] = crit_color[3]
-						text_color[4] = crit_color[4]
-						damage_number.expand_duration = damage_number_settings.expand_duration
-					elseif damage_number.hit_weakspot then
-						text_color[2] = weakspot_color[2]
-						text_color[3] = weakspot_color[3]
-						text_color[4] = weakspot_color[4]
-					else
-						text_color[2] = default_color[2]
-						text_color[3] = default_color[3]
-						text_color[4] = default_color[4]
-					end
+                -- Preload color objects only if we will display damage numbers
+                local default_color, crit_color, weakspot_color, text_color
+                if show_damage_numbers then
+                    local cached_colors = template.cached_colors
+                    default_color = cached_colors.default_color
+                    crit_color = cached_colors.crit_color
+                    weakspot_color = cached_colors.weakspot_color
+                    -- Create working copy for color modifications (reused per number)
+                    text_color = { default_color[1], default_color[2], default_color[3], default_color[4] }
+                end
 
-					local value = damage_number.value
-					local font_size = value <= 99 and default_font_size or hundreds_font_size
-					local expand_duration = damage_number.expand_duration
+                -- Always update timers and remove expired damage numbers, regardless of whether
+                -- they are drawn.  This keeps the list clean and ensures timers don't run
+                -- indefinitely when the feature is disabled.
+                local num_damage_numbers = #damage_numbers
+                for i = num_damage_numbers, 1, -1 do
+                    local damage_number = damage_numbers[i]
+                    local duration = damage_number.duration
+                    local time = damage_number.time
+                    local progress = math.clamp(time / duration, 0, 1)
 
-					if expand_duration then
-						local expand_time = damage_number.expand_time
-						local expand_progress = math.clamp(expand_time / expand_duration, 0, 1)
-						local anim_progress = 1 - expand_progress
-						font_size = font_size + damage_number_settings.expand_bonus_scale * anim_progress
+                    if progress >= 1 then
+                        table.remove(damage_numbers, i)
+                    else
+                        damage_number.time = damage_number.time + ui_renderer.dt
 
-						if expand_progress >= 1 then
-							damage_number.expand_duration = nil
-							damage_number.shrink_start_t = duration - damage_number_settings.shrink_duration
-						else
-							damage_number.expand_time = expand_time + ui_renderer.dt
-						end
-					elseif damage_number.shrink_start_t and damage_number.shrink_start_t < time then
-						local diff = time - damage_number.shrink_start_t
-						local percentage = diff / damage_number_settings.shrink_duration
-						local scale = 1 - percentage
-						font_size = font_size * scale
-						text_color[1] = text_color[1] * scale
-					end
+                        -- Only perform expensive sizing and color calculations when
+                        -- damage numbers are enabled.
+                        if show_damage_numbers then
+                            -- Update color based on damage type (crit/weakspot/default)
+                            if damage_number.was_critical then
+                                text_color[2] = crit_color[2]
+                                text_color[3] = crit_color[3]
+                                text_color[4] = crit_color[4]
+                                damage_number.expand_duration = damage_number_settings.expand_duration
+                            elseif damage_number.hit_weakspot then
+                                text_color[2] = weakspot_color[2]
+                                text_color[3] = weakspot_color[3]
+                                text_color[4] = weakspot_color[4]
+                            else
+                                text_color[2] = default_color[2]
+                                text_color[3] = default_color[3]
+                                text_color[4] = default_color[4]
+                            end
 
-					local text = value
-					local size = ui_style.size
-					local current_order = num_damage_numbers - i
+                            local value = damage_number.value
+                            local font_size = value <= 99 and default_font_size or hundreds_font_size
+                            local expand_duration = damage_number.expand_duration
 
-					if current_order == 0 then
-						local scale_size = damage_number.was_critical and damage_number_settings.crit_hit_size_scale
-							or damage_number_settings.first_hit_size_scale
-						font_size = font_size * scale_size
-					end
+                            if expand_duration then
+                                local expand_time = damage_number.expand_time
+                                local expand_progress = math.clamp(expand_time / expand_duration, 0, 1)
+                                local anim_progress = 1 - expand_progress
+                                font_size = font_size + damage_number_settings.expand_bonus_scale * anim_progress
 
-					position[3] = z_position + current_order
-					position[2] = y_position
-					position[1] = x_position + current_order * damage_number_settings.x_offset_between_numbers
+                                if expand_progress >= 1 then
+                                    damage_number.expand_duration = nil
+                                    damage_number.shrink_start_t = duration - damage_number_settings.shrink_duration
+                                else
+                                    damage_number.expand_time = expand_time + ui_renderer.dt
+                                end
+                            elseif damage_number.shrink_start_t and damage_number.shrink_start_t < time then
+                                local diff = time - damage_number.shrink_start_t
+                                local percentage = diff / damage_number_settings.shrink_duration
+                                local scale = 1 - percentage
+                                font_size = font_size * scale
+                                text_color[1] = text_color[1] * scale
+                            end
 
-					-- V4 OPTIMIZATION: Use cached setting from content (draw pass can't access marker/mod safely).
-				-- Settings are captured once on_enter and reused here to avoid mod:get() in the draw hot-path.
-					if ui_content.settings_cache and ui_content.settings_cache.show_damage_numbers then
-						UIRenderer.draw_text(ui_renderer, text, font_size, font_type, position, size, text_color, {})
-					end
-				end
+                            local text = value
+                            local size = ui_style.size
+                            local current_order = num_damage_numbers - i
 
-				local damage_has_started = ui_content.damage_has_started
+                            if current_order == 0 then
+                                local scale_size = damage_number.was_critical and damage_number_settings.crit_hit_size_scale
+                                    or damage_number_settings.first_hit_size_scale
+                                font_size = font_size * scale_size
+                            end
 
-				if damage_has_started then
-					if not ui_content.damage_has_started_timer then
-						ui_content.damage_has_started_timer = ui_renderer.dt
-					elseif not ui_content.dead then
-						ui_content.damage_has_started_timer = ui_content.damage_has_started_timer + ui_renderer.dt
-					end
+                            position[3] = z_position + current_order
+                            position[2] = y_position
+                            position[1] = x_position + current_order * damage_number_settings.x_offset_between_numbers
 
-					if ui_content.dead then
-						local damage_has_started_position =
-							Vector3(x_position, y_position - damage_number_settings.dps_y_offset, z_position)
-						local dps = ui_content.damage_has_started_timer > 1
-								and ui_content.damage_taken / ui_content.damage_has_started_timer
-							or ui_content.damage_taken
-						local text = string.format("%d DPS", dps)
+                            -- Draw the damage number
+                            UIRenderer.draw_text(ui_renderer, text, font_size, font_type, position, size, text_color, {})
+                        end
+                    end
+                end
 
-						-- V4 OPTIMIZATION: Use cached setting from content (draw pass can't access marker/mod safely).
-				-- Settings are captured once on_enter and reused here to avoid mod:get() in the draw hot-path.
-						if ui_content.settings_cache and ui_content.settings_cache.show_dps then
-							UIRenderer.draw_text(
-								ui_renderer,
-								text,
-								dps_font_size,
-								font_type,
-								damage_has_started_position,
-								size,
-								ui_style.text_color,
-								{}
-							)
-						end
-					end
+                local damage_has_started = ui_content.damage_has_started
 
-					if ui_content.last_hit_zone_name then
-						local hit_zone_name = ui_content.last_hit_zone_name
-						local breed = ui_content.breed
-						local armor_type = breed.armor_type
+                if damage_has_started then
+                    -- Advance the DPS timer regardless of whether we draw it; this tracks how long
+                    -- the unit has been taking damage.
+                    if not ui_content.damage_has_started_timer then
+                        ui_content.damage_has_started_timer = ui_renderer.dt
+                    elseif not ui_content.dead then
+                        ui_content.damage_has_started_timer = ui_content.damage_has_started_timer + ui_renderer.dt
+                    end
 
-						if breed.hitzone_armor_override and breed.hitzone_armor_override[hit_zone_name] then
-							armor_type = breed.hitzone_armor_override[hit_zone_name]
-						end
+                    -- Draw DPS text only when the feature is enabled and the unit is dead.
+                    local show_dps = ui_content.settings_cache.show_dps
+                    if ui_content.dead and show_dps then
+                        local damage_has_started_position =
+                            Vector3(x_position, y_position - damage_number_settings.dps_y_offset, z_position)
+                        local dps = ui_content.damage_has_started_timer > 1
+                                and ui_content.damage_taken / ui_content.damage_has_started_timer
+                            or ui_content.damage_taken
+                        local text = string.format("%d DPS", dps)
 
-						local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
-						local armor_type_text = Localize(armor_type_loc_string)
-						local armor_type_position = Vector3(
-							x_position,
-							y_position - damage_number_settings.has_taken_damage_timer_y_offset,
-							z_position
-						)
+                        UIRenderer.draw_text(
+                            ui_renderer,
+                            text,
+                            dps_font_size,
+                            font_type,
+                            damage_has_started_position,
+                            size,
+                            ui_style.text_color,
+                            {}
+                        )
+                    end
 
-						-- V4 OPTIMIZATION: Use cached setting from content (draw pass can't access marker/mod safely).
-				-- Settings are captured once on_enter and reused here to avoid mod:get() in the draw hot-path.
-						if ui_content.settings_cache and ui_content.settings_cache.show_armour_type then
-							UIRenderer.draw_text(
-								ui_renderer,
-								armor_type_text,
-								dps_font_size,
-								font_type,
-								armor_type_position,
-								size,
-								ui_style.text_color,
-								{}
-							)
-						end
-					end
-				end
+                    -- Draw armour type text only when the feature is enabled.
+                    local show_armour = ui_content.settings_cache.show_armour_type
+                    if show_armour and ui_content.last_hit_zone_name then
+                        local hit_zone_name = ui_content.last_hit_zone_name
+                        local breed = ui_content.breed
+                        local armor_type = breed.armor_type
+
+                        if breed.hitzone_armor_override and breed.hitzone_armor_override[hit_zone_name] then
+                            armor_type = breed.hitzone_armor_override[hit_zone_name]
+                        end
+
+                        local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
+                        local armor_type_text = Localize(armor_type_loc_string)
+                        local armor_type_position = Vector3(
+                            x_position,
+                            y_position - damage_number_settings.has_taken_damage_timer_y_offset,
+                            z_position
+                        )
+
+                        UIRenderer.draw_text(
+                            ui_renderer,
+                            armor_type_text,
+                            dps_font_size,
+                            font_type,
+                            armor_type_position,
+                            size,
+                            ui_style.text_color,
+                            {}
+                        )
+                    end
+                end
 
 				ui_style.font_size = default_font_size
 				position[3] = z_position
@@ -596,10 +580,11 @@ template.on_enter = function(widget, marker, template)
 	-- V4 OPTIMIZATION: Cache resolution scale in content (so draw function can access it)
 	content.resolution_scale = RESOLUTION_LOOKUP.scale
 	
-	-- BUGFIX: Initialize visibility to prevent healthbar flash on spawn
-	content.visibility_delay = nil
-	content.fade_delay = nil
-	widget.alpha_multiplier = 0  -- Start invisible (prevents 1-frame flash before fade timers kick in)
+    -- BUGFIX: Initialize visibility to prevent healthbar flash on spawn
+    -- `visibility_delay` and `fade_delay` are nil by default on a new table, so
+    -- explicit nil assignments are redundant.  We only need to set the alpha
+    -- multiplier to zero to start the widget invisible.
+    widget.alpha_multiplier = 0  -- Start invisible
 	
 	local bar_settings = template.bar_settings
 	marker.bar_logic = HudHealthBarLogic:new(bar_settings)
@@ -626,14 +611,15 @@ template.on_enter = function(widget, marker, template)
 	
 	content.header_text = breed.name
 	content.breed = breed
-	marker.head_offset = 0
+    marker.head_offset = 0
+    -- Reset cached head offset flag.  This will be set to true on the first
+    -- update when the head offset is calculated.
+    marker.head_offset_cached = nil
 	marker.debuff_check_timer = 0
 	marker.debuffs = {}
 	
 	-- V4 OPTIMIZATION: Cache settings to avoid repeated mod:get() lookups
 	-- Store in BOTH marker (for update) and content (for draw function)
-	-- Note: settings are captured when the marker is created; changing options mid-mission
-	-- may require a UI reload or respawned marker to take effect.
 	local settings_cache = {
 		show_damage_numbers = mod:get("show_damage_numbers"),
 		show_dps = mod:get("show_dps"),
@@ -650,8 +636,7 @@ template.on_enter = function(widget, marker, template)
 	-- This value never changes for a breed, no need to recalculate every frame
 	marker.max_health = Managers.state.difficulty:get_minion_max_health(breed.name)
 	
-	-- V4 OPTIMIZATION: Cache Color objects once (stored on the template and shared by all markers)
-	-- to avoid constructor calls in the draw function
+	-- V4 OPTIMIZATION: Cache Color objects to avoid constructor calls in draw function
 	-- Color[] is expensive (~50-100ns), and was being called 4x per enemy per frame
 	-- With 20 enemies: 80 Color allocations/frame = 4,800/second at 60 FPS!
 	if not template.cached_colors then
@@ -675,8 +660,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local unit = marker.unit
 	content.t = t
 	
-	-- PERFORMANCE FIX: Throttle *heavy* work to ~10 FPS (100ms), keep lightweight tracking per-frame.
-	-- This cuts extension/buff work dramatically while keeping the marker visually smooth.
+	-- PERFORMANCE FIX: Throttle *heavy* updates to 10 FPS (100ms) - but keep lightweight tracking per frame
 	local skip_heavy = false
 	-- Dead units need frequent updates to count down removal timer properly
 	if not content.remove_timer then
@@ -691,28 +675,30 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	-- PERFORMANCE FIX: Cache extension references (but revalidate if unit dies)
 	local unit_is_alive = ALIVE[unit]
 
-	-- Smooth tracking: update head offset once, and keep world position following the unit every frame
-	-- This prevents the healthbar from visually lagging behind fast-moving targets when heavy updates are throttled.
-	if unit_is_alive and marker.head_offset == 0 then
-		local root_position = Unit.world_position(unit, 1)
-		local node = Unit.node(unit, HEAD_NODE)
-		local head_position = Unit.world_position(unit, node)
-		marker.head_offset = head_position.z - root_position.z + 0.4
-		marker.head_offset_cached = true
-	end
-	local wants_tracking = (widget.alpha_multiplier and widget.alpha_multiplier > 0)
-		or content.visibility_delay
-		or content.fade_delay
-		or content.dead
+    -- Smooth tracking: update head offset once, and keep world position following the unit every frame
+    -- This prevents the healthbar from visually lagging behind fast‑moving targets when heavy updates are throttled.
+    -- Use a separate flag to track whether we've already calculated the head offset.  Avoid
+    -- comparing against numeric zero because zero may be a valid offset for some models.
+    if unit_is_alive and not marker.head_offset_cached then
+        local root_position = Unit.world_position(unit, 1)
+        local node = Unit.node(unit, HEAD_NODE)
+        local head_position = Unit.world_position(unit, node)
+        marker.head_offset = head_position.z - root_position.z + 0.4
+        marker.head_offset_cached = true
+    end
+    local should_update_position = (widget.alpha_multiplier and widget.alpha_multiplier > 0)
+        or content.visibility_delay
+        or content.fade_delay
+        or content.dead
 
-	if wants_tracking and unit_is_alive and marker.world_position then
-		local root_position = Unit.world_position(unit, 1)
-		local position = marker.world_position:unbox()
-		position.x = root_position.x
-		position.y = root_position.y
-		position.z = root_position.z + marker.head_offset
-		marker.world_position:store(position)
-	end
+    if should_update_position and unit_is_alive and marker.world_position then
+        local root_position = Unit.world_position(unit, 1)
+        local position = marker.world_position:unbox()
+        position.x = root_position.x
+        position.y = root_position.y
+        position.z = root_position.z + marker.head_offset
+        marker.world_position:store(position)
+    end
 
 	
 	-- Shared state (needed even when heavy updates are skipped)
@@ -721,19 +707,18 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local damage_number_settings = template.damage_number_settings
 
 	if not skip_heavy then
-	if unit_is_alive and not marker._health_ext_cached then
-		marker._health_extension = ScriptUnit.has_extension(unit, "health_system")
-		-- BUGFIX: Add has_extension check before caching buff_extension
-		if ScriptUnit.has_extension(unit, "buff_system") then
-			marker._buff_extension = ScriptUnit.extension(unit, "buff_system")
-		end
-		marker._health_ext_cached = true
-	end
+    if unit_is_alive and not marker._health_extension then
+        marker._health_extension = ScriptUnit.has_extension(unit, "health_system")
+        -- Cache the buff extension at the same time we cache health.  We only fetch
+        -- the buff extension once; it will be cleared if it becomes invalid.
+        if ScriptUnit.has_extension(unit, "buff_system") then
+            marker._buff_extension = ScriptUnit.extension(unit, "buff_system")
+        end
+    end
 	
 	local health_extension = marker._health_extension
 	
-	-- OPTIMIZATION: Validate cached extensions once, then use direct calls.
-	-- pcall is kept around the validation because extensions can be torn down asynchronously.
+	-- OPTIMIZATION: Single extension validation per frame instead of multiple pcalls
 	-- Validates extension once, then all subsequent calls are direct (much faster)
 	is_dead = not HEALTH_ALIVE[unit]
 	health_percent = 0
@@ -754,8 +739,10 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			is_dead = false
 		else
 			-- Extension was destroyed, clear cache
-			marker._health_ext_cached = false
-			marker._health_extension = nil
+            -- Extension was destroyed, clear cached references.  These will be
+            -- recached on the next update when _health_extension is nil.
+            marker._health_extension = nil
+            marker._buff_extension = nil
 		end
 	end
 	
@@ -764,9 +751,12 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		health_percent = health_extension:current_health_percent() or 0
 	end
 	
-	-- V4 OPTIMIZATION: Use cached max_health instead of Manager chain lookup
-	local max_health = marker.max_health
-	local damage_taken = nil
+    -- V4 OPTIMIZATION: Use cached max_health instead of Manager chain lookup
+    local max_health = marker.max_health
+    -- Initialise the damage accumulator for this unit.  Declaring it here
+    -- ensures the variable is local to the update function and can be
+    -- reassigned later without shadowing.
+    local damage_taken = nil
 
 	marker.debuff_check_timer = marker.debuff_check_timer + dt
 	
@@ -785,11 +775,12 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			end)
 			buff_valid = success
 			
-			if not success then
-				-- Buff extension was destroyed, clear cache
-				marker._buff_extension = nil
-				marker._health_ext_cached = false
-			end
+            if not success then
+                -- Buff extension was destroyed, clear cache.  Health extension
+                -- will be recached on the next update.
+                marker._buff_extension = nil
+                marker._health_extension = nil
+            end
 		end
 		
 		if buff_valid then
@@ -799,7 +790,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			if marker.settings_cache.bleed then
 				local bleed_stacks = buff_extension:current_stacks("bleed") or 0
 				if bleed_stacks > 0 then
-					-- PERFORMANCE FIX: Reuse debuff entry tables (avoids allocations during buff polling)
+					-- PERFORMANCE FIX: Reuse debuff entry tables
 					local entry = marker.debuffs[1] or {}
 					entry.type = "bleed"
 					entry.stacks = bleed_stacks
@@ -866,7 +857,8 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	-- (Same calculation already done earlier at lines 652-658)
 
 	-- OPTIMIZATION: Use extension_valid flag from above - no pcall needed
-	local damage_taken = nil
+	-- Compute total damage directly based on extension validity.  Do not reset
+	-- damage_taken to nil beforehand, since the variable is assigned below
 	if extension_valid then
 		damage_taken = health_extension:total_damage_taken()
 	else
@@ -879,31 +871,35 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		local success = pcall(function()
 			local last_damaging_unit = health_extension.last_damaging_unit and health_extension:last_damaging_unit()
 
-			if last_damaging_unit then
-				content.last_hit_zone_name = (health_extension.last_hit_zone_name and health_extension:last_hit_zone_name()) or "center_mass"
-				
-				local breed = content.breed
-				local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
+            if last_damaging_unit then
+                -- Since we're already in a protected pcall, we can call directly
+                -- into the extension.  If the call fails the outer pcall will
+                -- handle the error.
+                content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
 
-				if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
-					content.hit_weakspot = true
-				else
-					content.hit_weakspot = false
-				end
+                local breed = content.breed
+                local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
 
-				-- Check critical hit (per-frame state)
-				if health_extension.was_hit_by_critical_hit_this_render_frame then
-					local crit_success, was_crit = pcall(health_extension.was_hit_by_critical_hit_this_render_frame, health_extension)
-					content.was_critical = crit_success and was_crit or false
-				end
-			end
+                if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
+                    content.hit_weakspot = true
+                else
+                    content.hit_weakspot = false
+                end
+
+                -- Check critical hit (per-frame state)
+                if health_extension.was_hit_by_critical_hit_this_render_frame then
+                    local crit_success, was_crit = pcall(health_extension.was_hit_by_critical_hit_this_render_frame, health_extension)
+                    content.was_critical = crit_success and was_crit or false
+                end
+            end
 		end)
 		
-		if not success then
-			-- Extension destroyed mid-frame, clear cache
-			marker._health_ext_cached = false
-			marker._health_extension = nil
-		end
+        if not success then
+            -- Extension destroyed mid-frame, clear cache.  Health and buff
+            -- extensions will be recached on the next update.
+            marker._health_extension = nil
+            marker._buff_extension = nil
+        end
 	end
 
 	if ALIVE[unit] and damage_taken > 0 then
@@ -1044,7 +1040,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	end
 
 	-- V4 OPTIMIZATION: Use cached setting instead of mod:get()
-	if marker.settings_cache and not marker.settings_cache.show_bar then
+    if not marker.settings_cache.show_bar then
 		style.bar.visible = false
 		style.ghost_bar.visible = false
 		style.health_max.visible = false

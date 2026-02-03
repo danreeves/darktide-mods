@@ -1,15 +1,3 @@
---[[-------------------------------------------------------------------------
-Healthbars (v4_final)
-
-Notes on this version:
-  * The healthbar marker is spawned from HealthExtension/HuskHealthExtension init.
-  * In live matches the 'unit_data_system' extension isn't guaranteed to exist at the exact hook moment,
-    and units can be despawned quickly (especially in high-intensity fights).
-
-This version adds defensive nil/extension checks before reading breed data.
-That prevents rare-but-nasty crashes without changing the feature set.
----------------------------------------------------------------------------]]
-
 -- Healthbars
 -- Description: Show healthbars from the Psykanium in regular game modes
 -- Author: raindish
@@ -28,6 +16,24 @@ mod.colors = {
 	burn = { 255, 255, 102, 0 },
 	toxin = { 255, 0, 255, 0 },
 }
+
+-- Preload required UI packages when all mods are loaded.  These packages
+-- contain the textures used by the healthbar widgets.  Without preloading
+-- them here the game may hitch when the healthbars first appear.  This
+-- helper mirrors the original implementation that existed prior to the
+-- v4 performance pass and restores the removed behaviour.
+function mod.on_all_mods_loaded()
+    -- Preload icon packages
+    local function load_package(package_name)
+        if not Managers.package:has_loaded(package_name) then
+            Managers.package:load(package_name, "Healthbars")
+        end
+    end
+
+    load_package("packages/ui/views/inventory_view/inventory_view")
+    load_package("packages/ui/views/inventory_weapons_view/inventory_weapons_view")
+    load_package("packages/ui/hud/player_weapon/player_weapon")
+end
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
@@ -57,8 +63,7 @@ local function should_enable_healthbar(unit)
 		return false
 	end
 
-	-- BUGFIX: Defensive checks before touching unit extensions.
-	-- Some units can be dead/despawned or missing unit_data_system at hook time.
+	-- BUGFIX: Add nil-checking for extension access to prevent crashes
 	if not (unit and Unit.alive(unit)) then
 		return false
 	end
