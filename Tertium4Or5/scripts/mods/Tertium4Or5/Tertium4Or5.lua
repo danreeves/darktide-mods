@@ -52,7 +52,7 @@ mod:hook("ProfilesService", "fetch_all_profiles", function(func, ...)
 
 			local archetype = profile.archetype
 			local archetype_raw_name = Localize(archetype.archetype_name)
-			archetype_name = archetype_raw_name:sub(1, 1):upper() .. archetype_raw_name:sub(2)
+			local archetype_name = archetype_raw_name:sub(1, 1):upper() .. archetype_raw_name:sub(2)
 
 			local personality_name = Localize(Personalities[profile.lore.backstory.personality].display_name)
 

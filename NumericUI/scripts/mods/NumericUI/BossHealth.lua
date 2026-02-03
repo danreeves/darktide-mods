@@ -108,7 +108,7 @@ mod:hook_require("scripts/ui/hud/elements/boss_health/hud_element_boss_health_de
 	}, "toughness_bar")
 end)
 
-function _get_network_values(game_session, game_object_id)
+local function _get_network_values(game_session, game_object_id)
 	local toughness_damage = GameSession.game_object_field(game_session, game_object_id, "toughness_damage")
 	local max_toughness = GameSession.game_object_field(game_session, game_object_id, "toughness")
 
