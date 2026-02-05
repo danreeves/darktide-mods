@@ -50,6 +50,26 @@ get_toggles()
 
 mod.on_setting_changed = function()
 	get_toggles()
+
+	-- Update cached settings for all active healthbar markers
+	local hud = Managers.ui and Managers.ui:get_hud()
+	if hud then
+		local world_markers_element = hud:element("HudElementWorldMarkers")
+		if world_markers_element and world_markers_element._active_markers then
+			for _, marker in pairs(world_markers_element._active_markers) do
+				if marker.template_name == MarkerTemplate.name and marker.cached_settings then
+					-- Update cached settings
+					marker.cached_settings.show_damage_numbers = mod:get("show_damage_numbers")
+					marker.cached_settings.show_dps = mod:get("show_dps")
+					marker.cached_settings.show_armour_type = mod:get("show_armour_type")
+					marker.cached_settings.show_bar = mod:get("show_bar")
+					marker.cached_settings.bleed = mod:get("bleed")
+					marker.cached_settings.burn = mod:get("burn")
+					marker.cached_settings.toxin = mod:get("toxin")
+				end
+			end
+		end
+	end
 end
 
 local function should_enable_healthbar(unit)
