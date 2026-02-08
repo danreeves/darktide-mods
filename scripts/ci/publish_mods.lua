@@ -26,6 +26,17 @@ local function extract(path)
 	return { version = result.version, mod_id = result.mod_id }
 end
 
+-- zips a mod directory and returns true if successful
+local function zip_mod(mod_name)
+	local zip_cmd = string.format('zip -r "%s.zip" "%s"', mod_name, mod_name)
+	local ok = os.execute(zip_cmd)
+	local zip_file = mod_name .. ".zip"
+	local f = io.open(zip_file, "r")
+	local file_exists = f ~= nil
+	if f then f:close() end
+	return ok or file_exists
+end
+
 -- executes a shell command and returns its output as a string
 local function exec(cmd)
 	local f = io.popen(cmd)
@@ -126,27 +137,21 @@ for _, path in ipairs(filtered_files) do
 
 	if cur and cur.version and cur.mod_id and cur.version ~= (prev and prev.version) then
 		local mod_name = path:match("^([^/]+)")
-		print(string.format("Uploading %s (ID: %s, version: %s)", mod_name, tostring(cur.mod_id), tostring(cur.version)))
-		-- Package the mod
-		local zip_cmd = string.format('zip -r "%s.zip" "%s"', mod_name, mod_name)
-		-- Upload
 		local upload_cmd = string.format('unex upload %s "%s.zip" -v "%s" -f "%s"', tostring(cur.mod_id),
 			mod_name, tostring(cur.version), mod_name)
 		if dry_run then
-			print("Dry run: Would run: " .. zip_cmd)
-			print("Dry run: Would run: " .. upload_cmd)
+			print("Dry run: Would zip and upload " .. mod_name)
 			table.insert(changed, mod_name) -- count in dry run too
 		else
-			local zip_ok = os.execute(zip_cmd)
-			if zip_ok ~= 0 then
-				print("Failed to zip " .. mod_name .. ", skipping upload")
-			else
+			if zip_mod(mod_name) then
 				local upload_ok = os.execute(upload_cmd)
-				if upload_ok ~= 0 then
+				if not upload_ok then
 					print("Failed to upload " .. mod_name)
 				else
 					table.insert(changed, mod_name) -- count successful uploads
 				end
+			else
+				print("Failed to zip " .. mod_name .. ", skipping upload")
 			end
 		end
 	end
