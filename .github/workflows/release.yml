@@ -27,6 +27,22 @@ jobs:
       - name: Install BUTR.NexusUploader
         run: dotnet tool install -g BUTR.NexusUploader
 
+      - name: Verify CLI tools
+        run: |
+          if ! command -v lua5.3 &> /dev/null; then
+            echo "lua5.3 not found"
+            exit 1
+          fi
+          if ! command -v zip &> /dev/null; then
+            echo "zip not found"
+            exit 1
+          fi
+          if ! command -v unex &> /dev/null; then
+            echo "unex not found"
+            exit 1
+          fi
+          echo "All CLI tools are available"
+
       - name: Run mod check and upload
         env:
           GITHUB_BEFORE: ${{ github.event.before }}
