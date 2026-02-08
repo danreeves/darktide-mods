@@ -22,15 +22,15 @@ jobs:
       - name: Install Lua
         run: |
           sudo apt-get update
-          sudo apt-get install -y lua5.3 zip
+          sudo apt-get install -y lua5.4 zip
 
       - name: Install BUTR.NexusUploader
         run: dotnet tool install -g BUTR.NexusUploader
 
       - name: Verify CLI tools
         run: |
-          if ! command -v lua5.3 &> /dev/null; then
-            echo "lua5.3 not found"
+          if ! command -v lua5.4 &> /dev/null; then
+            echo "lua5.4 not found"
             exit 1
           fi
           if ! command -v zip &> /dev/null; then
@@ -51,4 +51,4 @@ jobs:
           UNEX_APIKEY: ${{ secrets.NEXUSMODS_APIKEY }}
           UNEX_SESSION_COOKIE: ${{ secrets.NEXUSMODS_SESSION_COOKIE }}
         run: |
-          lua5.3 scripts/ci/publish_mods.lua
+          lua5.4 scripts/ci/publish_mods.lua
