@@ -78,11 +78,15 @@ end
 
 
 local files_raw
-if before == nil or before == NULL_COMMIT then
-	files_raw = exec([[git ls-files '*.mod']])
+if dry_run then
+	files_raw = exec([[git diff --name-only "*.mod"]])
 else
-	local cmd = string.format('git diff --name-only %s %s -- "*.mod"', before, sha)
-	files_raw = exec(cmd)
+	if before == nil or before == NULL_COMMIT then
+		files_raw = exec([[git ls-files '*.mod']])
+	else
+		local cmd = string.format('git diff --name-only %s %s -- "*.mod"', before, sha)
+		files_raw = exec(cmd)
+	end
 end
 
 local files = split_lines(files_raw)
@@ -121,21 +125,22 @@ for _, path in ipairs(filtered_files) do
 	end
 
 	if cur and cur.version and cur.mod_id and cur.version ~= (prev and prev.version) then
-		local mod_name = path:gsub("%.mod$", "")
+		local mod_name = path:match("^([^/]+)")
 		print(string.format("Uploading %s (ID: %s, version: %s)", mod_name, tostring(cur.mod_id), tostring(cur.version)))
+		-- Package the mod
+		local zip_cmd = string.format('zip -r "%s.zip" "%s"', mod_name, mod_name)
+		-- Upload
+		local upload_cmd = string.format('unex upload %s "%s.zip" -v "%s" -f "%s"', tostring(cur.mod_id),
+			mod_name, tostring(cur.version), mod_name)
 		if dry_run then
-			print("Dry run: Would zip and upload " .. mod_name)
+			print("Dry run: Would run: " .. zip_cmd)
+			print("Dry run: Would run: " .. upload_cmd)
 			table.insert(changed, mod_name) -- count in dry run too
 		else
-			-- Package the mod
-			local zip_cmd = string.format('zip -r "%s.zip" "%s"', mod_name, mod_name)
 			local zip_ok = os.execute(zip_cmd)
 			if zip_ok ~= 0 then
 				print("Failed to zip " .. mod_name .. ", skipping upload")
 			else
-				-- Upload
-				local upload_cmd = string.format('unex upload %s "%s.zip" -v "%s" -f "%s"', tostring(cur.mod_id),
-					mod_name, tostring(cur.version), mod_name)
 				local upload_ok = os.execute(upload_cmd)
 				if upload_ok ~= 0 then
 					print("Failed to upload " .. mod_name)
