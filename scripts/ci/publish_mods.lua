@@ -1,5 +1,14 @@
 local NULL_COMMIT = "0000000000000000000000000000000000000000"
 
+-- Check for --dry-run flag
+local dry_run = false
+for _, v in ipairs(arg) do
+	if v == "--dry-run" then
+		dry_run = true
+		break
+	end
+end
+
 -- extracts `version` and `mod_id` from a .mod file
 local function extract(path)
 	if not path then return { version = nil, mod_id = nil } end
@@ -51,11 +60,20 @@ local function trim(s)
 end
 
 -- main logic
-local before = os.getenv("GITHUB_BEFORE")
-local sha = os.getenv("GITHUB_SHA")
-if not sha then
-	print("missing GITHUB_SHA")
-	os.exit(1)
+local before, sha
+if dry_run then
+	sha = trim(exec("git rev-parse HEAD"))
+	before = trim(exec("git rev-parse main"))
+	print("Dry run mode:")
+	print("Current commit: " .. sha)
+	print("Main commit: " .. before)
+else
+	before = os.getenv("GITHUB_BEFORE")
+	sha = os.getenv("GITHUB_SHA")
+	if not sha then
+		print("missing GITHUB_SHA")
+		os.exit(1)
+	end
 end
 
 
@@ -105,28 +123,42 @@ for _, path in ipairs(filtered_files) do
 	if cur and cur.version and cur.mod_id and cur.version ~= (prev and prev.version) then
 		local mod_name = path:gsub("%.mod$", "")
 		print(string.format("Uploading %s (ID: %s, version: %s)", mod_name, tostring(cur.mod_id), tostring(cur.version)))
-		-- Package the mod
-		local zip_cmd = string.format('zip -r "%s.zip" "%s"', mod_name, mod_name)
-		local zip_ok = os.execute(zip_cmd)
-		if zip_ok ~= 0 then
-			print("Failed to zip " .. mod_name .. ", skipping upload")
+		if dry_run then
+			print("Dry run: Would zip and upload " .. mod_name)
+			table.insert(changed, mod_name) -- count in dry run too
 		else
-			-- Upload
-			local upload_cmd = string.format('unex upload %s "%s.zip" -v "%s" -f "%s"', tostring(cur.mod_id), mod_name, tostring(cur.version), mod_name)
-			local upload_ok = os.execute(upload_cmd)
-			if upload_ok ~= 0 then
-				print("Failed to upload " .. mod_name)
+			-- Package the mod
+			local zip_cmd = string.format('zip -r "%s.zip" "%s"', mod_name, mod_name)
+			local zip_ok = os.execute(zip_cmd)
+			if zip_ok ~= 0 then
+				print("Failed to zip " .. mod_name .. ", skipping upload")
 			else
-				table.insert(changed, mod_name)  -- count successful uploads
+				-- Upload
+				local upload_cmd = string.format('unex upload %s "%s.zip" -v "%s" -f "%s"', tostring(cur.mod_id),
+					mod_name, tostring(cur.version), mod_name)
+				local upload_ok = os.execute(upload_cmd)
+				if upload_ok ~= 0 then
+					print("Failed to upload " .. mod_name)
+				else
+					table.insert(changed, mod_name) -- count successful uploads
+				end
 			end
 		end
 	end
 end
 
 if #changed == 0 then
-	print("No changed mods with version bumps detected.")
+	if dry_run then
+		print("Dry run: No changed mods with version bumps detected.")
+	else
+		print("No changed mods with version bumps detected.")
+	end
 else
-	print("Uploaded " .. #changed .. " changed mod(s).")
+	if dry_run then
+		print("Dry run: Would upload " .. #changed .. " changed mod(s).")
+	else
+		print("Uploaded " .. #changed .. " changed mod(s).")
+	end
 end
 
 os.exit(0)
