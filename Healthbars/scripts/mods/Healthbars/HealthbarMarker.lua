@@ -97,17 +97,21 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				local z_position = position[3]
 				local y_position = position[2] + damage_number_settings.y_offset
 				local x_position = position[1] + damage_number_settings.x_offset
-				local scale = RESOLUTION_LOOKUP.scale
+				local scale = ui_content.resolution_scale
 				local default_font_size = damage_number_settings.default_font_size * scale
 				local dps_font_size = damage_number_settings.dps_font_size * scale
 				local hundreds_font_size = damage_number_settings.hundreds_font_size * scale
 				local font_type = ui_style.font_type
 
-				if mod:get("show_damage_numbers") then
-					local default_color = Color[damage_number_settings.default_color](255, true)
-					local crit_color = Color[damage_number_settings.crit_color](255, true)
-					local weakspot_color = Color[damage_number_settings.weakspot_color](255, true)
-					local text_color = table.clone(default_color)
+				-- Use marker.cached_settings instead of mod:get() - will be updated via setting change callback
+				local show_damage_numbers = ui_content.show_damage_numbers_cached
+				if show_damage_numbers then
+					-- Use cached colors instead of creating new ones
+					local cached_colors = ui_style.cached_colors
+					local default_color = cached_colors.default
+					local crit_color = cached_colors.crit
+					local weakspot_color = cached_colors.weakspot
+					local text_color = cached_colors.text
 					local num_damage_numbers = #damage_numbers
 
 					for i = num_damage_numbers, 1, -1 do
@@ -181,7 +185,8 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				local damage_has_started = ui_content.damage_has_started
 
 				if damage_has_started then
-					if mod:get("show_dps") then
+					local show_dps = ui_content.show_dps_cached
+					if show_dps then
 						if not ui_content.damage_has_started_timer then
 							ui_content.damage_has_started_timer = ui_renderer.dt
 						elseif not ui_content.dead then
@@ -189,19 +194,28 @@ template.create_widget_defintion = function(template, scenegraph_id)
 						end
 
 						if ui_content.dead then
-							local damage_has_started_position =
-								Vector3(x_position, y_position - damage_number_settings.dps_y_offset, z_position)
 							local dps = ui_content.damage_has_started_timer > 1
 								and ui_content.damage_taken / ui_content.damage_has_started_timer
 								or ui_content.damage_taken
-							local text = string.format("%d DPS", dps)
+							-- Only update cached DPS text if DPS value changed
+							local dps_int = math.floor(dps)
+							if ui_content.cached_dps ~= dps_int then
+								ui_content.cached_dps = dps_int
+								ui_content.cached_dps_text = string.format("%d DPS", dps_int)
+							end
+
+							-- Reuse cached Vector3 instead of creating new one
+							local dps_position = ui_style.cached_vectors.position
+							dps_position.x = x_position
+							dps_position.y = y_position - damage_number_settings.dps_y_offset
+							dps_position.z = z_position
 
 							UIRenderer.draw_text(
 								ui_renderer,
-								text,
+								ui_content.cached_dps_text,
 								dps_font_size,
 								font_type,
-								damage_has_started_position,
+								dps_position,
 								size,
 								ui_style.text_color,
 								{}
@@ -209,33 +223,29 @@ template.create_widget_defintion = function(template, scenegraph_id)
 						end
 					end
 
-					if ui_content.last_hit_zone_name and mod:get("show_armour_type") then
+					local show_armour_type = ui_content.show_armour_type_cached
+					if ui_content.last_hit_zone_name and show_armour_type then
 						local hit_zone_name = ui_content.last_hit_zone_name
-						local breed = ui_content.breed
-						local armor_type = breed.armor_type
+						-- Use cached armor type text instead of localizing every frame
+						local armor_type_text = ui_content.cached_armor_type_text
+						if armor_type_text then
+							-- Reuse cached Vector3 instead of creating new one
+							local armor_position = ui_style.cached_vectors.position
+							armor_position.x = x_position
+							armor_position.y = y_position - damage_number_settings.has_taken_damage_timer_y_offset
+							armor_position.z = z_position
 
-						if breed.hitzone_armor_override and breed.hitzone_armor_override[hit_zone_name] then
-							armor_type = breed.hitzone_armor_override[hit_zone_name]
+							UIRenderer.draw_text(
+								ui_renderer,
+								armor_type_text,
+								dps_font_size,
+								font_type,
+								armor_position,
+								size,
+								ui_style.text_color,
+								{}
+							)
 						end
-
-						local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
-						local armor_type_text = Localize(armor_type_loc_string)
-						local armor_type_position = Vector3(
-							x_position,
-							y_position - damage_number_settings.has_taken_damage_timer_y_offset,
-							z_position
-						)
-
-						UIRenderer.draw_text(
-							ui_renderer,
-							armor_type_text,
-							dps_font_size,
-							font_type,
-							armor_type_position,
-							size,
-							ui_style.text_color,
-							{}
-						)
 					end
 				end
 
@@ -541,6 +551,7 @@ end
 
 template.on_enter = function(widget, marker, template)
 	local content = widget.content
+	local style = widget.style
 	content.spawn_progress_timer = 0
 	content.damage_taken = 0
 	content.damage_numbers = {}
@@ -554,6 +565,46 @@ template.on_enter = function(widget, marker, template)
 	marker.head_offset = 0
 	marker.debuff_check_timer = 0
 	marker.debuffs = {}
+
+	-- Cache mod settings to avoid per-frame mod:get() calls
+	marker.cached_settings = {
+		show_damage_numbers = mod:get("show_damage_numbers"),
+		show_dps = mod:get("show_dps"),
+		show_armour_type = mod:get("show_armour_type"),
+		show_bar = mod:get("show_bar"),
+		bleed = mod:get("bleed"),
+		burn = mod:get("burn"),
+		toxin = mod:get("toxin"),
+	}
+
+	-- Cache color tables to avoid per-frame allocations
+	local damage_number_settings = template.damage_number_settings
+	style.cached_colors = {
+		default = Color[damage_number_settings.default_color](255, true),
+		crit = Color[damage_number_settings.crit_color](255, true),
+		weakspot = Color[damage_number_settings.weakspot_color](255, true),
+		text = { 255, 255, 255, 255 }, -- Reusable color table
+	}
+
+	-- Reusable Vector3 objects to avoid per-frame allocations
+	style.cached_vectors = {
+		position = Vector3(0, 0, 0),
+	}
+
+	-- Cache max_health to avoid per-frame difficulty manager lookups
+	content.max_health = Managers.state.difficulty:get_minion_max_health(breed.name)
+
+	-- Cache breed.hit_zone_weakspot_types for faster lookups
+	content.hit_zone_weakspot_types = breed.hit_zone_weakspot_types
+
+	-- Cache resolution scale
+	content.resolution_scale = RESOLUTION_LOOKUP.scale
+
+	-- Cache node index instead of string lookup
+	if ALIVE[unit] then
+		local head_node = "j_head"
+		marker.head_node_index = Unit.has_node(unit, head_node) and Unit.node(unit, head_node) or 1
+	end
 end
 
 local HEAD_NODE = "j_head"
@@ -562,43 +613,71 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local content = widget.content
 	local style = widget.style
 	local unit = marker.unit
+	local cached_settings = marker.cached_settings
+
+	-- Copy cached settings to content for use in render pass
+	content.show_damage_numbers_cached = cached_settings.show_damage_numbers
+	content.show_dps_cached = cached_settings.show_dps
+	content.show_armour_type_cached = cached_settings.show_armour_type
+
+	-- Cache health_extension reference for multiple uses in this function
 	local health_extension = ScriptUnit.has_extension(unit, "health_system")
 	local is_dead = not health_extension or not health_extension:is_alive()
 	local health_percent = is_dead and 0 or health_extension:current_health_percent()
-	local max_health = Managers.state.difficulty:get_minion_max_health(content.breed.name)
+	local max_health = content.max_health
 	local damage_taken = nil
 
-	marker.debuff_check_timer = marker.debuff_check_timer + dt
+	-- Debuff checking with early exit if all debuffs disabled
+	local any_debuff_enabled = cached_settings.bleed or cached_settings.burn or cached_settings.toxin
+	if any_debuff_enabled then
+		marker.debuff_check_timer = marker.debuff_check_timer + dt
 
-	if marker.debuff_check_timer >= 0.1 then
-		marker.debuff_check_timer = 0
-		local buff_extension = ScriptUnit.extension(unit, "buff_system")
+		if marker.debuff_check_timer >= 0.1 then
+			marker.debuff_check_timer = 0
+			local buff_extension = ScriptUnit.extension(unit, "buff_system")
 
-		if buff_extension then
-			table.clear(marker.debuffs)
+			if buff_extension then
+				-- Only clear and rebuild if we need to check debuffs
+				local debuffs = marker.debuffs
+				local debuff_count = 0
 
-			if mod:get("bleed") then
-				local bleed_stacks = buff_extension:current_stacks("bleed")
-				if bleed_stacks and bleed_stacks > 0 then
-					marker.debuffs[#marker.debuffs + 1] = { type = "bleed", stacks = bleed_stacks }
+				if cached_settings.bleed then
+					local bleed_stacks = buff_extension:current_stacks("bleed")
+					if bleed_stacks and bleed_stacks > 0 then
+						debuff_count = debuff_count + 1
+						debuffs[debuff_count] = debuffs[debuff_count] or {}
+						debuffs[debuff_count].type = "bleed"
+						debuffs[debuff_count].stacks = bleed_stacks
+					end
 				end
-			end
 
-			if mod:get("burn") then
-				local burn_stacks = buff_extension:current_stacks("flamer_assault") +
-				buff_extension:current_stacks("warp_fire")
-				if burn_stacks and burn_stacks > 0 then
-					marker.debuffs[#marker.debuffs + 1] = { type = "burn", stacks = burn_stacks }
+				if cached_settings.burn then
+					local burn_stacks = buff_extension:current_stacks("flamer_assault") +
+					buff_extension:current_stacks("warp_fire")
+					if burn_stacks and burn_stacks > 0 then
+						debuff_count = debuff_count + 1
+						debuffs[debuff_count] = debuffs[debuff_count] or {}
+						debuffs[debuff_count].type = "burn"
+						debuffs[debuff_count].stacks = burn_stacks
+					end
 				end
-			end
 
-			if mod:get("toxin") then
-				local toxin_stacks = buff_extension:current_stacks("neurotoxin_interval_buff")
-					+ buff_extension:current_stacks("neurotoxin_interval_buff2")
-					+ buff_extension:current_stacks("neurotoxin_interval_buff3")
-					+ buff_extension:current_stacks("exploding_toxin_interval_buff")
-				if toxin_stacks and toxin_stacks > 0 then
-					marker.debuffs[#marker.debuffs + 1] = { type = "toxin", stacks = toxin_stacks }
+				if cached_settings.toxin then
+					local toxin_stacks = buff_extension:current_stacks("neurotoxin_interval_buff")
+						+ buff_extension:current_stacks("neurotoxin_interval_buff2")
+						+ buff_extension:current_stacks("neurotoxin_interval_buff3")
+						+ buff_extension:current_stacks("exploding_toxin_interval_buff")
+					if toxin_stacks and toxin_stacks > 0 then
+						debuff_count = debuff_count + 1
+						debuffs[debuff_count] = debuffs[debuff_count] or {}
+						debuffs[debuff_count].type = "toxin"
+						debuffs[debuff_count].stacks = toxin_stacks
+					end
+				end
+
+				-- Clear remaining slots if any
+				for i = debuff_count + 1, #debuffs do
+					debuffs[i] = nil
 				end
 			end
 		end
@@ -609,8 +688,11 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
 		content.status_stacks_1 = marker.debuffs[1].stacks
 	else
-		content.status_icon_1 = nil
-		content.status_stacks_1 = ""
+		-- Only set to nil if not already nil
+		if content.status_icon_1 ~= nil then
+			content.status_icon_1 = nil
+			content.status_stacks_1 = ""
+		end
 	end
 
 	if marker.debuffs[2] then
@@ -618,8 +700,10 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
 		content.status_stacks_2 = marker.debuffs[2].stacks
 	else
-		content.status_icon_2 = nil
-		content.status_stacks_2 = ""
+		if content.status_icon_2 ~= nil then
+			content.status_icon_2 = nil
+			content.status_stacks_2 = ""
+		end
 	end
 
 	if marker.debuffs[3] then
@@ -627,15 +711,22 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		style.status_icon_3.color = mod.colors[marker.debuffs[3].type]
 		content.status_stacks_3 = marker.debuffs[3].stacks
 	else
-		content.status_icon_3 = nil
-		content.status_stacks_3 = ""
+		if content.status_icon_3 ~= nil then
+			content.status_icon_3 = nil
+			content.status_stacks_3 = ""
+		end
 	end
 
-	if ALIVE[unit] and marker.head_offset == 0 then
-		local root_position = Unit.world_position(unit, 1)
-		local node = Unit.node(unit, HEAD_NODE)
-		local head_position = Unit.world_position(unit, node)
-		marker.head_offset = head_position.z - root_position.z + 0.4
+	-- Consolidate world position calculations - do once instead of twice
+	local root_position = nil
+	if ALIVE[unit] then
+		root_position = Unit.world_position(unit, 1)
+
+		-- Calculate head offset once using cached node index
+		if marker.head_offset == 0 and marker.head_node_index then
+			local head_position = Unit.world_position(unit, marker.head_node_index)
+			marker.head_offset = head_position.z - root_position.z + 0.4
+		end
 	end
 
 	if not is_dead then
@@ -648,9 +739,26 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		local last_damaging_unit = health_extension:last_damaging_unit()
 
 		if last_damaging_unit then
-			content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
-			local breed = content.breed
-			local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
+			local new_hit_zone = health_extension:last_hit_zone_name() or "center_mass"
+
+			-- Cache armor type text when hit zone changes
+			if content.last_hit_zone_name ~= new_hit_zone then
+				content.last_hit_zone_name = new_hit_zone
+
+				-- Update cached armor type text for this hit zone
+				local breed = content.breed
+				local armor_type = breed.armor_type
+
+				if breed.hitzone_armor_override and breed.hitzone_armor_override[new_hit_zone] then
+					armor_type = breed.hitzone_armor_override[new_hit_zone]
+				end
+
+				local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
+				content.cached_armor_type_text = Localize(armor_type_loc_string)
+			end
+
+			-- Use cached hit_zone_weakspot_types
+			local hit_zone_weakspot_types = content.hit_zone_weakspot_types
 
 			if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
 				content.hit_weakspot = true
@@ -663,11 +771,9 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	end
 
 	if ALIVE[unit] and damage_taken > 0 then
-		local root_position = Unit.world_position(unit, 1)
-
+		-- Reuse root_position from earlier calculation
 		if not marker.world_position then
-			local node = Unit.node(unit, HEAD_NODE)
-			local head_position = Unit.world_position(unit, node)
+			local head_position = Unit.world_position(unit, marker.head_node_index or 1)
 			head_position.z = head_position.z + 0.5
 			marker.world_position = Vector3Box(head_position)
 		else
@@ -687,7 +793,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		content.visibility_delay = damage_number_settings.visibility_delay
 		content.damage_taken = damage_taken
 
-		if old_damage_taken < damage_taken and mod:get("show_damage_numbers") then
+		if old_damage_taken < damage_taken and cached_settings.show_damage_numbers then
 			local damage_numbers = content.damage_numbers
 			local damage_diff = math.ceil(damage_taken - old_damage_taken)
 			local latest_damage_number = damage_numbers[#damage_numbers]
@@ -709,17 +815,9 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 					duration = damage_number_settings.duration,
 					value = damage_diff,
 					expand_duration = damage_number_settings.expand_duration,
+					hit_weakspot = content.hit_weakspot,
+					was_critical = was_critical,
 				}
-				local breed = content.breed
-				local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
-
-				if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
-					damage_number.hit_weakspot = true
-				else
-					damage_number.hit_weakspot = false
-				end
-
-				damage_number.was_critical = was_critical
 				damage_numbers[#damage_numbers + 1] = damage_number
 
 				if content.add_on_next_number then
@@ -734,15 +832,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 				latest_damage_number.time = 0
 				latest_damage_number.y_position = nil
 				latest_damage_number.start_time = t
-				local breed = content.breed
-				local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
-
-				if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
-					latest_damage_number.hit_weakspot = true
-				else
-					latest_damage_number.hit_weakspot = false
-				end
-
+				latest_damage_number.hit_weakspot = content.hit_weakspot
 				latest_damage_number.was_critical = was_critical
 			end
 		end
@@ -787,12 +877,16 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		marker.health_fraction = health_fraction
 	end
 
-	if not mod:get("show_bar") then
-		style.bar.visible = false
-		style.ghost_bar.visible = false
-		style.health_max.visible = false
-		style.bar_end.visible = false
-		style.background.visible = false
+	-- Only update bar visibility when setting changes
+	local show_bar = cached_settings.show_bar
+	if marker.last_show_bar_state ~= show_bar then
+		marker.last_show_bar_state = show_bar
+		local visible = show_bar
+		style.bar.visible = visible
+		style.ghost_bar.visible = visible
+		style.health_max.visible = visible
+		style.bar_end.visible = visible
+		style.background.visible = visible
 	end
 
 	local line_of_sight_progress = content.line_of_sight_progress or 0
