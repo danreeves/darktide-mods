@@ -99,6 +99,12 @@ local localization = {
 		ru = "Заряды горения",
 		fr = "Affiche les brûlures",
 	},
+	warpfire = {
+		en = "Show warpfire (Soulblaze) stacks",
+	},
+	electrocuted = {
+		en = "Show electrocution debuff",
+	},
 	toxin = {
 		en = "Show toxin stacks",
 	},

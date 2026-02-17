@@ -9,11 +9,15 @@ local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/Healthb
 mod.textures = {
 	bleed = "content/ui/materials/icons/presets/preset_13",
 	burn = "content/ui/materials/icons/presets/preset_20",
+	warpfire = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_encroaching_garden",
+	electrocuted = "content/ui/materials/icons/presets/preset_11",
 	toxin = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle",
 }
 mod.colors = {
 	bleed = { 255, 255, 0, 0 },
 	burn = { 255, 255, 102, 0 },
+	warpfire = { 255, 80, 160, 255 },
+	electrocuted = { 255, 255, 235, 245 },
 	toxin = { 255, 0, 255, 0 },
 }
 
@@ -95,3 +99,17 @@ mod:hook_safe(
 		end
 	end
 )
+
+mod.on_game_state_changed = function(state, state_name)
+    -- Preload Preset Icons
+    Managers.package:load("packages/ui/views/inventory_view/inventory_view", "KillfeedDetails", nil, true)
+    Managers.package:load("packages/ui/views/inventory_weapons_view/inventory_weapons_view", "KillfeedDetails", nil, true)
+    Managers.package:load("packages/ui/views/inventory_background_view/inventory_background_view", "KillfeedDetails", nil, true)
+    Managers.package:load("packages/ui/views/inventory_weapon_details_view/inventory_weapon_details_view", "KillfeedDetails", nil, true)
+    -- Preload Weapon Icons
+    Managers.package:load("packages/ui/hud/player_weapon/player_weapon", "KillfeedDetails", nil, true)
+    Managers.package:load("packages/ui/views/inventory_weapon_marks_view/inventory_weapon_marks_view", "KillfeedDetails", nil, true)
+    -- Other stuff that probably isn't needed but don't dare remove just yet
+    Managers.package:load("packages/ui/views/cosmetics_inspect_view/cosmetics_inspect_view", "KillfeedDetails", nil, true)
+    Managers.package:load("packages/ui/views/masteries_overview_view/masteries_overview_view", "KillfeedDetails", nil, true)
+end

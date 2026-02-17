@@ -536,6 +536,124 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				},
 			},
 		},
+
+		{
+			pass_type = "texture",
+			style_id = "status_icon_4",
+			value_id = "status_icon_4",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10 + 10 + 20 + 10,
+					-40,
+					10,
+				},
+				size = {
+					25,
+					25,
+				},
+				color = {
+					255,
+					120,
+					210,
+					255,
+				},
+			},
+			visibility_function = function(content, style)
+				return content.status_icon_4 ~= nil
+			end,
+		},
+		{
+			pass_type = "text",
+			style_id = "status_stacks_4",
+			value_id = "status_stacks_4",
+			value = "",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				text_vertical_alignment = "center",
+				text_horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10 + 10 + 20 + 10 + 10,
+					-40,
+					10,
+				},
+				size = {
+					25,
+					25,
+				},
+				font_type = header_font_settings.font_type,
+				font_size = 14,
+				text_color = {
+					255,
+					255,
+					255,
+					0,
+				},
+			},
+		},
+
+		{
+			pass_type = "texture",
+			style_id = "status_icon_5",
+			value_id = "status_icon_5",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10 + 10 + 20 + 10 + 10 + 20 + 10,
+					-40,
+					10,
+				},
+				size = {
+					25,
+					25,
+				},
+				color = {
+					255,
+					255,
+					255,
+					255,
+				},
+			},
+			visibility_function = function(content, style)
+				return content.status_icon_5 ~= nil
+			end,
+		},
+		{
+			pass_type = "text",
+			style_id = "status_stacks_5",
+			value_id = "status_stacks_5",
+			value = "",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "right",
+				text_vertical_alignment = "center",
+				text_horizontal_alignment = "right",
+				position = { 0, 0, 0 },
+				offset = {
+					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10 + 10 + 20 + 10 + 10 + 20 + 10 + 10,
+					-40,
+					10,
+				},
+				size = {
+					25,
+					25,
+				},
+				font_type = header_font_settings.font_type,
+				font_size = 14,
+				text_color = {
+					255,
+					255,
+					255,
+					0,
+				},
+			},
+		},
 	}, scenegraph_id)
 end
 
@@ -557,6 +675,21 @@ template.on_enter = function(widget, marker, template)
 end
 
 local HEAD_NODE = "j_head"
+
+-- Buff templates that apply the electrocution keyword (see weapon_buff_templates.lua)
+local ELECTROCUTED_BUFFS = {
+	"shock_grenade_interval",
+	"shock_mine_interval",
+	"shockmaul_stun_interval",
+	"power_maul_p2_special_hit_primer",
+	"power_maul_p2_activated_stun_extra",
+	"power_maul_stun",
+	"shotgun_special_stun",
+	"chain_lightning_interval",
+	"psyker_protectorate_spread_chain_lightning_interval",
+	"shock_effect",
+	"toxin_special_stun",
+}
 
 template.update_function = function(parent, ui_renderer, widget, marker, template, dt, t)
 	local content = widget.content
@@ -585,12 +718,18 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			end
 
 			if mod:get("burn") then
-				local burn_stacks = buff_extension:current_stacks("flamer_assault") +
-				buff_extension:current_stacks("warp_fire")
+				local burn_stacks = buff_extension:current_stacks("flamer_assault")
 				if burn_stacks and burn_stacks > 0 then
 					marker.debuffs[#marker.debuffs + 1] = { type = "burn", stacks = burn_stacks }
 				end
 			end
+
+            if mod:get("warpfire") then
+                local warpfire_stacks = buff_extension:current_stacks("warp_fire")
+                if warpfire_stacks and warpfire_stacks > 0 then
+                    marker.debuffs[#marker.debuffs + 1] = { type = "warpfire", stacks = warpfire_stacks }
+                end
+            end
 
 			if mod:get("toxin") then
 				local toxin_stacks = buff_extension:current_stacks("neurotoxin_interval_buff")
@@ -601,13 +740,31 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 					marker.debuffs[#marker.debuffs + 1] = { type = "toxin", stacks = toxin_stacks }
 				end
 			end
+
+			if mod:get("electrocuted") then
+				local electrocuted = false
+				for i = 1, #ELECTROCUTED_BUFFS do
+					local stacks = buff_extension:current_stacks(ELECTROCUTED_BUFFS[i])
+					if stacks and stacks > 0 then
+						electrocuted = true
+						break
+					end
+				end
+
+				-- Electrocution only has a single "stack" visually (icon only)
+				if electrocuted then
+					marker.debuffs[#marker.debuffs + 1] = { type = "electrocuted" }
+				end
+			end
 		end
 	end
 
 	if marker.debuffs[1] then
 		content.status_icon_1 = mod.textures[marker.debuffs[1].type]
-		style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
-		content.status_stacks_1 = marker.debuffs[1].stacks
+		if style.status_icon_1 then
+			style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
+		end
+        content.status_stacks_1 = tostring(marker.debuffs[1].stacks or "")
 	else
 		content.status_icon_1 = nil
 		content.status_stacks_1 = ""
@@ -615,8 +772,10 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 	if marker.debuffs[2] then
 		content.status_icon_2 = mod.textures[marker.debuffs[2].type]
-		style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
-		content.status_stacks_2 = marker.debuffs[2].stacks
+		if style.status_icon_2 then
+			style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
+		end
+		content.status_stacks_2 = tostring(marker.debuffs[2].stacks or "")
 	else
 		content.status_icon_2 = nil
 		content.status_stacks_2 = ""
@@ -624,11 +783,35 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 	if marker.debuffs[3] then
 		content.status_icon_3 = mod.textures[marker.debuffs[3].type]
-		style.status_icon_3.color = mod.colors[marker.debuffs[3].type]
-		content.status_stacks_3 = marker.debuffs[3].stacks
+		if style.status_icon_3 then
+			style.status_icon_3.color = mod.colors[marker.debuffs[3].type]
+		end
+		content.status_stacks_3 = tostring(marker.debuffs[3].stacks or "")
 	else
 		content.status_icon_3 = nil
 		content.status_stacks_3 = ""
+	end
+
+	if marker.debuffs[4] then
+		content.status_icon_4 = mod.textures[marker.debuffs[4].type]
+		if style.status_icon_4 then
+			style.status_icon_4.color = mod.colors[marker.debuffs[4].type]
+		end
+		content.status_stacks_4 = tostring(marker.debuffs[4].stacks or "")
+	else
+		content.status_icon_4 = nil
+		content.status_stacks_4 = ""
+	end
+
+	if marker.debuffs[5] then
+		content.status_icon_5 = mod.textures[marker.debuffs[5].type]
+		if style.status_icon_5 then
+			style.status_icon_5.color = mod.colors[marker.debuffs[5].type]
+		end
+		content.status_stacks_5 = tostring(marker.debuffs[5].stacks or "")
+	else
+		content.status_icon_5 = nil
+		content.status_stacks_5 = ""
 	end
 
 	if ALIVE[unit] and marker.head_offset == 0 then

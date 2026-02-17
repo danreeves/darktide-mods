@@ -72,6 +72,16 @@ local widgets = {
 				default_value = true,
 			},
 			{
+				setting_id = "warpfire",
+				type = "checkbox",
+				default_value = true,
+			},
+				{
+					setting_id = "electrocuted",
+					type = "checkbox",
+					default_value = true,
+				},
+			{
 				setting_id = "toxin",
 				type = "checkbox",
 				default_value = true,
