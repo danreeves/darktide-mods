@@ -100,16 +100,33 @@ mod:hook_safe(
 	end
 )
 
+local _preloaded = false
+
 mod.on_game_state_changed = function(state, state_name)
-    -- Preload Preset Icons
-    Managers.package:load("packages/ui/views/inventory_view/inventory_view", "KillfeedDetails", nil, true)
-    Managers.package:load("packages/ui/views/inventory_weapons_view/inventory_weapons_view", "KillfeedDetails", nil, true)
-    Managers.package:load("packages/ui/views/inventory_background_view/inventory_background_view", "KillfeedDetails", nil, true)
-    Managers.package:load("packages/ui/views/inventory_weapon_details_view/inventory_weapon_details_view", "KillfeedDetails", nil, true)
-    -- Preload Weapon Icons
-    Managers.package:load("packages/ui/hud/player_weapon/player_weapon", "KillfeedDetails", nil, true)
-    Managers.package:load("packages/ui/views/inventory_weapon_marks_view/inventory_weapon_marks_view", "KillfeedDetails", nil, true)
-    -- Other stuff that probably isn't needed but don't dare remove just yet
-    Managers.package:load("packages/ui/views/cosmetics_inspect_view/cosmetics_inspect_view", "KillfeedDetails", nil, true)
-    Managers.package:load("packages/ui/views/masteries_overview_view/masteries_overview_view", "KillfeedDetails", nil, true)
+    if _preloaded then
+        return
+    end
+
+	-- set only once
+    _preloaded = true
+
+    local pkgs = {
+        -- Preset Icons
+        "packages/ui/views/inventory_view/inventory_view",
+        "packages/ui/views/inventory_weapons_view/inventory_weapons_view",
+        "packages/ui/views/inventory_background_view/inventory_background_view",
+        "packages/ui/views/inventory_weapon_details_view/inventory_weapon_details_view",
+
+        -- Weapon icons
+        "packages/ui/hud/player_weapon/player_weapon",
+        "packages/ui/views/inventory_weapon_marks_view/inventory_weapon_marks_view",
+
+        -- Maybe not needed
+        "packages/ui/views/cosmetics_inspect_view/cosmetics_inspect_view",
+        "packages/ui/views/masteries_overview_view/masteries_overview_view",
+    }
+
+    for _, pkg in ipairs(pkgs) do
+        Managers.package:load(pkg, "KillfeedDetails", nil, true)
+    end
 end
