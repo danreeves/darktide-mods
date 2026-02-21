@@ -102,11 +102,23 @@ local localization = {
 	warpfire = {
 		en = "Show warpfire (Soulblaze) stacks",
 	},
+	toxin = {
+		en = "Show toxin stacks",
+	},
 	electrocuted = {
 		en = "Show electrocution debuff",
 	},
-	toxin = {
-		en = "Show toxin stacks",
+	brittleness_indicator = {
+		en = "Show brittleness indicator",
+	},
+	brittleness_indicator_display = {
+		en = "Brittleness display",
+	},
+	loc_healthbars_brittleness_display_icon_text = {
+		en = "Icon + text %%",
+	},
+	loc_healthbars_brittleness_display_icon_only = {
+		en = "Icon only",
 	},
 }
 

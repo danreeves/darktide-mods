@@ -50,16 +50,21 @@ local widgets = {
 				setting_id = "show_damage_numbers",
 				type = "checkbox",
 				default_value = true,
-			},
-			{
-				setting_id = "show_dps",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "show_armour_type",
-				type = "checkbox",
-				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "show_dps",
+						type = "checkbox",
+						default_value = true,
+						disabled = function() return not mod:get("show_damage_numbers") end,
+					},
+					{
+						setting_id = "show_armour_type",
+						type = "checkbox",
+						default_value = true,
+						 disabled = function() return not mod:get("show_damage_numbers") end,
+					},
+				},
 			},
 			{
 				setting_id = "bleed",
@@ -76,15 +81,29 @@ local widgets = {
 				type = "checkbox",
 				default_value = true,
 			},
-				{
-					setting_id = "electrocuted",
-					type = "checkbox",
-					default_value = true,
-				},
 			{
 				setting_id = "toxin",
 				type = "checkbox",
 				default_value = true,
+			},
+			{
+				setting_id = "electrocuted",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "brittleness_indicator",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "brittleness_indicator_display",
+				type = "dropdown",
+				default_value = "icon_text",
+				options = {
+					{ text = "loc_healthbars_brittleness_display_icon_text", value = "icon_text" },
+					{ text = "loc_healthbars_brittleness_display_icon_only", value = "icon_only" },
+				},
 			},
 		},
 	},

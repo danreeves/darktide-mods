@@ -10,15 +10,16 @@ mod.textures = {
 	bleed = "content/ui/materials/icons/presets/preset_13",
 	burn = "content/ui/materials/icons/presets/preset_20",
 	warpfire = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_encroaching_garden",
-	electrocuted = "content/ui/materials/icons/presets/preset_11",
 	toxin = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle",
+	electrocuted = "content/ui/materials/icons/presets/preset_11",
+	brittleness = "content/ui/materials/icons/presets/preset_04",
 }
 mod.colors = {
 	bleed = { 255, 255, 0, 0 },
 	burn = { 255, 255, 102, 0 },
 	warpfire = { 255, 80, 160, 255 },
-	electrocuted = { 255, 255, 235, 245 },
 	toxin = { 255, 0, 255, 0 },
+	electrocuted = { 255, 255, 235, 245 },
 }
 
 function mod.on_all_mods_loaded()
