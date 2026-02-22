@@ -114,11 +114,8 @@ local localization = {
 	brittleness_indicator_display = {
 		en = "Brittleness display",
 	},
-	brittleness_display_icon_text = {
+	display_icon_text = {
 		en = "Icon + text %%",
-	},
-	brittleness_display_icon_only = {
-		en = "Icon only",
 	},
 	skullcrusher = {
 		en = "Show Skullcrusher debuff",
@@ -141,6 +138,12 @@ local localization = {
     thunderstrike_display = {
     	en = "Thunderstrike display",
     },
+    melee_damage_taken = {
+		en = "Show Melee damage taken debuff",
+	},
+	melee_damage_taken_display = {
+		en = "Melee damage taken display",
+	},
 }
 
 local unlocalized_breeds = {

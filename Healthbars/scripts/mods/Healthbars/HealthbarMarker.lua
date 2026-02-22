@@ -479,6 +479,15 @@ local THUNDERSTRIKE_BUFFS = {
 	{ name = "impact_modifier", per_stack = 10.0, cap = 8 },
 }
 
+
+-- Melee damage taken debuff (Hard Knocks + Target the Weak)
+-- Each source applies once (max_stacks=1) and they add additively (+15% each)
+local MELEE_DAMAGE_TAKEN_BUFFS = {
+	"ogryn_staggering_damage_taken_increase",
+	"adamant_staggering_enemies_take_more_damage",
+}
+local MELEE_DAMAGE_TAKEN_PER_SOURCE = 15.0
+
 local function _staggered_color_by_stacks(stacks)
 	-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
 	stacks = stacks or 0
@@ -517,6 +526,49 @@ local function _compute_staggered_debuff(buff_extension, BUFFS)
 	end
 
 	return stacks_best, stacks_best * per_stack
+end
+
+local function _count_named_buffs(buff_extension, buff_names)
+	if not buff_extension or not buff_names then
+		return 0
+	end
+
+	local buffs = buff_extension._buffs
+	if not buffs then
+		return 0
+	end
+
+	local count = 0
+	for i = 1, #buff_names do
+		local name = buff_names[i]
+		for j = 1, #buffs do
+			local buff = buffs[j]
+			if buff then
+				local template_name = nil
+				-- Prefer method if available
+				if buff.template_name then
+					template_name = buff:template_name()
+				else
+					template_name = buff._template_name
+				end
+				if template_name == name then
+					count = count + 1
+					break
+				end
+			end
+		end
+	end
+
+	return count
+end
+
+local function _melee_damage_taken_color(sources)
+	if sources >= 2 then
+		return { 255, 255, 0, 0 } -- red
+	elseif sources == 1 then
+		return { 255, 255, 255, 255 } -- white
+	end
+	return { 255, 255, 255, 255 }
 end
 
 local function _compute_thunderstrike(buff_extension)
@@ -750,6 +802,43 @@ local DEBUFF_DEFS = {
 			return tostring(data.stacks or "")
 		end,
 	},
+	{
+    	id = "melee_damage_taken",
+    	setting = "melee_damage_taken",
+    	icon = function() return mod.textures and mod.textures.melee_damage_taken end,
+
+    	-- color by "active sources" (1=white, 2=red)
+    	-- IMPORTANT: use data.stacks here because update() only forwards stacks/percent.
+    	color = function(data)
+    		return _melee_damage_taken_color((data and data.stacks) or 0)
+    	end,
+
+    	poll = function(buff_extension)
+    		if not mod:get("melee_damage_taken") then
+    			return nil
+    		end
+
+    		local sources = _count_named_buffs(buff_extension, MELEE_DAMAGE_TAKEN_BUFFS)
+    		if sources <= 0 then
+    			return nil
+    		end
+
+    		-- store sources into stacks so it survives update() packing
+    		return {
+    			stacks = sources,
+    			percent = sources * MELEE_DAMAGE_TAKEN_PER_SOURCE
+    		}
+    	end,
+
+    	-- only "icon_text" (percent) or "icon_only", like brittleness
+    	text = function(data)
+    		local mode = mod:get("melee_damage_taken_display") or "icon_text"
+    		if mode == "icon_text" then
+    			return _format_percent(data.percent or 0)
+    		end
+    		return ""
+    	end,
+    },
 }
 
 local function max_visible_slots()
@@ -841,7 +930,7 @@ local function _find_active(t, id)
 end
 
 local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-local debuff_order = { "brittleness", "skullcrusher", "thunderstrike", "electrocuted" }
+local debuff_order = { "brittleness", "melee_damage_taken", "skullcrusher", "thunderstrike", "electrocuted" }
 
 local active_debuffs = {}
 for i = 1, #debuff_order do
@@ -906,6 +995,7 @@ local debuff_rules = {
   brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
   skullcrusher = { setting = "skullcrusher_display",         default = "stacks",    center_on = "percent"   },
   thunderstrike = { setting = "thunderstrike_display",       default = "stacks",    center_on = "percent"   },
+  melee_damage_taken = { setting = "melee_damage_taken_display",    default = "icon_text", center_on = "icon_text" },
 }
 
 -- Apply placements to widget content/styles

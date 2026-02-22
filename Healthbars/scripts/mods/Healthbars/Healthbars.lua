@@ -15,6 +15,7 @@ mod.textures = {
 	brittleness = "content/ui/materials/icons/presets/preset_04",
 	skullcrusher = "content/ui/materials/icons/presets/preset_05",
 	thunderstrike = "content/ui/materials/icons/presets/preset_18",
+	melee_damage_taken = "content/ui/materials/icons/weapons/actions/special_attack",
 }
 mod.colors = {
 	bleed = { 255, 255, 0, 0 },

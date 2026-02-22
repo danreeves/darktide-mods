@@ -95,8 +95,8 @@ local widgets = {
 						type = "dropdown",
 						default_value = "icon_text",
 						options = {
-							{ text = "brittleness_display_icon_text", value = "icon_text" },
-							{ text = "brittleness_display_icon_only", value = "icon_only" },
+							{ text = "display_icon_text", value = "icon_text" },
+							{ text = "display_icon_only", value = "icon_only" },
 						},
 					},
 				},
@@ -109,7 +109,7 @@ local widgets = {
 			{
 				setting_id = "skullcrusher",
 				type = "checkbox",
-				default_value = false,
+				default_value = true,
 
 				sub_widgets = {
 					{
@@ -127,7 +127,7 @@ local widgets = {
 			{
             	setting_id = "thunderstrike",
             	type = "checkbox",
-            	default_value = false,
+            	default_value = true,
 
             	sub_widgets = {
             		{
@@ -142,6 +142,23 @@ local widgets = {
             		},
             	},
             },
+            {
+				setting_id = "melee_damage_taken",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "melee_damage_taken_display",
+						type = "dropdown",
+						default_value = "icon_text",
+						options = {
+							{ text = "display_icon_text", value = "icon_text" },
+							{ text = "display_icon_only", value = "icon_only" },
+						},
+					}
+				},
+			},
 		},
 	},
 	{
