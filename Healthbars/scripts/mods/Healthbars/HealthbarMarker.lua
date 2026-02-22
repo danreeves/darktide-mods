@@ -463,6 +463,40 @@ local BRITTLENESS_BUFFS = {
 	{ name = "saw_rending_debuff", per_stack = 2.5, cap = 15 },
 }
 
+-- Skullcrusher / Damage vs staggered debuff (see weapon_buff_templates.lua)
+-- Template: increase_damage_received_while_staggered (duration 5s, max_stacks 8, 10% per stack)
+local SKULLCRUSHER_BUFFS = {
+	{ name = "increase_damage_received_while_staggered", per_stack = 10.0, cap = 8 },
+	-- Fallback in case the buff is exposed under the stat-buff name (rare, but harmless)
+	{ name = "damage_vs_staggered", per_stack = 10.0, cap = 8 },
+}
+
+local function _compute_skullcrusher(buff_extension)
+	if not buff_extension then
+		return 0, 0
+	end
+
+	local stacks_best = 0
+	local per_stack = 10.0
+
+	for i = 1, #SKULLCRUSHER_BUFFS do
+		local cfg = SKULLCRUSHER_BUFFS[i]
+		local stacks = buff_extension:current_stacks(cfg.name) or 0
+
+		if stacks > 0 then
+			if cfg.cap and stacks > cfg.cap then
+				stacks = cfg.cap
+			end
+			if stacks > stacks_best then
+				stacks_best = stacks
+				per_stack = cfg.per_stack or per_stack
+			end
+		end
+	end
+
+	return stacks_best, stacks_best * per_stack
+end
+
 local BRITTLENESS_RELEVANT_ARMOR_TYPES = {
 	armored = true,      -- Flak
 	super_armor = true,  -- Carapace
@@ -595,6 +629,40 @@ local DEBUFF_DEFS = {
 			return toxin_stacks > 0 and { stacks = toxin_stacks } or nil
 		end,
 		text = function(data) return tostring(data.stacks or "") end,
+	},
+	{
+		id = "skullcrusher",
+		setting = "skullcrusher",
+		icon = function() return mod.textures and mod.textures.skullcrusher end,
+		-- Color by stacks:
+		-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
+		color = function(data)
+			local stacks = (data and data.stacks) or 0
+			if stacks <= 2 then
+				return { 255, 255, 255, 255 } -- white
+			elseif stacks <= 4 then
+				return { 255, 255, 255, 0 } -- yellow
+			elseif stacks <= 6 then
+				return { 255, 255, 165, 0 } -- orange
+			else
+				return { 255, 255, 0, 0 } -- red
+			end
+		end,
+		poll = function(buff_extension)
+			local stacks, percent = _compute_skullcrusher(buff_extension)
+			return stacks > 0 and { stacks = stacks, percent = percent } or nil
+		end,
+		text = function(data)
+          local mode = mod:get("skullcrusher_display") or "stacks"
+
+          if mode == "icon_only" then
+            return ""
+          elseif mode == "percent" then
+            return _format_percent(data.percent or 0)
+          end
+
+          return tostring(data.stacks or "")
+        end,
 	},
 	{
 		id = "electrocuted",
@@ -732,7 +800,7 @@ local function _find_active(t, id)
 end
 
 local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-local debuff_order = { "brittleness", "electrocuted" }
+local debuff_order = { "brittleness", "skullcrusher", "electrocuted" }
 
 local active_debuffs = {}
 for i = 1, #debuff_order do
@@ -834,6 +902,17 @@ for p = 1, #placements do
 				stacks_style.text_vertical_alignment = "center"
 			end
 		end
+
+		-- Skullcrusher: stacks like DoTs; percent text centered like brittleness; icon_only shows no text.
+        if debuff.type == "skullcrusher" then
+          local mode = mod:get("skullcrusher_display") or "stacks"
+          if mode == "percent" and stacks_style then
+            stacks_style.font_size = 11
+            stacks_style.text_horizontal_alignment = "center"
+            stacks_style.text_vertical_alignment = "center"
+          end
+          -- no styling needed for icon_only because text will be ""
+        end
 
 		-- Electrocution: no text
 		if debuff.type == "electrocuted" then

@@ -95,8 +95,8 @@ local widgets = {
 						type = "dropdown",
 						default_value = "icon_text",
 						options = {
-							{ text = "loc_healthbars_brittleness_display_icon_text", value = "icon_text" },
-							{ text = "loc_healthbars_brittleness_display_icon_only", value = "icon_only" },
+							{ text = "brittleness_display_icon_text", value = "icon_text" },
+							{ text = "brittleness_display_icon_only", value = "icon_only" },
 						},
 					},
 				},
@@ -105,6 +105,24 @@ local widgets = {
 				setting_id = "electrocuted",
 				type = "checkbox",
 				default_value = true,
+			},
+			{
+				setting_id = "skullcrusher",
+				type = "checkbox",
+				default_value = false,
+
+				sub_widgets = {
+					{
+					  setting_id = "skullcrusher_display",
+					  type = "dropdown",
+					  default_value = "stacks",
+					  options = {
+						{ text = "skullcrusher_display_stacks", value = "stacks" },
+						{ text = "skullcrusher_display_percent", value = "percent" },
+						{ text = "skullcrusher_display_icon_only", value = "icon_only" },
+					  },
+					}
+				},
 			},
 		},
 	},

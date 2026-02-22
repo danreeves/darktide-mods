@@ -114,12 +114,27 @@ local localization = {
 	brittleness_indicator_display = {
 		en = "Brittleness display",
 	},
-	loc_healthbars_brittleness_display_icon_text = {
+	brittleness_display_icon_text = {
 		en = "Icon + text %%",
 	},
-	loc_healthbars_brittleness_display_icon_only = {
+	brittleness_display_icon_only = {
 		en = "Icon only",
 	},
+	skullcrusher = {
+		en = "Show Skullcrusher debuff",
+	},
+	skullcrusher_display = {
+		en = "Skullcrusher display",
+	},
+	skullcrusher_display_stacks = {
+		en = "Stacks",
+	},
+	skullcrusher_display_percent = {
+		en = "Percent %%",
+	},
+	skullcrusher_display_icon_only = {
+      en = "Icon only",
+    },
 }
 
 local unlocalized_breeds = {
