@@ -126,14 +126,20 @@ local localization = {
 	skullcrusher_display = {
 		en = "Skullcrusher display",
 	},
-	skullcrusher_display_stacks = {
+	display_stacks = {
 		en = "Stacks",
 	},
-	skullcrusher_display_percent = {
+	display_percent = {
 		en = "Percent %%",
 	},
-	skullcrusher_display_icon_only = {
+	display_icon_only = {
       en = "Icon only",
+    },
+    thunderstrike = {
+    	en = "Show Thunderstrike debuff",
+    },
+    thunderstrike_display = {
+    	en = "Thunderstrike display",
     },
 }
 

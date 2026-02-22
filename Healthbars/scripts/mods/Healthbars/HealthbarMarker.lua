@@ -463,7 +463,7 @@ local BRITTLENESS_BUFFS = {
 	{ name = "saw_rending_debuff", per_stack = 2.5, cap = 15 },
 }
 
--- Skullcrusher / Damage vs staggered debuff (see weapon_buff_templates.lua)
+-- Skullcrusher / Damage vs staggered debuff
 -- Template: increase_damage_received_while_staggered (duration 5s, max_stacks 8, 10% per stack)
 local SKULLCRUSHER_BUFFS = {
 	{ name = "increase_damage_received_while_staggered", per_stack = 10.0, cap = 8 },
@@ -471,7 +471,29 @@ local SKULLCRUSHER_BUFFS = {
 	{ name = "damage_vs_staggered", per_stack = 10.0, cap = 8 },
 }
 
-local function _compute_skullcrusher(buff_extension)
+-- Thunderstrike / Impact modifier debuff
+-- Template: increase_impact_received_while_staggered (duration 5s, max_stacks 8, 10% per stack)
+local THUNDERSTRIKE_BUFFS = {
+	{ name = "increase_impact_received_while_staggered", per_stack = 10.0, cap = 8 },
+	-- Fallback in case the buff is exposed under the stat-buff name
+	{ name = "impact_modifier", per_stack = 10.0, cap = 8 },
+}
+
+local function _staggered_color_by_stacks(stacks)
+	-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
+	stacks = stacks or 0
+	if stacks <= 2 then
+		return { 255, 255, 255, 255 } -- white
+	elseif stacks <= 4 then
+		return { 255, 255, 255, 0 } -- yellow
+	elseif stacks <= 6 then
+		return { 255, 255, 165, 0 } -- orange
+	else
+		return { 255, 255, 0, 0 } -- red
+	end
+end
+
+local function _compute_staggered_debuff(buff_extension, BUFFS)
 	if not buff_extension then
 		return 0, 0
 	end
@@ -479,8 +501,8 @@ local function _compute_skullcrusher(buff_extension)
 	local stacks_best = 0
 	local per_stack = 10.0
 
-	for i = 1, #SKULLCRUSHER_BUFFS do
-		local cfg = SKULLCRUSHER_BUFFS[i]
+	for i = 1, #BUFFS do
+		local cfg = BUFFS[i]
 		local stacks = buff_extension:current_stacks(cfg.name) or 0
 
 		if stacks > 0 then
@@ -495,6 +517,14 @@ local function _compute_skullcrusher(buff_extension)
 	end
 
 	return stacks_best, stacks_best * per_stack
+end
+
+local function _compute_thunderstrike(buff_extension)
+	return _compute_staggered_debuff(buff_extension, THUNDERSTRIKE_BUFFS)
+end
+
+local function _compute_skullcrusher(buff_extension)
+	return _compute_staggered_debuff(buff_extension, SKULLCRUSHER_BUFFS)
 end
 
 local BRITTLENESS_RELEVANT_ARMOR_TYPES = {
@@ -631,40 +661,6 @@ local DEBUFF_DEFS = {
 		text = function(data) return tostring(data.stacks or "") end,
 	},
 	{
-		id = "skullcrusher",
-		setting = "skullcrusher",
-		icon = function() return mod.textures and mod.textures.skullcrusher end,
-		-- Color by stacks:
-		-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
-		color = function(data)
-			local stacks = (data and data.stacks) or 0
-			if stacks <= 2 then
-				return { 255, 255, 255, 255 } -- white
-			elseif stacks <= 4 then
-				return { 255, 255, 255, 0 } -- yellow
-			elseif stacks <= 6 then
-				return { 255, 255, 165, 0 } -- orange
-			else
-				return { 255, 255, 0, 0 } -- red
-			end
-		end,
-		poll = function(buff_extension)
-			local stacks, percent = _compute_skullcrusher(buff_extension)
-			return stacks > 0 and { stacks = stacks, percent = percent } or nil
-		end,
-		text = function(data)
-          local mode = mod:get("skullcrusher_display") or "stacks"
-
-          if mode == "icon_only" then
-            return ""
-          elseif mode == "percent" then
-            return _format_percent(data.percent or 0)
-          end
-
-          return tostring(data.stacks or "")
-        end,
-	},
-	{
 		id = "electrocuted",
 		setting = "electrocuted",
 		icon = function() return mod.textures and mod.textures.electrocuted end,
@@ -699,7 +695,6 @@ local DEBUFF_DEFS = {
 			local p = _compute_brittleness_percent(buff_extension)
 			return p >= 2.5 and { percent = p } or nil
 		end,
-		-- Keep your existing display mode:
 		text = function(data)
 			local mode = mod:get("brittleness_indicator_display") or "icon_text"
 			if mode == "icon_text" then
@@ -708,6 +703,52 @@ local DEBUFF_DEFS = {
 			return ""
 		end,
 		is_brittleness = true,
+	},
+	{
+		id = "skullcrusher",
+		setting = "skullcrusher",
+		icon = function() return mod.textures and mod.textures.skullcrusher end,
+		-- Color by stacks:
+		-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
+		color = function(data)
+			return _staggered_color_by_stacks((data and data.stacks) or 0)
+		end,
+		poll = function(buff_extension)
+			local stacks, percent = _compute_skullcrusher(buff_extension)
+			return stacks > 0 and { stacks = stacks, percent = percent } or nil
+		end,
+		text = function(data)
+		  local mode = mod:get("skullcrusher_display") or "stacks"
+
+		  if mode == "icon_only" then
+			return ""
+		  elseif mode == "percent" then
+			return _format_percent(data.percent or 0)
+		  end
+
+		  return tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "thunderstrike",
+		setting = "thunderstrike",
+		icon = function() return mod.textures and mod.textures.thunderstrike end,
+		color = function(data)
+			return _staggered_color_by_stacks((data and data.stacks) or 0)
+		end,
+		poll = function(buff_extension)
+			local stacks, percent = _compute_thunderstrike(buff_extension)
+			return stacks > 0 and { stacks = stacks, percent = percent } or nil
+		end,
+		text = function(data)
+			local mode = mod:get("thunderstrike_display") or "stacks"
+			if mode == "icon_only" then
+				return ""
+			elseif mode == "percent" then
+				return _format_percent(data.percent or 0)
+			end
+			return tostring(data.stacks or "")
+		end,
 	},
 }
 
@@ -800,7 +841,7 @@ local function _find_active(t, id)
 end
 
 local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-local debuff_order = { "brittleness", "skullcrusher", "electrocuted" }
+local debuff_order = { "brittleness", "skullcrusher", "thunderstrike", "electrocuted" }
 
 local active_debuffs = {}
 for i = 1, #debuff_order do
@@ -852,6 +893,21 @@ else
 	end
 end
 
+-- helper: apply the shared "center + small" style
+local function center_small_text(stacks_style)
+  if not stacks_style then return end
+  stacks_style.font_size = 11
+  stacks_style.text_horizontal_alignment = "center"
+  stacks_style.text_vertical_alignment   = "center"
+end
+
+-- "switch table" / rules per debuff type
+local debuff_rules = {
+  brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
+  skullcrusher = { setting = "skullcrusher_display",         default = "stacks",    center_on = "percent"   },
+  thunderstrike = { setting = "thunderstrike_display",       default = "stacks",    center_on = "percent"   },
+}
+
 -- Apply placements to widget content/styles
 for p = 1, #placements do
 	local slot = placements[p].slot
@@ -893,25 +949,13 @@ for p = 1, #placements do
 			content[stacks_id] = tostring(debuff.stacks or "")
 		end
 
-		-- Brittleness: keep it inside icon; scale down + center so it never collides.
-		if debuff.type == "brittleness" then
-			local mode = mod:get("brittleness_indicator_display") or "icon_text"
-			if mode == "icon_text" and stacks_style then
-				stacks_style.font_size = 11
-				stacks_style.text_horizontal_alignment = "center"
-				stacks_style.text_vertical_alignment = "center"
-			end
-		end
-
-		-- Skullcrusher: stacks like DoTs; percent text centered like brittleness; icon_only shows no text.
-        if debuff.type == "skullcrusher" then
-          local mode = mod:get("skullcrusher_display") or "stacks"
-          if mode == "percent" and stacks_style then
-            stacks_style.font_size = 11
-            stacks_style.text_horizontal_alignment = "center"
-            stacks_style.text_vertical_alignment = "center"
+		-- text for brittleness, skullcrusher and thunderstrike debuffs
+        local rule = debuff_rules[debuff.type]
+        if rule then
+          local mode = mod:get(rule.setting) or rule.default
+          if mode == rule.center_on then
+            center_small_text(stacks_style)
           end
-          -- no styling needed for icon_only because text will be ""
         end
 
 		-- Electrocution: no text

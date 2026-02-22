@@ -117,13 +117,31 @@ local widgets = {
 					  type = "dropdown",
 					  default_value = "stacks",
 					  options = {
-						{ text = "skullcrusher_display_stacks", value = "stacks" },
-						{ text = "skullcrusher_display_percent", value = "percent" },
-						{ text = "skullcrusher_display_icon_only", value = "icon_only" },
+						{ text = "display_stacks", value = "stacks" },
+						{ text = "display_percent", value = "percent" },
+						{ text = "display_icon_only", value = "icon_only" },
 					  },
 					}
 				},
 			},
+			{
+            	setting_id = "thunderstrike",
+            	type = "checkbox",
+            	default_value = false,
+
+            	sub_widgets = {
+            		{
+            			setting_id = "thunderstrike_display",
+            			type = "dropdown",
+            			default_value = "stacks",
+            			options = {
+							{ text = "display_stacks", value = "stacks" },
+							{ text = "display_percent", value = "percent" },
+							{ text = "display_icon_only", value = "icon_only" },
+            			},
+            		},
+            	},
+            },
 		},
 	},
 	{
