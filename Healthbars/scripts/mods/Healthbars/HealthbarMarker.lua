@@ -92,7 +92,7 @@ end
 local MAX_DEBUFF_SLOTS_ALLOC = 12 -- maximum number of slots
 
 local ICON_SIZE = 25
-local GRID_COLS = 4
+local GRID_COLS = 6
 local GRID_GAP_X = 4
 local GRID_GAP_Y = 4
 local BAR_TO_DEBUFF_MARGIN_Y = 5
@@ -486,7 +486,130 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 	"ogryn_staggering_damage_taken_increase",
 	"adamant_staggering_enemies_take_more_damage",
 }
-local MELEE_DAMAGE_TAKEN_PER_SOURCE = 15.0
+
+-- ---------------------------------------------------------------------------
+-- Total damage taken debuff (various talents/blessings)
+-- ---------------------------------------------------------------------------
+-- Values taken from the game templates (see provided Darktide source):
+-- - ogryn_recieve_damage_taken_increase_debuff: damage_taken_modifier = 0.1 (5s)
+-- - ogryn_taunt_increased_damage_taken_buff: damage_taken_multiplier = 1.2 (15s)
+-- - increase_damage_taken (weapon special debuff): damage_taken_modifier = 0.1 per stack (5s, max 1)
+-- - adamant_drone_enemy_debuff: damage_taken_multiplier = 1.15
+-- - psyker_discharge_damage_debuff: damage_taken_multiplier = 1.1 (8s)
+-- - veteran_improved_tag_debuff: +0.05 per stack (max 6)
+-- - zealot_bled_enemies_take_more_damage_effect: damage_taken_multiplier = 1.15 (5s)
+local DAMAGE_TAKEN_MODIFIER_BUFFS = {
+	{ name = "ogryn_recieve_damage_taken_increase_debuff", per_stack = 0.10, cap = 1 }, -- Soften them up
+	{ name = "increase_damage_taken", per_stack = 0.10, cap = 1 }, -- Pickaxe weapon special
+}
+
+local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
+	{ name = "ogryn_taunt_increased_damage_taken_buff", multiplier = 1.20 }, -- Valuable Distraction
+	{ name = "adamant_drone_enemy_debuff", multiplier = 1.15 }, -- Nuncio-Aquila
+	{ name = "psyker_discharge_damage_debuff", multiplier = 1.10 }, -- Warp Rupture
+	{ name = "zealot_bled_enemies_take_more_damage_effect", multiplier = 1.15 }, -- Blinded by Blood
+}
+
+-- Enfeeble (Psyker): Smite/Charged Smite applies +10% damage taken while actively affected
+local ENFEEBLE_SMITE_TARGET_BUFFS = {
+  "psyker_protectorate_spread_chain_lightning_interval_improved",
+  "psyker_protectorate_spread_charged_chain_lightning_interval_improved",
+  "psyker_heavy_swings_shock_improved",
+}
+
+local VETERAN_FOCUS_TARGET_DEBUFF = { name = "veteran_improved_tag_debuff", per_stack = 0.05, cap = 6 }
+
+local function _has_any_named_buff(buff_extension, buff_names)
+  if not buff_extension or not buff_names then
+    return false
+  end
+
+  local buffs = buff_extension._buffs
+  if not buffs then
+    return false
+  end
+
+  for i = 1, #buff_names do
+    local wanted = buff_names[i]
+    for j = 1, #buffs do
+      local buff = buffs[j]
+      if buff then
+        local template_name = buff.template_name and buff:template_name() or buff._template_name
+        if template_name == wanted then
+          return true
+        end
+      end
+    end
+  end
+
+  return false
+end
+
+local function _compute_total_damage_taken_percent(buff_extension)
+	if not buff_extension then
+		return 0
+	end
+
+	local additive_modifier = 0
+	for i = 1, #DAMAGE_TAKEN_MODIFIER_BUFFS do
+		local cfg = DAMAGE_TAKEN_MODIFIER_BUFFS[i]
+		local stacks = buff_extension:current_stacks(cfg.name) or 0
+		if stacks > 0 then
+			if cfg.cap and stacks > cfg.cap then
+				stacks = cfg.cap
+			end
+			additive_modifier = additive_modifier + stacks * (cfg.per_stack or 0)
+		end
+	end
+
+	local total_multiplier = 1 + additive_modifier
+
+	for i = 1, #DAMAGE_TAKEN_MULTIPLIER_BUFFS do
+		local cfg = DAMAGE_TAKEN_MULTIPLIER_BUFFS[i]
+		local stacks = buff_extension:current_stacks(cfg.name) or 0
+		if stacks and stacks > 0 then
+			total_multiplier = total_multiplier * (cfg.multiplier or 1)
+		end
+	end
+
+	local tag_stacks = buff_extension:current_stacks(VETERAN_FOCUS_TARGET_DEBUFF.name) or 0
+    if tag_stacks > 0 then
+		if VETERAN_FOCUS_TARGET_DEBUFF.cap and tag_stacks > VETERAN_FOCUS_TARGET_DEBUFF.cap then
+			tag_stacks = VETERAN_FOCUS_TARGET_DEBUFF.cap
+		end
+
+		local per = VETERAN_FOCUS_TARGET_DEBUFF.per_stack or 0
+		total_multiplier = total_multiplier * math.pow(1 + per, tag_stacks)
+    end
+
+	-- Enfeeble: +10% damage taken while electrocuted by you (improved chain lightning target debuff)
+	if _has_any_named_buff(buff_extension, ENFEEBLE_SMITE_TARGET_BUFFS) then
+		total_multiplier = total_multiplier * 1.10 -- enfeeble electrocuted damage taken multiplier
+	end
+
+	local percent = (total_multiplier - 1) * 100
+	if percent < 0.01 then
+		return 0
+	end
+
+	return percent
+end
+
+local function _damage_taken_color(percent)
+	-- Suggested model:
+	-- 0..14.9 white, 15..29.9 yellow, 30..44.9 orange, 45..59.9 red, >=60 magenta
+	percent = percent or 0
+	if percent >= 60 then
+		return { 255, 255, 0, 255 } -- magenta
+	elseif percent >= 45 then
+		return { 255, 255, 0, 0 } -- red
+	elseif percent >= 30 then
+		return { 255, 255, 165, 0 } -- orange
+	elseif percent >= 15 then
+		return { 255, 255, 255, 0 } -- yellow
+	end
+	return { 255, 255, 255, 255 } -- white
+end
 
 local function _staggered_color_by_stacks(stacks)
 	-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
@@ -597,22 +720,22 @@ local function _is_brittleness_relevant(content)
 end
 
 local function _format_percent(value)
-	local rounded = math.floor(value * 10 + 0.5) / 10
-	if math.abs(rounded - math.floor(rounded)) < 0.0001 then
-		return string.format("%d%%", rounded)
-	end
-	return string.format("%.1f%%", rounded)
+  -- Round to full percent:
+  -- 0.1-0.4 down, 0.5-0.9 up (round half up)
+  local rounded = math.floor((value or 0) + 0.5)
+  return string.format("%d%%", rounded)
 end
 
 local function _brittleness_color(percent)
-	-- 2.5..19.9 white, 20..29.9 yellow, 30..39.9 orange, >=40 red
-	if percent >= 40 then
+	if percent >= 60 then
+		return { 255, 255, 0, 255 } -- >=60 magenta
+	elseif percent >= 40 then -- >=40 red
 		return 255, 255, 0, 0
-	elseif percent >= 30 then
+	elseif percent >= 30 then -- 30..39.9 orange
 		return 255, 255, 165, 0
-	elseif percent >= 20 then
+	elseif percent >= 20 then -- 20..29.9 yellow
 		return 255, 255, 255, 0
-	elseif percent >= 2.5 then
+	elseif percent >= 2.5 then -- 2.5..19.9 white
 		return 255, 255, 255, 255
 	end
 	return 0, 255, 255, 255
@@ -760,8 +883,6 @@ local DEBUFF_DEFS = {
 		id = "skullcrusher",
 		setting = "skullcrusher",
 		icon = function() return mod.textures and mod.textures.skullcrusher end,
-		-- Color by stacks:
-		-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
 		color = function(data)
 			return _staggered_color_by_stacks((data and data.stacks) or 0)
 		end,
@@ -806,9 +927,6 @@ local DEBUFF_DEFS = {
     	id = "melee_damage_taken",
     	setting = "melee_damage_taken",
     	icon = function() return mod.textures and mod.textures.melee_damage_taken end,
-
-    	-- color by "active sources" (1=white, 2=red)
-    	-- IMPORTANT: use data.stacks here because update() only forwards stacks/percent.
     	color = function(data)
     		return _melee_damage_taken_color((data and data.stacks) or 0)
     	end,
@@ -826,7 +944,7 @@ local DEBUFF_DEFS = {
     		-- store sources into stacks so it survives update() packing
     		return {
     			stacks = sources,
-    			percent = sources * MELEE_DAMAGE_TAKEN_PER_SOURCE
+    			percent = sources * 15.0 -- melee damage per source
     		}
     	end,
 
@@ -839,6 +957,31 @@ local DEBUFF_DEFS = {
     		return ""
     	end,
     },
+	{
+		id = "damage_taken",
+		setting = "damage_taken",
+		icon = function() return mod.textures and mod.textures.damage_taken end,
+		color = function(data)
+			return _damage_taken_color((data and data.percent) or 0)
+		end,
+		poll = function(buff_extension)
+			if not mod:get("damage_taken") then
+				return nil
+			end
+			local percent = _compute_total_damage_taken_percent(buff_extension)
+			if percent <= 0 then
+				return nil
+			end
+			return { percent = percent }
+		end,
+		text = function(data)
+			local mode = mod:get("damage_taken_display") or "icon_text"
+			if mode == "icon_text" then
+				return _format_percent(data.percent or 0)
+			end
+			return ""
+		end,
+	},
 }
 
 local function max_visible_slots()
@@ -930,7 +1073,7 @@ local function _find_active(t, id)
 end
 
 local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-local debuff_order = { "brittleness", "melee_damage_taken", "skullcrusher", "thunderstrike", "electrocuted" }
+local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike", "electrocuted" }
 
 local active_debuffs = {}
 for i = 1, #debuff_order do
@@ -996,6 +1139,7 @@ local debuff_rules = {
   skullcrusher = { setting = "skullcrusher_display",         default = "stacks",    center_on = "percent"   },
   thunderstrike = { setting = "thunderstrike_display",       default = "stacks",    center_on = "percent"   },
   melee_damage_taken = { setting = "melee_damage_taken_display",    default = "icon_text", center_on = "icon_text" },
+  damage_taken = { setting = "damage_taken_display", default = "icon_text", center_on = "icon_text" },
 }
 
 -- Apply placements to widget content/styles
@@ -1039,7 +1183,7 @@ for p = 1, #placements do
 			content[stacks_id] = tostring(debuff.stacks or "")
 		end
 
-		-- text for brittleness, skullcrusher and thunderstrike debuffs
+		-- text for brittleness, skullcrusher, thunderstrike, melee_damage_taken and damage_taken debuffs
         local rule = debuff_rules[debuff.type]
         if rule then
           local mode = mod:get(rule.setting) or rule.default

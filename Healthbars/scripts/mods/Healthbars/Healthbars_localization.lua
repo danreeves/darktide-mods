@@ -144,6 +144,12 @@ local localization = {
 	melee_damage_taken_display = {
 		en = "Melee damage taken display",
 	},
+	damage_taken = {
+		en = "Show Increased damage taken debuff",
+	},
+	damage_taken_display = {
+		en = "Increased damage taken display",
+	},
 }
 
 local unlocalized_breeds = {

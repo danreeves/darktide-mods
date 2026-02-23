@@ -16,6 +16,7 @@ mod.textures = {
 	skullcrusher = "content/ui/materials/icons/presets/preset_05",
 	thunderstrike = "content/ui/materials/icons/presets/preset_18",
 	melee_damage_taken = "content/ui/materials/icons/weapons/actions/special_attack",
+	damage_taken = "content/ui/materials/icons/weapons/actions/smiter",
 }
 mod.colors = {
 	bleed = { 255, 255, 0, 0 },
@@ -23,7 +24,7 @@ mod.colors = {
 	warpfire = { 255, 80, 160, 255 },
 	toxin = { 255, 0, 255, 0 },
 	electrocuted = { 255, 255, 235, 245 },
-	-- brittleness, skullcrusher and thunderstrike debuffs are calculated by applied stacks
+	-- brittleness, skullcrusher, thunderstrike and damage taken debuffs are calculated by applied stacks
 }
 
 function mod.on_all_mods_loaded()
