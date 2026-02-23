@@ -151,7 +151,7 @@ local widgets = {
 					{
 						setting_id = "melee_damage_taken_display",
 						type = "dropdown",
-						default_value = "icon_text",
+						default_value = "icon_only",
 						options = {
 							{ text = "display_icon_text", value = "icon_text" },
 							{ text = "display_icon_only", value = "icon_only" },
@@ -172,6 +172,23 @@ local widgets = {
 						options = {
 							{ text = "display_icon_text", value = "icon_text" },
 							{ text = "display_icon_only", value = "icon_only" },
+						},
+					},
+				},
+			},
+			{
+				setting_id = "empyric_shock",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "empyric_shock_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							{ text = "display_stacks", value = "stacks" },
+							{ text = "display_percent", value = "percent" },
 						},
 					},
 				},

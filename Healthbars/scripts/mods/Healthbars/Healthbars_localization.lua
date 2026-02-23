@@ -150,6 +150,12 @@ local localization = {
 	damage_taken_display = {
 		en = "Increased damage taken display",
 	},
+	empyric_shock = {
+		en = "Show Empyric Shock debuff",
+	},
+	empyric_shock_display = {
+		en = "Empyric Shock display",
+	},
 }
 
 local unlocalized_breeds = {

@@ -479,6 +479,10 @@ local THUNDERSTRIKE_BUFFS = {
 	{ name = "impact_modifier", per_stack = 10.0, cap = 8 },
 }
 
+-- Empyric Shock (Psyker): warp_damage_taken_multiplier
+-- Buff template: psyker_force_staff_quick_attack_debuff
+-- +6% warp damage taken per stack, stacks up to 5, lasts 10s
+local EMPYRIC_SHOCK_DEBUFF = { name = "psyker_force_staff_quick_attack_debuff", per_stack = 0.06, cap = 5 }
 
 -- Melee damage taken debuff (Hard Knocks + Target the Weak)
 -- Each source applies once (max_stacks=1) and they add additively (+15% each)
@@ -694,12 +698,58 @@ local function _melee_damage_taken_color(sources)
 	return { 255, 255, 255, 255 }
 end
 
+local function _lerp(a, b, t)
+	return a + (b - a) * t
+end
+
+local function _lerp_color_rgba(c1, c2, t)
+	-- c = {a,r,g,b}
+	return {
+		math.floor(_lerp(c1[1], c2[1], t) + 0.5),
+		math.floor(_lerp(c1[2], c2[2], t) + 0.5),
+		math.floor(_lerp(c1[3], c2[3], t) + 0.5),
+		math.floor(_lerp(c1[4], c2[4], t) + 0.5),
+	}
+end
+
+local function _empyric_shock_color_by_stacks(stacks)
+	stacks = stacks or 0
+	if stacks <= 0 then
+		return { 255, 255, 255, 255 }
+	end
+
+	local t = (stacks - 1) / 4 -- stacks 1..5 -> t 0..1
+	t = t * t
+
+	return _lerp_color_rgba({ 255, 210, 235, 255 }, { 255, 80, 160, 255 }, t)
+end
+
 local function _compute_thunderstrike(buff_extension)
 	return _compute_staggered_debuff(buff_extension, THUNDERSTRIKE_BUFFS)
 end
 
 local function _compute_skullcrusher(buff_extension)
 	return _compute_staggered_debuff(buff_extension, SKULLCRUSHER_BUFFS)
+end
+
+local function _compute_empyric_shock(buff_extension)
+	if not buff_extension then
+		return 0, 0
+	end
+
+	local stacks = buff_extension:current_stacks(EMPYRIC_SHOCK_DEBUFF.name) or 0
+	if stacks <= 0 then
+		return 0, 0
+	end
+
+	if EMPYRIC_SHOCK_DEBUFF.cap and stacks > EMPYRIC_SHOCK_DEBUFF.cap then
+		stacks = EMPYRIC_SHOCK_DEBUFF.cap
+	end
+
+	local mult = math.pow(1 + (EMPYRIC_SHOCK_DEBUFF.per_stack or 0), stacks)
+	local percent = (mult - 1) * 100
+
+	return stacks, percent
 end
 
 local BRITTLENESS_RELEVANT_ARMOR_TYPES = {
@@ -982,6 +1032,26 @@ local DEBUFF_DEFS = {
 			return ""
 		end,
 	},
+	{
+		id = "empyric_shock",
+		setting = "empyric_shock",
+		icon = function() return mod.textures and mod.textures.empyric_shock end,
+		color = function(data) return _empyric_shock_color_by_stacks((data and data.stacks) or 0) end,
+		poll = function(buff_extension)
+			if not mod:get("empyric_shock") then
+				return nil
+			end
+			local stacks, percent = _compute_empyric_shock(buff_extension)
+			return stacks > 0 and { stacks = stacks, percent = percent } or nil
+		end,
+		text = function(data)
+			local mode = mod:get("empyric_shock_display") or "stacks"
+			if mode == "percent" then
+				return _format_percent(data.percent or 0)
+			end
+			return tostring(data.stacks or "")
+		end,
+	},
 }
 
 local function max_visible_slots()
@@ -1073,7 +1143,7 @@ local function _find_active(t, id)
 end
 
 local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike", "electrocuted" }
+local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "empyric_shock", "skullcrusher", "thunderstrike", "electrocuted" }
 
 local active_debuffs = {}
 for i = 1, #debuff_order do
@@ -1138,8 +1208,9 @@ local debuff_rules = {
   brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
   skullcrusher = { setting = "skullcrusher_display",         default = "stacks",    center_on = "percent"   },
   thunderstrike = { setting = "thunderstrike_display",       default = "stacks",    center_on = "percent"   },
-  melee_damage_taken = { setting = "melee_damage_taken_display",    default = "icon_text", center_on = "icon_text" },
+  melee_damage_taken = { setting = "melee_damage_taken_display",    default = "icon_only", center_on = "icon_text" },
   damage_taken = { setting = "damage_taken_display", default = "icon_text", center_on = "icon_text" },
+  empyric_shock = { setting = "empyric_shock_display", default = "stacks", center_on = "percent" },
 }
 
 -- Apply placements to widget content/styles

@@ -17,6 +17,7 @@ mod.textures = {
 	thunderstrike = "content/ui/materials/icons/presets/preset_18",
 	melee_damage_taken = "content/ui/materials/icons/weapons/actions/special_attack",
 	damage_taken = "content/ui/materials/icons/weapons/actions/smiter",
+	empyric_shock = "content/ui/materials/icons/weapons/actions/smiter",
 }
 mod.colors = {
 	bleed = { 255, 255, 0, 0 },
