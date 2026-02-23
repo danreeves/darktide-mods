@@ -698,30 +698,22 @@ local function _melee_damage_taken_color(sources)
 	return { 255, 255, 255, 255 }
 end
 
-local function _lerp(a, b, t)
-	return a + (b - a) * t
-end
 
-local function _lerp_color_rgba(c1, c2, t)
-	-- c = {a,r,g,b}
-	return {
-		math.floor(_lerp(c1[1], c2[1], t) + 0.5),
-		math.floor(_lerp(c1[2], c2[2], t) + 0.5),
-		math.floor(_lerp(c1[3], c2[3], t) + 0.5),
-		math.floor(_lerp(c1[4], c2[4], t) + 0.5),
-	}
-end
 
 local function _empyric_shock_color_by_stacks(stacks)
-	stacks = stacks or 0
-	if stacks <= 0 then
-		return { 255, 255, 255, 255 }
-	end
+	  stacks = stacks or 0
 
-	local t = (stacks - 1) / 4 -- stacks 1..5 -> t 0..1
-	t = t * t
-
-	return _lerp_color_rgba({ 255, 210, 235, 255 }, { 255, 80, 160, 255 }, t)
+	  if stacks <= 0 then
+		return { 255, 255, 255, 255 } -- fallback white
+	  elseif stacks <= 2 then
+		return { 255, 255, 255, 255 } -- 1-2: white
+	  elseif stacks == 3 then
+		return { 255, 255, 255, 0 }   -- 3: yellow
+	  elseif stacks == 4 then
+		return { 255, 255, 165, 0 }   -- 4: orange
+	  else
+		return { 255, 255, 0, 0 }     -- 5: red
+	  end
 end
 
 local function _compute_thunderstrike(buff_extension)
@@ -1143,7 +1135,7 @@ local function _find_active(t, id)
 end
 
 local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "empyric_shock", "skullcrusher", "thunderstrike", "electrocuted" }
+local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike", "empyric_shock", "electrocuted" }
 
 local active_debuffs = {}
 for i = 1, #debuff_order do

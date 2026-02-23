@@ -15,9 +15,9 @@ mod.textures = {
 	brittleness = "content/ui/materials/icons/presets/preset_04",
 	skullcrusher = "content/ui/materials/icons/presets/preset_05",
 	thunderstrike = "content/ui/materials/icons/presets/preset_18",
-	melee_damage_taken = "content/ui/materials/icons/weapons/actions/special_attack",
-	damage_taken = "content/ui/materials/icons/weapons/actions/smiter",
-	empyric_shock = "content/ui/materials/icons/weapons/actions/smiter",
+	melee_damage_taken = "content/ui/materials/icons/presets/preset_01",
+	damage_taken = "content/ui/materials/icons/presets/preset_14",
+	empyric_shock = "content/ui/materials/icons/presets/preset_12",
 }
 mod.colors = {
 	bleed = { 255, 255, 0, 0 },
