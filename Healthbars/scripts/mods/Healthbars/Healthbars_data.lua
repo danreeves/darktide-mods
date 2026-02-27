@@ -96,7 +96,8 @@ local widgets = {
 						default_value = "icon_text",
 						options = {
 							{ text = "display_icon_text", value = "icon_text" },
-							{ text = "display_icon_only", value = "icon_only" },
+							{ text = "display_icon_only", value = "icon_only"},
+							{ text = "display_time", value = "time" },
 						},
 					},
 				},
@@ -188,7 +189,8 @@ local widgets = {
 						default_value = "stacks",
 						options = {
 							{ text = "display_stacks", value = "stacks" },
-							{ text = "display_percent", value = "percent" },
+							{ text = "display_percent", value = "percent"},
+							{ text = "display_time", value = "time" },
 						},
 					},
 				},

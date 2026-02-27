@@ -129,6 +129,9 @@ local localization = {
 	display_percent = {
 		en = "Percent %%",
 	},
+	display_time = {
+		en = "Time (s)",
+	},
 	display_icon_only = {
       en = "Icon only",
     },

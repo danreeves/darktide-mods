@@ -689,6 +689,63 @@ local function _count_named_buffs(buff_extension, buff_names)
 	return count
 end
 
+-- Remaining-time helper -----------------------------------------------------
+--
+-- Buff instances in Darktide are objects where `duration` is a METHOD
+-- (see game source: scripts/extension_systems/buff/buffs/buff.lua).
+-- Relying on raw instance fields is brittle across patches.
+--
+-- What we *can* reliably use from the buff extension interface:
+--   buff_extension:buff_start_time(buff_name)
+--   buff_extension:buff_duration_progress(buff_name)
+--
+-- `buff_duration_progress()` is computed as (total_duration - elapsed) / total_duration,
+-- i.e. it is the **remaining fraction**. The interface does not provide total duration,
+-- so we map the specific debuffs we want using the game's buff templates.
+
+local BUFF_DURATIONS = {
+	-- Brittleness sources (game source: scripts/settings/buff/weapon_buff_templates.lua)
+	rending_debuff = 5,
+	rending_burn_debuff = 5,
+	saw_rending_debuff = 5,
+	shotgun_special_rending_debuff = 8,
+	-- Empyric Shock (game source: scripts/settings/buff/archetype_buff_templates/psyker_buff_templates.lua)
+	psyker_force_staff_quick_attack_debuff = 10,
+}
+
+-- Returns the (max) remaining time across matching stacking buffs.
+-- We use MAX because the debuff is fully gone when the *last* stack expires.
+local function _max_remaining_time_for_templates(buff_extension, template_names, t)
+	if not buff_extension or not template_names or not t then
+		return 0
+	end
+
+	local best = 0
+
+	for i = 1, #template_names do
+		local name = template_names[i]
+		local duration = BUFF_DURATIONS[name]
+		if duration then
+			local stacks = buff_extension:current_stacks(name) or 0
+			if stacks > 0 then
+				local progress = buff_extension:buff_duration_progress(name)
+				if type(progress) == "number" and progress > 0 then
+					local left = duration * progress
+					if left > best then
+						best = left
+					end
+				end
+			end
+		end
+	end
+
+	if best < 0 then
+		best = 0
+	end
+	return best
+end
+
+
 local function _melee_damage_taken_color(sources)
 	if sources >= 2 then
 		return { 255, 255, 0, 0 } -- red
@@ -770,7 +827,7 @@ end
 
 local function _brittleness_color(percent)
 	if percent >= 60 then
-		return { 255, 255, 0, 255 } -- >=60 magenta
+		return 255, 255, 0, 255 -- >=60 magenta
 	elseif percent >= 40 then -- >=40 red
 		return 255, 255, 0, 0
 	elseif percent >= 30 then -- 30..39.9 orange
@@ -902,7 +959,7 @@ local DEBUFF_DEFS = {
 			local a, r, g, b = _brittleness_color(data.percent or 0)
 			return { a, r, g, b }
 		end,
-		poll = function(buff_extension, content)
+		poll = function(buff_extension, content, t)
 			if not mod:get("brittleness_indicator") then
 				return nil
 			end
@@ -910,12 +967,29 @@ local DEBUFF_DEFS = {
 				return nil
 			end
 			local p = _compute_brittleness_percent(buff_extension)
-			return p >= 2.5 and { percent = p } or nil
+			if p < 2.5 then
+				return nil
+			end
+
+			local mode = mod:get("brittleness_indicator_display") or "icon_text"
+			local time_left = nil
+			if mode == "time" then
+				local names = {}
+				for i = 1, #BRITTLENESS_BUFFS do
+					names[#names + 1] = BRITTLENESS_BUFFS[i].name
+				end
+				time_left = _max_remaining_time_for_templates(buff_extension, names, t)
+			end
+
+			return { percent = p, time_left = time_left }
 		end,
 		text = function(data)
 			local mode = mod:get("brittleness_indicator_display") or "icon_text"
 			if mode == "icon_text" then
 				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				local secs = math.ceil((data.time_left or 0))
+				return secs > 0 and tostring(secs) or "0"
 			end
 			return ""
 		end,
@@ -1029,17 +1103,30 @@ local DEBUFF_DEFS = {
 		setting = "empyric_shock",
 		icon = function() return mod.textures and mod.textures.empyric_shock end,
 		color = function(data) return _empyric_shock_color_by_stacks((data and data.stacks) or 0) end,
-		poll = function(buff_extension)
+		poll = function(buff_extension, _content, t)
 			if not mod:get("empyric_shock") then
 				return nil
 			end
 			local stacks, percent = _compute_empyric_shock(buff_extension)
-			return stacks > 0 and { stacks = stacks, percent = percent } or nil
+			if stacks <= 0 then
+				return nil
+			end
+
+			local mode = mod:get("empyric_shock_display") or "stacks"
+			local time_left = nil
+			if mode == "time" then
+				time_left = _max_remaining_time_for_templates(buff_extension, { EMPYRIC_SHOCK_DEBUFF.name }, t)
+			end
+
+			return { stacks = stacks, percent = percent, time_left = time_left }
 		end,
 		text = function(data)
 			local mode = mod:get("empyric_shock_display") or "stacks"
 			if mode == "percent" then
 				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				local secs = math.ceil((data.time_left or 0))
+				return secs > 0 and tostring(secs) or "0"
 			end
 			return tostring(data.stacks or "")
 		end,
@@ -1084,13 +1171,14 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 				local def = DEBUFF_DEFS[i]
 				local enabled = (def.setting == nil) or mod:get(def.setting)
 				if enabled then
-					local data = def.poll(buff_extension, content)
+					local data = def.poll(buff_extension, content, t)
 					if data then
 						marker.debuffs[#marker.debuffs + 1] = {
 							type = def.id,
 							def = def,
 							stacks = data.stacks,
 							percent = data.percent,
+							time_left = data.time_left,
 						}
 					end
 				end
