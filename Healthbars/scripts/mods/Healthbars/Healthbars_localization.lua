@@ -133,15 +133,15 @@ local localization = {
 		en = "Time (s)",
 	},
 	display_icon_only = {
-      en = "Icon only",
-    },
-    thunderstrike = {
-    	en = "Show Thunderstrike debuff",
-    },
-    thunderstrike_display = {
-    	en = "Thunderstrike display",
-    },
-    melee_damage_taken = {
+		en = "Icon only",
+	},
+	thunderstrike = {
+		en = "Show Thunderstrike debuff",
+	},
+	thunderstrike_display = {
+		en = "Thunderstrike display",
+	},
+	melee_damage_taken = {
 		en = "Show Melee damage taken debuff",
 	},
 	melee_damage_taken_display = {

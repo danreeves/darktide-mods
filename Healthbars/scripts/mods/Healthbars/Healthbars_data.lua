@@ -96,8 +96,8 @@ local widgets = {
 						default_value = "icon_text",
 						options = {
 							{ text = "display_icon_text", value = "icon_text" },
-							{ text = "display_icon_only", value = "icon_only"},
-							{ text = "display_time", value = "time" },
+							{ text = "display_icon_only", value = "icon_only" },
+							{ text = "display_time",      value = "time" },
 						},
 					},
 				},
@@ -114,36 +114,36 @@ local widgets = {
 
 				sub_widgets = {
 					{
-					  setting_id = "skullcrusher_display",
-					  type = "dropdown",
-					  default_value = "stacks",
-					  options = {
-						{ text = "display_stacks", value = "stacks" },
-						{ text = "display_percent", value = "percent" },
-						{ text = "display_icon_only", value = "icon_only" },
-					  },
+						setting_id = "skullcrusher_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							{ text = "display_stacks",    value = "stacks" },
+							{ text = "display_percent",   value = "percent" },
+							{ text = "display_icon_only", value = "icon_only" },
+						},
 					}
 				},
 			},
 			{
-            	setting_id = "thunderstrike",
-            	type = "checkbox",
-            	default_value = true,
+				setting_id = "thunderstrike",
+				type = "checkbox",
+				default_value = true,
 
-            	sub_widgets = {
-            		{
-            			setting_id = "thunderstrike_display",
-            			type = "dropdown",
-            			default_value = "stacks",
-            			options = {
-							{ text = "display_stacks", value = "stacks" },
-							{ text = "display_percent", value = "percent" },
+				sub_widgets = {
+					{
+						setting_id = "thunderstrike_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							{ text = "display_stacks",    value = "stacks" },
+							{ text = "display_percent",   value = "percent" },
 							{ text = "display_icon_only", value = "icon_only" },
-            			},
-            		},
-            	},
-            },
-            {
+						},
+					},
+				},
+			},
+			{
 				setting_id = "melee_damage_taken",
 				type = "checkbox",
 				default_value = true,
@@ -188,9 +188,9 @@ local widgets = {
 						type = "dropdown",
 						default_value = "stacks",
 						options = {
-							{ text = "display_stacks", value = "stacks" },
-							{ text = "display_percent", value = "percent"},
-							{ text = "display_time", value = "time" },
+							{ text = "display_stacks",  value = "stacks" },
+							{ text = "display_percent", value = "percent" },
+							{ text = "display_time",    value = "time" },
 						},
 					},
 				},

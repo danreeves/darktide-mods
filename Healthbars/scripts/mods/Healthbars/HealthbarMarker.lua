@@ -11,8 +11,8 @@ local template = {}
 local size = { 120, 6 }
 template.size = size
 template.name = "custom_healthbar"
-template.unit_node = "root_point"
-template.position_offset = { 0, 0, 0 }
+template.unit_node = "j_head"
+template.position_offset = { 0, 0, 0.4 }
 template.check_line_of_sight = true
 template.max_distance = 25
 template.screen_clamp = false
@@ -98,28 +98,28 @@ local GRID_GAP_Y = 4
 local BAR_TO_DEBUFF_MARGIN_Y = 5
 
 local function _slot_pos(template, slot_index)
-  local cols = GRID_COLS
-  local col  = (slot_index - 1) % cols
-  local row  = math.floor((slot_index - 1) / cols)
+	local cols       = GRID_COLS
+	local col        = (slot_index - 1) % cols
+	local row        = math.floor((slot_index - 1) / cols)
 
-  -- left edge of the bar is -width/2 in the widget's local space
-  local bar_left_x = -(template.size[1] * 0.5)
+	-- left edge of the bar is -width/2 in the widget's local space
+	local bar_left_x = -(template.size[1] * 0.5)
 
-  -- place first icon starting at bar-left, then to the right
-  local x = bar_left_x + (ICON_SIZE * 0.5) + col * (ICON_SIZE + GRID_GAP_X)
+	-- place first icon starting at bar-left, then to the right
+	local x          = bar_left_x + (ICON_SIZE * 0.5) + col * (ICON_SIZE + GRID_GAP_X)
 
-  -- base y directly under the bar (negative is "down")
-  local base_y = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
+	-- base y directly under the bar (negative is "down")
+	local base_y     = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
 
-  -- in case armour type display is active move row up
-  if mod:get("show_damage_numbers") and mod:get("show_armour_type") then
-      base_y = base_y - 20
-  end
+	-- in case armour type display is active move row up
+	if mod:get("show_damage_numbers") and mod:get("show_armour_type") then
+		base_y = base_y - 20
+	end
 
-  -- IMPORTANT: row 2 must be BELOW row 1 => y becomes MORE negative
-  local y = base_y - row * (ICON_SIZE + GRID_GAP_Y)
+	-- IMPORTANT: row 2 must be BELOW row 1 => y becomes MORE negative
+	local y = base_y - row * (ICON_SIZE + GRID_GAP_Y)
 
-  return x, y
+	return x, y
 end
 
 local function _debuff_signature(debuffs)
@@ -237,7 +237,8 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 			local dps = (elapsed and elapsed > 1) and (ui_content.damage_taken / elapsed) or ui_content.damage_taken
 			local text = string.format("%d DPS", dps)
 
-			UIRenderer.draw_text(ui_renderer, text, dps_font_size, font_type, dps_pos, ui_style.size, ui_style.text_color, {})
+			UIRenderer.draw_text(ui_renderer, text, dps_font_size, font_type, dps_pos, ui_style.size, ui_style
+				.text_color, {})
 		end
 	end
 
@@ -255,7 +256,8 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 		local armor_type_text = Localize(armor_type_loc_string)
 		local armor_pos = Vector3(x0, y0 - settings.has_taken_damage_timer_y_offset, z0)
 
-		UIRenderer.draw_text(ui_renderer, armor_type_text, dps_font_size, font_type, armor_pos, ui_style.size, ui_style.text_color, {})
+		UIRenderer.draw_text(ui_renderer, armor_type_text, dps_font_size, font_type, armor_pos, ui_style.size,
+			ui_style.text_color, {})
 	end
 
 	-- restore values for any later pass that might use them
@@ -268,9 +270,9 @@ end
 -- ---------------------------------------------------------------------------
 
 local ICON_DEFAULT_COLORS = {
-	{ 255, 255, 0, 0 },
+	{ 255, 255, 0,   0 },
 	{ 255, 255, 102, 0 },
-	{ 255, 0, 255, 0 },
+	{ 255, 0,   255, 0 },
 	{ 255, 120, 210, 255 },
 	{ 255, 255, 255, 255 },
 }
@@ -388,17 +390,17 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			value_id = stacks_id,
 			value = "",
 			style = {
-              vertical_alignment = "center",
-              horizontal_alignment = "center",
-              text_vertical_alignment = "bottom",
-              text_horizontal_alignment = "right",
-              offset = { x, y, 11 },
-              size = { ICON_SIZE, ICON_SIZE },
+				vertical_alignment = "center",
+				horizontal_alignment = "center",
+				text_vertical_alignment = "bottom",
+				text_horizontal_alignment = "right",
+				offset = { x, y, 11 },
+				size = { ICON_SIZE, ICON_SIZE },
 
-              font_type = header_font_settings.font_type,
-              font_size = 14,
-              text_color = { 255, 255, 255, 0 },
-            }
+				font_type = header_font_settings.font_type,
+				font_size = 14,
+				text_color = { 255, 255, 255, 0 },
+			}
 		}
 	end
 
@@ -425,7 +427,6 @@ template.on_enter = function(widget, marker, template)
 	content.header_text = breed.name
 	content.breed = breed
 
-	marker.head_offset = 0
 	marker.debuff_check_timer = 0
 	marker.debuffs = {}
 	marker.brittleness_percent = 0
@@ -457,10 +458,10 @@ local ELECTROCUTED_BUFFS = {
 
 -- Brittleness (enemy-side) is implemented via rending_multiplier statbuffs on the enemy.
 local BRITTLENESS_BUFFS = {
-	{ name = "rending_debuff", per_stack = 2.5, cap = 16, duration = 5 },
-	{ name = "rending_burn_debuff", per_stack = 1.0, cap = 20, duration = 5 },
-	{ name = "shotgun_special_rending_debuff", per_stack = 25.0, cap = 1, duration = 8 },
-	{ name = "saw_rending_debuff", per_stack = 2.5, cap = 15, duration = 5 },
+	{ name = "rending_debuff",                 per_stack = 2.5,  cap = 16, duration = 5 },
+	{ name = "rending_burn_debuff",            per_stack = 1.0,  cap = 20, duration = 5 },
+	{ name = "shotgun_special_rending_debuff", per_stack = 25.0, cap = 1,  duration = 8 },
+	{ name = "saw_rending_debuff",             per_stack = 2.5,  cap = 15, duration = 5 },
 }
 
 -- Skullcrusher / Damage vs staggered debuff
@@ -468,7 +469,7 @@ local BRITTLENESS_BUFFS = {
 local SKULLCRUSHER_BUFFS = {
 	{ name = "increase_damage_received_while_staggered", per_stack = 10.0, cap = 8, duration = 5 },
 	-- Fallback in case the buff is exposed under the stat-buff name (rare, but harmless)
-	{ name = "damage_vs_staggered", per_stack = 10.0, cap = 8, duration = 5 },
+	{ name = "damage_vs_staggered",                      per_stack = 10.0, cap = 8, duration = 5 },
 }
 
 -- Thunderstrike / Impact modifier debuff
@@ -476,7 +477,7 @@ local SKULLCRUSHER_BUFFS = {
 local THUNDERSTRIKE_BUFFS = {
 	{ name = "increase_impact_received_while_staggered", per_stack = 10.0, cap = 8, duration = 5 },
 	-- Fallback in case the buff is exposed under the stat-buff name
-	{ name = "impact_modifier", per_stack = 10.0, cap = 8, duration = 5 },
+	{ name = "impact_modifier",                          per_stack = 10.0, cap = 8, duration = 5 },
 }
 
 -- Empyric Shock (Psyker): warp_damage_taken_multiplier
@@ -504,49 +505,49 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- - zealot_bled_enemies_take_more_damage_effect: damage_taken_multiplier = 1.15 (5s)
 local DAMAGE_TAKEN_MODIFIER_BUFFS = {
 	{ name = "ogryn_recieve_damage_taken_increase_debuff", per_stack = 0.10, cap = 1 }, -- Soften them up
-	{ name = "increase_damage_taken", per_stack = 0.10, cap = 1 }, -- Pickaxe weapon special
+	{ name = "increase_damage_taken",                      per_stack = 0.10, cap = 1 }, -- Pickaxe weapon special
 }
 
 local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
-	{ name = "ogryn_taunt_increased_damage_taken_buff", multiplier = 1.20 }, -- Valuable Distraction
-	{ name = "adamant_drone_enemy_debuff", multiplier = 1.15 }, -- Nuncio-Aquila
-	{ name = "psyker_discharge_damage_debuff", multiplier = 1.10 }, -- Warp Rupture
+	{ name = "ogryn_taunt_increased_damage_taken_buff",     multiplier = 1.20 }, -- Valuable Distraction
+	{ name = "adamant_drone_enemy_debuff",                  multiplier = 1.15 }, -- Nuncio-Aquila
+	{ name = "psyker_discharge_damage_debuff",              multiplier = 1.10 }, -- Warp Rupture
 	{ name = "zealot_bled_enemies_take_more_damage_effect", multiplier = 1.15 }, -- Blinded by Blood
 }
 
 -- Enfeeble (Psyker): Smite/Charged Smite applies +10% damage taken while actively affected
 local ENFEEBLE_SMITE_TARGET_BUFFS = {
-  "psyker_protectorate_spread_chain_lightning_interval_improved",
-  "psyker_protectorate_spread_charged_chain_lightning_interval_improved",
-  "psyker_heavy_swings_shock_improved",
+	"psyker_protectorate_spread_chain_lightning_interval_improved",
+	"psyker_protectorate_spread_charged_chain_lightning_interval_improved",
+	"psyker_heavy_swings_shock_improved",
 }
 
 local VETERAN_FOCUS_TARGET_DEBUFF = { name = "veteran_improved_tag_debuff", per_stack = 0.05, cap = 6 }
 
 local function _has_any_named_buff(buff_extension, buff_names)
-  if not buff_extension or not buff_names then
-    return false
-  end
+	if not buff_extension or not buff_names then
+		return false
+	end
 
-  local buffs = buff_extension._buffs
-  if not buffs then
-    return false
-  end
+	local buffs = buff_extension._buffs
+	if not buffs then
+		return false
+	end
 
-  for i = 1, #buff_names do
-    local wanted = buff_names[i]
-    for j = 1, #buffs do
-      local buff = buffs[j]
-      if buff then
-        local template_name = buff.template_name and buff:template_name() or buff._template_name
-        if template_name == wanted then
-          return true
-        end
-      end
-    end
-  end
+	for i = 1, #buff_names do
+		local wanted = buff_names[i]
+		for j = 1, #buffs do
+			local buff = buffs[j]
+			if buff then
+				local template_name = buff.template_name and buff:template_name() or buff._template_name
+				if template_name == wanted then
+					return true
+				end
+			end
+		end
+	end
 
-  return false
+	return false
 end
 
 local function _compute_total_damage_taken_percent(buff_extension)
@@ -577,14 +578,14 @@ local function _compute_total_damage_taken_percent(buff_extension)
 	end
 
 	local tag_stacks = buff_extension:current_stacks(VETERAN_FOCUS_TARGET_DEBUFF.name) or 0
-    if tag_stacks > 0 then
+	if tag_stacks > 0 then
 		if VETERAN_FOCUS_TARGET_DEBUFF.cap and tag_stacks > VETERAN_FOCUS_TARGET_DEBUFF.cap then
 			tag_stacks = VETERAN_FOCUS_TARGET_DEBUFF.cap
 		end
 
 		local per = VETERAN_FOCUS_TARGET_DEBUFF.per_stack or 0
 		total_multiplier = total_multiplier * math.pow(1 + per, tag_stacks)
-    end
+	end
 
 	-- Enfeeble: +10% damage taken while electrocuted by you (improved chain lightning target debuff)
 	if _has_any_named_buff(buff_extension, ENFEEBLE_SMITE_TARGET_BUFFS) then
@@ -746,19 +747,19 @@ end
 
 
 local function _empyric_shock_color_by_stacks(stacks)
-	  stacks = stacks or 0
+	stacks = stacks or 0
 
-	  if stacks <= 0 then
+	if stacks <= 0 then
 		return { 255, 255, 255, 255 } -- fallback white
-	  elseif stacks <= 2 then
+	elseif stacks <= 2 then
 		return { 255, 255, 255, 255 } -- 1-2: white
-	  elseif stacks == 3 then
-		return { 255, 255, 255, 0 }   -- 3: yellow
-	  elseif stacks == 4 then
-		return { 255, 255, 165, 0 }   -- 4: orange
-	  else
-		return { 255, 255, 0, 0 }     -- 5: red
-	  end
+	elseif stacks == 3 then
+		return { 255, 255, 255, 0 } -- 3: yellow
+	elseif stacks == 4 then
+		return { 255, 255, 165, 0 } -- 4: orange
+	else
+		return { 255, 255, 0, 0 } -- 5: red
+	end
 end
 
 local function _compute_thunderstrike(buff_extension)
@@ -790,10 +791,10 @@ local function _compute_empyric_shock(buff_extension)
 end
 
 local BRITTLENESS_RELEVANT_ARMOR_TYPES = {
-	armored = true,      -- Flak
-	super_armor = true,  -- Carapace
-	berserker = true,    -- Maniac
-	resistant = true,    -- Unyielding
+	armored = true,  -- Flak
+	super_armor = true, -- Carapace
+	berserker = true, -- Maniac
+	resistant = true, -- Unyielding
 }
 
 local function _is_brittleness_relevant(content)
@@ -807,10 +808,10 @@ local function _is_brittleness_relevant(content)
 end
 
 local function _format_percent(value)
-  -- Round to full percent:
-  -- 0.1-0.4 down, 0.5-0.9 up (round half up)
-  local rounded = math.floor((value or 0) + 0.5)
-  return string.format("%d%%", rounded)
+	-- Round to full percent:
+	-- 0.1-0.4 down, 0.5-0.9 up (round half up)
+	local rounded = math.floor((value or 0) + 0.5)
+	return string.format("%d%%", rounded)
 end
 
 local function _brittleness_color(percent)
@@ -991,15 +992,15 @@ local DEBUFF_DEFS = {
 			return stacks > 0 and { stacks = stacks, percent = percent } or nil
 		end,
 		text = function(data)
-		  local mode = mod:get("skullcrusher_display") or "stacks"
+			local mode = mod:get("skullcrusher_display") or "stacks"
 
-		  if mode == "icon_only" then
-			return ""
-		  elseif mode == "percent" then
-			return _format_percent(data.percent or 0)
-		  end
+			if mode == "icon_only" then
+				return ""
+			elseif mode == "percent" then
+				return _format_percent(data.percent or 0)
+			end
 
-		  return tostring(data.stacks or "")
+			return tostring(data.stacks or "")
 		end,
 	},
 	{
@@ -1024,39 +1025,39 @@ local DEBUFF_DEFS = {
 		end,
 	},
 	{
-    	id = "melee_damage_taken",
-    	setting = "melee_damage_taken",
-    	icon = function() return mod.textures and mod.textures.melee_damage_taken end,
-    	color = function(data)
-    		return _melee_damage_taken_color((data and data.stacks) or 0)
-    	end,
+		id = "melee_damage_taken",
+		setting = "melee_damage_taken",
+		icon = function() return mod.textures and mod.textures.melee_damage_taken end,
+		color = function(data)
+			return _melee_damage_taken_color((data and data.stacks) or 0)
+		end,
 
-    	poll = function(buff_extension)
-    		if not mod:get("melee_damage_taken") then
-    			return nil
-    		end
+		poll = function(buff_extension)
+			if not mod:get("melee_damage_taken") then
+				return nil
+			end
 
-    		local sources = _count_named_buffs(buff_extension, MELEE_DAMAGE_TAKEN_BUFFS)
-    		if sources <= 0 then
-    			return nil
-    		end
+			local sources = _count_named_buffs(buff_extension, MELEE_DAMAGE_TAKEN_BUFFS)
+			if sources <= 0 then
+				return nil
+			end
 
-    		-- store sources into stacks so it survives update() packing
-    		return {
-    			stacks = sources,
-    			percent = sources * 15.0 -- melee damage per source
-    		}
-    	end,
+			-- store sources into stacks so it survives update() packing
+			return {
+				stacks = sources,
+				percent = sources * 15.0 -- melee damage per source
+			}
+		end,
 
-    	-- only "icon_text" (percent) or "icon_only", like brittleness
-    	text = function(data)
-    		local mode = mod:get("melee_damage_taken_display") or "icon_text"
-    		if mode == "icon_text" then
-    			return _format_percent(data.percent or 0)
-    		end
-    		return ""
-    	end,
-    },
+		-- only "icon_text" (percent) or "icon_only", like brittleness
+		text = function(data)
+			local mode = mod:get("melee_damage_taken_display") or "icon_text"
+			if mode == "icon_text" then
+				return _format_percent(data.percent or 0)
+			end
+			return ""
+		end,
+	},
 	{
 		id = "damage_taken",
 		setting = "damage_taken",
@@ -1118,15 +1119,12 @@ local DEBUFF_DEFS = {
 }
 
 local function max_visible_slots()
-  return math.min(#DEBUFF_DEFS, MAX_DEBUFF_SLOTS_ALLOC)
+	return math.min(#DEBUFF_DEFS, MAX_DEBUFF_SLOTS_ALLOC)
 end
 
 -- ---------------------------------------------------------------------------
 -- Update
 -- ---------------------------------------------------------------------------
-
-local HEAD_NODE = "j_head"
-
 template.update_function = function(parent, ui_renderer, widget, marker, template, dt, t)
 	local content = widget.content
 	local style = widget.style
@@ -1181,167 +1179,159 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		end
 	end
 
--- ----------------------------
--- Render DoTs and Debuffs (grid, fixed ordering)
--- DoTs: bleed, burn, warpfire, toxin
--- Debuffs: electrocuted, brittleness
--- If any debuff is active: debuffs occupy bottom row (slots 1..GRID_COLS),
--- and all DoTs are moved to the next row (slot + GRID_COLS).
--- ----------------------------
-
--- Clear all allocated slots first
-for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
-	local icon_id = "status_icon_" .. i
-	local stacks_id = "status_stacks_" .. i
-	content[icon_id] = nil
-	content[stacks_id] = ""
-end
-
-local function _find_active(t, id)
-	for i = 1, #t do
-		if t[i] and t[i].type == id then
-			return t[i]
-		end
-	end
-	return nil
-end
-
-local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike", "empyric_shock", "electrocuted" }
-
-local active_debuffs = {}
-for i = 1, #debuff_order do
-	local d = _find_active(marker.debuffs, debuff_order[i])
-	if d then
-		active_debuffs[#active_debuffs + 1] = d
-	end
-end
-
-local active_dots = {}
-for i = 1, #dot_order do
-	local d = _find_active(marker.debuffs, dot_order[i])
-	if d then
-		active_dots[#active_dots + 1] = d
-	end
-end
-
-local has_any_debuff = #active_debuffs > 0
-
--- slot mapping we want to show; ensure at least 2 rows are available
-local max_slots_used = math.min(GRID_COLS * 2, MAX_DEBUFF_SLOTS_ALLOC)
-
--- Build a list of {slot = n, debuff = d}
-local placements = {}
-
-if has_any_debuff then
-	-- Debuffs in top row from slot 1
-	for i = 1, #active_debuffs do
-		if i > GRID_COLS then
-			break
-		end
-		placements[#placements + 1] = { slot = i, debuff = active_debuffs[i] }
-	end
-
-	-- DoTs compacted into second row (slot + GRID_COLS)
-	for i = 1, #active_dots do
-		if i > GRID_COLS then
-			break
-		end
-		placements[#placements + 1] = { slot = GRID_COLS + i, debuff = active_dots[i] }
-	end
-else
-	-- Only DoTs: occupy top row in fixed order, compacted
-	for i = 1, #active_dots do
-		if i > GRID_COLS then
-			break
-		end
-		placements[#placements + 1] = { slot = i, debuff = active_dots[i] }
-	end
-end
-
--- helper: apply the shared "center + small" style
-local function center_small_text(stacks_style)
-  if not stacks_style then return end
-  stacks_style.font_size = 11
-  stacks_style.text_horizontal_alignment = "center"
-  stacks_style.text_vertical_alignment   = "center"
-end
-
--- "switch table" / rules per debuff type
-local debuff_rules = {
-  brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
-  skullcrusher = { setting = "skullcrusher_display",         default = "stacks",    center_on = "percent"   },
-  thunderstrike = { setting = "thunderstrike_display",       default = "stacks",    center_on = "percent"   },
-  melee_damage_taken = { setting = "melee_damage_taken_display",    default = "icon_only", center_on = "icon_text" },
-  damage_taken = { setting = "damage_taken_display", default = "icon_text", center_on = "icon_text" },
-  empyric_shock = { setting = "empyric_shock_display", default = "stacks", center_on = "percent" },
-}
-
--- Apply placements to widget content/styles
-for p = 1, #placements do
-	local slot = placements[p].slot
-	local debuff = placements[p].debuff
-
-	if slot <= max_slots_used and debuff then
-		local icon_id = "status_icon_" .. slot
-		local stacks_id = "status_stacks_" .. slot
-
-		local icon_style = style[icon_id]
-		local stacks_style = style[stacks_id]
-
-		local x, y = _slot_pos(template, slot)
-		if icon_style then
-			icon_style.offset[1], icon_style.offset[2] = x, y
-		end
-		if stacks_style then
-			stacks_style.offset[1], stacks_style.offset[2] = x, y
-			-- defaults: small number in bottom-right inside icon bounds
-			stacks_style.size[1], stacks_style.size[2] = ICON_SIZE, ICON_SIZE
-			stacks_style.text_horizontal_alignment = "right"
-			stacks_style.text_vertical_alignment = "bottom"
-			stacks_style.font_size = 14
-		end
-
-		local def = debuff.def
-		content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
-
-		-- icon color
-		if icon_style then
-			local c = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or { 255, 255, 255, 255 }
-			icon_style.color = c
-		end
-
-		-- text
-		if def and def.text then
-			content[stacks_id] = def.text(debuff) or ""
-		else
-			content[stacks_id] = tostring(debuff.stacks or "")
-		end
-
-		-- text for brittleness, skullcrusher, thunderstrike, melee_damage_taken and damage_taken debuffs
-        local rule = debuff_rules[debuff.type]
-        if rule then
-          local mode = mod:get(rule.setting) or rule.default
-          if mode == rule.center_on then
-            center_small_text(stacks_style)
-          end
-        end
-
-		-- Electrocution: no text
-		if debuff.type == "electrocuted" then
-			content[stacks_id] = ""
-		end
-	end
-end
-
 	-- ----------------------------
-	-- Head position offset init
+	-- Render DoTs and Debuffs (grid, fixed ordering)
+	-- DoTs: bleed, burn, warpfire, toxin
+	-- Debuffs: electrocuted, brittleness
+	-- If any debuff is active: debuffs occupy bottom row (slots 1..GRID_COLS),
+	-- and all DoTs are moved to the next row (slot + GRID_COLS).
 	-- ----------------------------
-	if ALIVE[unit] and marker.head_offset == 0 then
-		local root_position = Unit.world_position(unit, 1)
-		local node = Unit.node(unit, HEAD_NODE)
-		local head_position = Unit.world_position(unit, node)
-		marker.head_offset = head_position.z - root_position.z + 0.4
+
+	-- Clear all allocated slots first
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local icon_id = "status_icon_" .. i
+		local stacks_id = "status_stacks_" .. i
+		content[icon_id] = nil
+		content[stacks_id] = ""
+	end
+
+	local function _find_active(t, id)
+		for i = 1, #t do
+			if t[i] and t[i].type == id then
+				return t[i]
+			end
+		end
+		return nil
+	end
+
+	local dot_order = { "bleed", "burn", "warpfire", "toxin" }
+	local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike",
+		"empyric_shock", "electrocuted" }
+
+	local active_debuffs = {}
+	for i = 1, #debuff_order do
+		local d = _find_active(marker.debuffs, debuff_order[i])
+		if d then
+			active_debuffs[#active_debuffs + 1] = d
+		end
+	end
+
+	local active_dots = {}
+	for i = 1, #dot_order do
+		local d = _find_active(marker.debuffs, dot_order[i])
+		if d then
+			active_dots[#active_dots + 1] = d
+		end
+	end
+
+	local has_any_debuff = #active_debuffs > 0
+
+	-- slot mapping we want to show; ensure at least 2 rows are available
+	local max_slots_used = math.min(GRID_COLS * 2, MAX_DEBUFF_SLOTS_ALLOC)
+
+	-- Build a list of {slot = n, debuff = d}
+	local placements = {}
+
+	if has_any_debuff then
+		-- Debuffs in top row from slot 1
+		for i = 1, #active_debuffs do
+			if i > GRID_COLS then
+				break
+			end
+			placements[#placements + 1] = { slot = i, debuff = active_debuffs[i] }
+		end
+
+		-- DoTs compacted into second row (slot + GRID_COLS)
+		for i = 1, #active_dots do
+			if i > GRID_COLS then
+				break
+			end
+			placements[#placements + 1] = { slot = GRID_COLS + i, debuff = active_dots[i] }
+		end
+	else
+		-- Only DoTs: occupy top row in fixed order, compacted
+		for i = 1, #active_dots do
+			if i > GRID_COLS then
+				break
+			end
+			placements[#placements + 1] = { slot = i, debuff = active_dots[i] }
+		end
+	end
+
+	-- helper: apply the shared "center + small" style
+	local function center_small_text(stacks_style)
+		if not stacks_style then return end
+		stacks_style.font_size                 = 11
+		stacks_style.text_horizontal_alignment = "center"
+		stacks_style.text_vertical_alignment   = "center"
+	end
+
+	-- "switch table" / rules per debuff type
+	local debuff_rules = {
+		brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
+		skullcrusher = { setting = "skullcrusher_display", default = "stacks", center_on = "percent" },
+		thunderstrike = { setting = "thunderstrike_display", default = "stacks", center_on = "percent" },
+		melee_damage_taken = { setting = "melee_damage_taken_display", default = "icon_only", center_on = "icon_text" },
+		damage_taken = { setting = "damage_taken_display", default = "icon_text", center_on = "icon_text" },
+		empyric_shock = { setting = "empyric_shock_display", default = "stacks", center_on = "percent" },
+	}
+
+	-- Apply placements to widget content/styles
+	for p = 1, #placements do
+		local slot = placements[p].slot
+		local debuff = placements[p].debuff
+
+		if slot <= max_slots_used and debuff then
+			local icon_id = "status_icon_" .. slot
+			local stacks_id = "status_stacks_" .. slot
+
+			local icon_style = style[icon_id]
+			local stacks_style = style[stacks_id]
+
+			local x, y = _slot_pos(template, slot)
+			if icon_style then
+				icon_style.offset[1], icon_style.offset[2] = x, y
+			end
+			if stacks_style then
+				stacks_style.offset[1], stacks_style.offset[2] = x, y
+				-- defaults: small number in bottom-right inside icon bounds
+				stacks_style.size[1], stacks_style.size[2] = ICON_SIZE, ICON_SIZE
+				stacks_style.text_horizontal_alignment = "right"
+				stacks_style.text_vertical_alignment = "bottom"
+				stacks_style.font_size = 14
+			end
+
+			local def = debuff.def
+			content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
+
+			-- icon color
+			if icon_style then
+				local c = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
+					{ 255, 255, 255, 255 }
+				icon_style.color = c
+			end
+
+			-- text
+			if def and def.text then
+				content[stacks_id] = def.text(debuff) or ""
+			else
+				content[stacks_id] = tostring(debuff.stacks or "")
+			end
+
+			-- text for brittleness, skullcrusher, thunderstrike, melee_damage_taken and damage_taken debuffs
+			local rule = debuff_rules[debuff.type]
+			if rule then
+				local mode = mod:get(rule.setting) or rule.default
+				if mode == rule.center_on then
+					center_small_text(stacks_style)
+				end
+			end
+
+			-- Electrocution: no text
+			if debuff.type == "electrocuted" then
+				content[stacks_id] = ""
+			end
+		end
 	end
 
 	-- ----------------------------
@@ -1362,26 +1352,6 @@ end
 			local weakspots = breed.hit_zone_weakspot_types
 			content.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
 			content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
-		end
-	end
-
-	-- ----------------------------
-	-- Marker world position
-	-- ----------------------------
-	if ALIVE[unit] and damage_taken > 0 then
-		local root_position = Unit.world_position(unit, 1)
-
-		if not marker.world_position then
-			local node = Unit.node(unit, HEAD_NODE)
-			local head_position = Unit.world_position(unit, node)
-			head_position.z = head_position.z + 0.5
-			marker.world_position = Vector3Box(head_position)
-		else
-			local position = marker.world_position:unbox()
-			position.x = root_position.x
-			position.y = root_position.y
-			position.z = root_position.z + marker.head_offset
-			marker.world_position:store(position)
 		end
 	end
 
@@ -1519,9 +1489,6 @@ end
 			end
 		end
 	end
-
-	local alpha_multiplier = line_of_sight_progress
-	content.line_of_sight_progress = line_of_sight_progress
 
 	-- ----------------------------
 	-- Visibility / Fade rules
