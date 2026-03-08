@@ -121,6 +121,7 @@ local widgets = {
 							{ text = "display_stacks",    value = "stacks" },
 							{ text = "display_percent",   value = "percent" },
 							{ text = "display_icon_only", value = "icon_only" },
+							{ text = "display_time",      value = "time" },
 						},
 					}
 				},
@@ -139,6 +140,7 @@ local widgets = {
 							{ text = "display_stacks",    value = "stacks" },
 							{ text = "display_percent",   value = "percent" },
 							{ text = "display_icon_only", value = "icon_only" },
+							{ text = "display_time",      value = "time" },
 						},
 					},
 				},

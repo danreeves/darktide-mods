@@ -76,11 +76,6 @@ template.fade_settings = {
 -- UI helpers
 -- ---------------------------------------------------------------------------
 
-local function _slot_right_edge(template, slot_index)
-	local base_right = -(template.size[1] / 2) + 20
-	return base_right + (slot_index - 1) * 40
-end
-
 local function _set_rgb(dst, src)
 	dst[2], dst[3], dst[4] = src[2], src[3], src[4]
 end
@@ -89,10 +84,10 @@ end
 -- Debuff layout
 -- ---------------------------------------------------------------------------
 
-local MAX_DEBUFF_SLOTS_ALLOC = 12 -- maximum number of slots
+local MAX_DEBUFF_SLOTS_ALLOC = 16 -- maximum number of slots
 
 local ICON_SIZE = 25
-local GRID_COLS = 6
+local GRID_COLS = 8
 local GRID_GAP_X = 4
 local GRID_GAP_Y = 4
 local BAR_TO_DEBUFF_MARGIN_Y = 5
@@ -362,7 +357,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 		},
 	}
 
-	-- Debuff slots (1..MAX_DEBUFF_SLOTS_ALLOC) in a centered grid (max 4 per row)
+	-- Debuff slots (1..MAX_DEBUFF_SLOTS_ALLOC) in a centered grid (max 8 per row)
 	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
 		local icon_id = "status_icon_" .. i
 		local stacks_id = "status_stacks_" .. i
@@ -483,7 +478,9 @@ local THUNDERSTRIKE_BUFFS = {
 -- Empyric Shock (Psyker): warp_damage_taken_multiplier
 -- Buff template: psyker_force_staff_quick_attack_debuff
 -- +6% warp damage taken per stack, stacks up to 5, lasts 10s
-local EMPYRIC_SHOCK_DEBUFF = { name = "psyker_force_staff_quick_attack_debuff", per_stack = 0.06, cap = 5, duration = 10 }
+local EMPYRIC_SHOCK_DEBUFF = {
+	{ name = "psyker_force_staff_quick_attack_debuff", per_stack = 0.06, cap = 5, duration = 10 }
+}
 
 -- Melee damage taken debuff (Hard Knocks + Target the Weak)
 -- Each source applies once (max_stacks=1) and they add additively (+15% each)
@@ -691,49 +688,44 @@ local function _count_named_buffs(buff_extension, buff_names)
 end
 
 -- Returns the remaining time of the FIRST matching debuff template to expire.
-local function _min_remaining_time_for_templates(buff_extension, debuff_template, t)
-	if not buff_extension or not debuff_template or not t then
+local function _min_remaining_time_for_templates(buff_extension, debuff_template)
+	if not buff_extension or not debuff_template then
 		return 0
 	end
 
 	local best = math.huge
+	local saw_active_stack = false
 
-	local function check_one(cfg)
-		if not cfg or not cfg.name or not cfg.duration then
-			return
-		end
+	for i = 1, #debuff_template do
+		local cfg = debuff_template[i]
 
-		local stacks = buff_extension:current_stacks(cfg.name) or 0
-		if stacks <= 0 then
-			return
-		end
+		if cfg and cfg.name and cfg.duration then
+			local stacks = buff_extension:current_stacks(cfg.name) or 0
 
-		local progress = buff_extension:buff_duration_progress(cfg.name)
-		if type(progress) ~= "number" or progress <= 0 then
-			return
-		end
+			if stacks > 0 then
+				saw_active_stack = true
 
-		local left = cfg.duration * progress
-		if left > 0 and left < best then
-			best = left
-		end
-	end
-
-	if debuff_template.name then
-		check_one(debuff_template)
-	else
-		for i = 1, #debuff_template do
-			check_one(debuff_template[i])
+				local progress = buff_extension:buff_duration_progress(cfg.name)
+				if type(progress) == "number" and progress > 0 then
+					local left = cfg.duration * progress
+					if left > 0 and left < best then
+						best = left
+					end
+				end
+			end
 		end
 	end
 
-	if best == math.huge then
-		return 0
+	if best ~= math.huge then
+		return best
 	end
 
-	return best
+	if saw_active_stack then
+		return nil
+	end
+
+	return 0
 end
-
 
 local function _melee_damage_taken_color(sources)
 	if sources >= 2 then
@@ -775,16 +767,16 @@ local function _compute_empyric_shock(buff_extension)
 		return 0, 0
 	end
 
-	local stacks = buff_extension:current_stacks(EMPYRIC_SHOCK_DEBUFF.name) or 0
+	local stacks = buff_extension:current_stacks(EMPYRIC_SHOCK_DEBUFF[1].name) or 0
 	if stacks <= 0 then
 		return 0, 0
 	end
 
-	if EMPYRIC_SHOCK_DEBUFF.cap and stacks > EMPYRIC_SHOCK_DEBUFF.cap then
-		stacks = EMPYRIC_SHOCK_DEBUFF.cap
+	if EMPYRIC_SHOCK_DEBUFF[1].cap and stacks > EMPYRIC_SHOCK_DEBUFF[1].cap then
+		stacks = EMPYRIC_SHOCK_DEBUFF[1].cap
 	end
 
-	local mult = math.pow(1 + (EMPYRIC_SHOCK_DEBUFF.per_stack or 0), stacks)
+	local mult = math.pow(1 + (EMPYRIC_SHOCK_DEBUFF[1].per_stack or 0), stacks)
 	local percent = (mult - 1) * 100
 
 	return stacks, percent
@@ -846,27 +838,6 @@ local function _compute_brittleness_percent(buff_extension)
 		end
 	end
 	return total
-end
-
-local function _trim_debuffs_keep(debuffs, max, keep_type)
-	if not debuffs then
-		return
-	end
-
-	while #debuffs > max do
-		local removed = false
-		for i = 1, #debuffs do
-			if debuffs[i] and debuffs[i].type ~= keep_type then
-				table.remove(debuffs, i)
-				removed = true
-				break
-			end
-		end
-
-		if not removed then
-			table.remove(debuffs, #debuffs)
-		end
-	end
 end
 
 -- ---------------------------------------------------------------------------
@@ -948,7 +919,7 @@ local DEBUFF_DEFS = {
 			local a, r, g, b = _brittleness_color(data.percent or 0)
 			return { a, r, g, b }
 		end,
-		poll = function(buff_extension, content, t)
+		poll = function(buff_extension, content)
 			if not mod:get("brittleness_indicator") then
 				return nil
 			end
@@ -963,7 +934,7 @@ local DEBUFF_DEFS = {
 			local mode = mod:get("brittleness_indicator_display") or "icon_text"
 			local time_left = nil
 			if mode == "time" then
-				time_left = _min_remaining_time_for_templates(buff_extension, BRITTLENESS_BUFFS, t)
+				time_left = _min_remaining_time_for_templates(buff_extension, BRITTLENESS_BUFFS)
 			end
 
 			return { percent = p, time_left = time_left }
@@ -973,12 +944,15 @@ local DEBUFF_DEFS = {
 			if mode == "icon_text" then
 				return _format_percent(data.percent or 0)
 			elseif mode == "time" then
-				local secs = math.ceil((data.time_left or 0))
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math.ceil(data.time_left or 0)
 				return secs > 0 and tostring(secs) or "0"
 			end
 			return ""
 		end,
-		is_brittleness = true,
 	},
 	{
 		id = "skullcrusher",
@@ -989,7 +963,12 @@ local DEBUFF_DEFS = {
 		end,
 		poll = function(buff_extension)
 			local stacks, percent = _compute_skullcrusher(buff_extension)
-			return stacks > 0 and { stacks = stacks, percent = percent } or nil
+			local mode = mod:get("skullcrusher_display") or "stacks"
+			local time_left = nil
+			if mode == "time" then
+				time_left = _min_remaining_time_for_templates(buff_extension, SKULLCRUSHER_BUFFS)
+			end
+			return stacks > 0 and { stacks = stacks, percent = percent, time_left = time_left } or nil
 		end,
 		text = function(data)
 			local mode = mod:get("skullcrusher_display") or "stacks"
@@ -998,6 +977,13 @@ local DEBUFF_DEFS = {
 				return ""
 			elseif mode == "percent" then
 				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math.ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
 			end
 
 			return tostring(data.stacks or "")
@@ -1012,7 +998,12 @@ local DEBUFF_DEFS = {
 		end,
 		poll = function(buff_extension)
 			local stacks, percent = _compute_thunderstrike(buff_extension)
-			return stacks > 0 and { stacks = stacks, percent = percent } or nil
+			local mode = mod:get("thunderstrike_display") or "stacks"
+			local time_left = nil
+			if mode == "time" then
+				time_left = _min_remaining_time_for_templates(buff_extension, THUNDERSTRIKE_BUFFS)
+			end
+			return stacks > 0 and { stacks = stacks, percent = percent, time_left = time_left } or nil
 		end,
 		text = function(data)
 			local mode = mod:get("thunderstrike_display") or "stacks"
@@ -1020,6 +1011,13 @@ local DEBUFF_DEFS = {
 				return ""
 			elseif mode == "percent" then
 				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math.ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
 			end
 			return tostring(data.stacks or "")
 		end,
@@ -1088,7 +1086,7 @@ local DEBUFF_DEFS = {
 		setting = "empyric_shock",
 		icon = function() return mod.textures and mod.textures.empyric_shock end,
 		color = function(data) return _empyric_shock_color_by_stacks((data and data.stacks) or 0) end,
-		poll = function(buff_extension, _content, t)
+		poll = function(buff_extension, _content)
 			if not mod:get("empyric_shock") then
 				return nil
 			end
@@ -1100,7 +1098,7 @@ local DEBUFF_DEFS = {
 			local mode = mod:get("empyric_shock_display") or "stacks"
 			local time_left = nil
 			if mode == "time" then
-				time_left = _min_remaining_time_for_templates(buff_extension, EMPYRIC_SHOCK_DEBUFF, t)
+				time_left = _min_remaining_time_for_templates(buff_extension, EMPYRIC_SHOCK_DEBUFF)
 			end
 
 			return { stacks = stacks, percent = percent, time_left = time_left }
@@ -1110,6 +1108,10 @@ local DEBUFF_DEFS = {
 			if mode == "percent" then
 				return _format_percent(data.percent or 0)
 			elseif mode == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
 				local secs = math.ceil((data.time_left or 0))
 				return secs > 0 and tostring(secs) or "0"
 			end
@@ -1117,10 +1119,6 @@ local DEBUFF_DEFS = {
 		end,
 	},
 }
-
-local function max_visible_slots()
-	return math.min(#DEBUFF_DEFS, MAX_DEBUFF_SLOTS_ALLOC)
-end
 
 -- ---------------------------------------------------------------------------
 -- Update
@@ -1153,7 +1151,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 				local def = DEBUFF_DEFS[i]
 				local enabled = (def.setting == nil) or mod:get(def.setting)
 				if enabled then
-					local data = def.poll(buff_extension, content, t)
+					local data = def.poll(buff_extension, content)
 					if data then
 						marker.debuffs[#marker.debuffs + 1] = {
 							type = def.id,
@@ -1165,9 +1163,6 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 					end
 				end
 			end
-
-			-- Keep max slots, but try to keep brittleness if present (same behavior as before)
-			_trim_debuffs_keep(marker.debuffs, max_visible_slots(), "brittleness")
 
 			-- Detect debuff changes (for “show when applied” even without damage)
 			local sig = _debuff_signature(marker.debuffs)
