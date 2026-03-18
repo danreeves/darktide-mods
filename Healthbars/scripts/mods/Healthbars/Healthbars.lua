@@ -114,9 +114,6 @@ mod.on_game_state_changed = function(state, state_name)
 		return
 	end
 
-	-- set only once
-	_preloaded = true
-
 	local pkgs = {
 		-- Preset Icons
 		"packages/ui/views/inventory_view/inventory_view",
@@ -136,4 +133,7 @@ mod.on_game_state_changed = function(state, state_name)
 	for _, pkg in ipairs(pkgs) do
 		Managers.package:load(pkg, "KillfeedDetails", nil, true)
 	end
+
+	-- set only once
+	_preloaded = true
 end

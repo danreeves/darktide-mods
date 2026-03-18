@@ -500,9 +500,11 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- - psyker_discharge_damage_debuff: damage_taken_multiplier = 1.1 (8s)
 -- - veteran_improved_tag_debuff: +0.05 per stack (max 6)
 -- - zealot_bled_enemies_take_more_damage_effect: damage_taken_multiplier = 1.15 (5s)
+-- - broker_passive_toxin_infected_enemies_take_increased_damage_debuff: damage_taken_modifier = 0.1 (5s)
 local DAMAGE_TAKEN_MODIFIER_BUFFS = {
-	{ name = "ogryn_recieve_damage_taken_increase_debuff", per_stack = 0.10, cap = 1 }, -- Soften them up
-	{ name = "increase_damage_taken",                      per_stack = 0.10, cap = 1 }, -- Pickaxe weapon special
+	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.10, cap = 1 }, -- Soften them up
+	{ name = "increase_damage_taken",                                              per_stack = 0.10, cap = 1 }, -- Pickaxe weapon special
+	{ name = "broker_passive_toxin_infected_enemies_take_increased_damage_debuff", per_stack = 0.10, cap = 1 }, -- Virulent Strain
 }
 
 local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
@@ -1449,13 +1451,13 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		marker.health_fraction = health_fraction
 	end
 
-	if not mod:get("show_bar") then
-		style.bar.visible = false
-		style.ghost_bar.visible = false
-		style.health_max.visible = false
-		style.bar_end.visible = false
-		style.background.visible = false
-	end
+	local show_bar = mod:get("show_bar")
+
+	style.bar.visible = show_bar
+	style.ghost_bar.visible = show_bar
+	style.health_max.visible = show_bar
+	style.bar_end.visible = show_bar
+	style.background.visible = show_bar
 
 	-- ----------------------------
 	-- LOS fade + removal timing
