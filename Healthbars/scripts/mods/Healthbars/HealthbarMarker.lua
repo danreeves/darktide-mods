@@ -454,6 +454,7 @@ local ELECTROCUTED_BUFFS = {
 -- Brittleness (enemy-side) is implemented via rending_multiplier statbuffs on the enemy.
 local BRITTLENESS_BUFFS = {
 	{ name = "rending_debuff",                 per_stack = 2.5,  cap = 16, duration = 5 },
+	{ name = "rending_debuff_medium",          per_stack = 10.0, cap = 2,  duration = 5 },
 	{ name = "rending_burn_debuff",            per_stack = 1.0,  cap = 20, duration = 5 },
 	{ name = "shotgun_special_rending_debuff", per_stack = 25.0, cap = 1,  duration = 8 },
 	{ name = "saw_rending_debuff",             per_stack = 2.5,  cap = 15, duration = 5 },
