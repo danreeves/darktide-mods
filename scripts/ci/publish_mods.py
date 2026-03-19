@@ -25,6 +25,7 @@ from urllib.request import Request, urlopen
 
 NULL_COMMIT = "0000000000000000000000000000000000000000"
 API_BASE = os.environ.get("NEXUSMODS_API_BASE", "https://api.nexusmods.com/v3").rstrip("/")
+MULTIPART_THRESHOLD = 100 * 1024 * 1024  # 100 MiB
 
 
 def exec_cmd(args):
@@ -32,14 +33,16 @@ def exec_cmd(args):
     return result.stdout.strip()
 
 
-def api_request(method, path, api_key, body=None, content_type="application/json"):
+def api_request(method, path, api_key, body=None):
     url = f"{API_BASE}{path}"
     headers = {
-        "Content-Type": content_type,
         "apikey": api_key,
         "User-Agent": "danreeves/darktide-mods publish script",
     }
-    data = json.dumps(body).encode() if body is not None else None
+    data = None
+    if body is not None:
+        data = json.dumps(body).encode()
+        headers["Content-Type"] = "application/json"
     req = Request(url, data=data, headers=headers, method=method)
     try:
         with urlopen(req) as resp:
@@ -101,79 +104,111 @@ def zip_mod(mod_name):
     return result.returncode == 0 and os.path.exists(f"{mod_name}.zip")
 
 
-def upload_mod(mod_name, zip_path, version, file_group_id, api_key):
-    """Upload a zipped mod to Nexus Mods using the v3 multipart upload API."""
-    file_size = os.path.getsize(zip_path)
-    zip_basename = os.path.basename(zip_path)
-
-    # Step 1: Create multipart upload
-    print(f"  Creating multipart upload ({zip_basename}, {file_size} bytes)...")
-    upload_info = api_request(
-        "POST",
-        "/uploads/multipart",
-        api_key,
-        {"filename": zip_basename, "size_bytes": str(file_size)},
-    )
-    upload_id = upload_info["id"]
-    part_urls = upload_info["parts_presigned_url"]
-    part_size = upload_info["parts_size"]
-    complete_url = upload_info["complete_presigned_url"]
-    print(f"  Upload ID: {upload_id} ({len(part_urls)} part(s) of {part_size} bytes each)")
-
-    # Step 2: Upload each part to the presigned S3 URLs
-    parts = []
-    with open(zip_path, "rb") as f:
-        for i, part_url in enumerate(part_urls):
-            part_number = i + 1
-            f.seek(i * part_size)
-            chunk = f.read(part_size)
-            print(f"  Uploading part {part_number}/{len(part_urls)} ({len(chunk)} bytes)...")
-            req = Request(
-                part_url,
-                data=chunk,
-                method="PUT",
-                headers={
-                    "Content-Type": "application/octet-stream",
-                    "Content-Length": str(len(chunk)),
-                },
-            )
-            with urlopen(req) as resp:
-                etag = resp.headers.get("ETag", "").strip('"')
-            parts.append((part_number, etag))
-
-    # Step 3: Complete the multipart upload
-    print("  Completing multipart upload...")
-    xml_parts = "\n".join(
-        f"  <Part>\n    <PartNumber>{pn}</PartNumber>\n    <ETag>{etag}</ETag>\n  </Part>"
-        for pn, etag in parts
-    )
-    xml = f"<CompleteMultipartUpload>\n{xml_parts}\n</CompleteMultipartUpload>"
+def _put_to_presigned_url(url, data):
+    """PUT binary data to a presigned S3 URL and return the ETag."""
     req = Request(
-        complete_url,
-        data=xml.encode(),
-        method="POST",
-        headers={"Content-Type": "application/xml"},
+        url,
+        data=data,
+        method="PUT",
+        headers={
+            "Content-Type": "application/octet-stream",
+            "Content-Length": str(len(data)),
+        },
     )
-    with urlopen(req):
-        pass
+    try:
+        with urlopen(req) as resp:
+            return resp.headers.get("ETag", "").strip('"')
+    except HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code} uploading to presigned URL: {e.read().decode()}") from e
 
-    # Step 4: Finalise the upload
-    print(f"  Finalising upload...")
-    api_request("POST", f"/uploads/{upload_id}/finalise", api_key)
 
-    # Step 5: Poll until the upload is in the "available" state
-    print("  Waiting for upload to be processed...")
+def _poll_until_available(upload_id, api_key):
+    """Poll GET /uploads/{id} until state is 'available'."""
     for attempt in range(60):
-        time.sleep(min(2 * (1.5 ** attempt), 30))
         state_info = api_request("GET", f"/uploads/{upload_id}", api_key)
         state = state_info.get("state")
         print(f"    State: {state}")
         if state == "available":
-            break
-    else:
-        raise RuntimeError(f"Timed out waiting for upload {upload_id} to become available")
+            return
+        delay = min(2 * (1.5 ** attempt), 30)
+        time.sleep(delay)
+    raise RuntimeError(f"Timed out waiting for upload {upload_id} to become available")
 
-    # Step 6: Create a new version in the mod file update group
+
+def upload_mod(mod_name, zip_path, version, file_group_id, api_key):
+    """Upload a zipped mod to Nexus Mods using the v3 API.
+
+    Uses single-part upload for files up to 100 MiB (POST /uploads), and
+    multipart upload (POST /uploads/multipart) for larger files.
+    """
+    file_size = os.path.getsize(zip_path)
+    zip_basename = os.path.basename(zip_path)
+
+    if file_size <= MULTIPART_THRESHOLD:
+        # Single-part upload (recommended for files ≤ 100 MiB)
+        print(f"  Creating upload ({zip_basename}, {file_size} bytes)...")
+        upload_info = api_request(
+            "POST",
+            "/uploads",
+            api_key,
+            {"filename": zip_basename, "size_bytes": file_size},
+        )
+        upload_id = upload_info["id"]
+        presigned_url = upload_info["presigned_url"]
+        print(f"  Upload ID: {upload_id}")
+
+        print("  Uploading file...")
+        with open(zip_path, "rb") as f:
+            _put_to_presigned_url(presigned_url, f.read())
+    else:
+        # Multipart upload (required for files > 100 MiB)
+        print(f"  Creating multipart upload ({zip_basename}, {file_size} bytes)...")
+        upload_info = api_request(
+            "POST",
+            "/uploads/multipart",
+            api_key,
+            {"filename": zip_basename, "size_bytes": file_size},
+        )
+        upload_id = upload_info["id"]
+        part_urls = upload_info["parts_presigned_url"]
+        part_size = upload_info["parts_size"]
+        complete_url = upload_info["complete_presigned_url"]
+        print(f"  Upload ID: {upload_id} ({len(part_urls)} part(s) of {part_size} bytes each)")
+
+        parts = []
+        with open(zip_path, "rb") as f:
+            for i, part_url in enumerate(part_urls):
+                part_number = i + 1
+                f.seek(i * part_size)
+                chunk = f.read(part_size)
+                print(f"  Uploading part {part_number}/{len(part_urls)} ({len(chunk)} bytes)...")
+                etag = _put_to_presigned_url(part_url, chunk)
+                parts.append((part_number, etag))
+
+        print("  Completing multipart upload...")
+        xml_parts = "\n".join(
+            f"  <Part>\n    <PartNumber>{pn}</PartNumber>\n    <ETag>{etag}</ETag>\n  </Part>"
+            for pn, etag in parts
+        )
+        xml = f"<CompleteMultipartUpload>\n{xml_parts}\n</CompleteMultipartUpload>"
+        req = Request(
+            complete_url,
+            data=xml.encode(),
+            method="POST",
+            headers={"Content-Type": "application/xml"},
+        )
+        with urlopen(req):
+            pass
+
+    # Finalise the upload
+    print("  Finalising upload...")
+    api_request("POST", f"/uploads/{upload_id}/finalise", api_key)
+
+    # Poll until the upload is in the "available" state
+    print("  Waiting for upload to be processed...")
+    _poll_until_available(upload_id, api_key)
+
+    # Create a new version in the mod file update group
     print(f"  Creating new version in file group {file_group_id}...")
     result = api_request(
         "POST",
