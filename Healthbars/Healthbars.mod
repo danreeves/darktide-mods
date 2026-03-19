@@ -10,5 +10,6 @@ return {
 	end,
 	packages = {},
 	version = "26.02.08-1",
-	mod_id = "16"
+	mod_id = "16",
+	file_group_id = nil,
 }

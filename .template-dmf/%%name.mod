@@ -9,4 +9,6 @@ return {
 		})
 	end,
 	packages = {},
+	-- version = "1.0.0",
+	-- file_group_id = nil,
 }
