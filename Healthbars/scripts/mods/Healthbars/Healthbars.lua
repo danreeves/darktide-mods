@@ -39,6 +39,7 @@ function mod.on_all_mods_loaded()
 	load_package("packages/ui/views/inventory_view/inventory_view")
 	load_package("packages/ui/views/inventory_weapons_view/inventory_weapons_view")
 	load_package("packages/ui/hud/player_weapon/player_weapon")
+	load_package("packages/ui/views/inventory_background_view/inventory_background_view")
 end
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
@@ -64,11 +65,6 @@ mod.on_setting_changed = function()
 end
 
 local function should_enable_healthbar(unit)
-	local game_mode_name = Managers.state.game_mode:game_mode_name()
-	if game_mode_name == "shooting_range" and not get_mod("creature_spawner") then
-		return false
-	end
-
 	local unit_data_extension = ScriptUnit.extension(unit, "unit_data_system")
 	local breed = unit_data_extension:breed()
 
@@ -107,33 +103,14 @@ mod:hook_safe(
 	end
 )
 
-local _preloaded = false
+mod:hook("HudElementWorldMarkers", "event_add_world_marker_unit", function(func, self, marker_type, unit, callback, data)
+	if marker_type == "damage_indicator" and ALIVE[unit] then
+		local game_mode_name = Managers.state.game_mode and Managers.state.game_mode:game_mode_name()
 
-mod.on_game_state_changed = function(state, state_name)
-	if _preloaded then
-		return
+		if game_mode_name == "shooting_range" and should_enable_healthbar(unit) then
+			return
+		end
 	end
 
-	local pkgs = {
-		-- Preset Icons
-		"packages/ui/views/inventory_view/inventory_view",
-		"packages/ui/views/inventory_weapons_view/inventory_weapons_view",
-		"packages/ui/views/inventory_background_view/inventory_background_view",
-		"packages/ui/views/inventory_weapon_details_view/inventory_weapon_details_view",
-
-		-- Weapon icons
-		"packages/ui/hud/player_weapon/player_weapon",
-		"packages/ui/views/inventory_weapon_marks_view/inventory_weapon_marks_view",
-
-		-- Maybe not needed
-		"packages/ui/views/cosmetics_inspect_view/cosmetics_inspect_view",
-		"packages/ui/views/masteries_overview_view/masteries_overview_view",
-	}
-
-	for _, pkg in ipairs(pkgs) do
-		Managers.package:load(pkg, "KillfeedDetails", nil, true)
-	end
-
-	-- set only once
-	_preloaded = true
-end
+	return func(self, marker_type, unit, callback, data)
+end)
