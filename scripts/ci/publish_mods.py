@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """Detect changed mods and upload them to Nexus Mods using the v3 API.
 
-Reads version and file_group_id from each mod's .mod file. Mods without a
-file_group_id set are skipped (they are not yet configured for the new API).
+Reads version, mod_id, and optionally file_group_id from each mod's .mod
+file. When file_group_id is not set, it is resolved automatically from the
+API using the mod_id: the script fetches all file update groups for the mod
+and uses the group if there is exactly one. Set file_group_id explicitly in
+the .mod file to choose a specific group when a mod has more than one.
 
 Usage:
     python3 scripts/ci/publish_mods.py [--dry-run]
 
 Required environment variables (unless --dry-run):
-    NEXUSMODS_API_KEY   Your Nexus Mods v3 API key
-    GITHUB_SHA          The current commit SHA
-    GITHUB_BEFORE       The previous commit SHA (set by GitHub Actions on push)
+    NEXUSMODS_API_KEY       Your Nexus Mods v3 API key
+    GITHUB_SHA              The current commit SHA
+    GITHUB_BEFORE           The previous commit SHA (set by GitHub Actions on push)
+
+Optional environment variables:
+    NEXUSMODS_GAME_DOMAIN   Nexus Mods game domain slug (default: warhammer40kdarktide)
 """
 
 import json
@@ -25,6 +31,7 @@ from urllib.request import Request, urlopen
 
 NULL_COMMIT = "0000000000000000000000000000000000000000"
 API_BASE = os.environ.get("NEXUSMODS_API_BASE", "https://api.nexusmods.com/v3").rstrip("/")
+GAME_DOMAIN = os.environ.get("NEXUSMODS_GAME_DOMAIN", "warhammer40kdarktide")
 MULTIPART_THRESHOLD = 100 * 1024 * 1024  # 100 MiB
 
 
@@ -53,7 +60,7 @@ def api_request(method, path, api_key, body=None):
 
 
 def extract_mod_info(path):
-    """Extract version and file_group_id from a .mod file using regex."""
+    """Extract version, mod_id, and file_group_id from a .mod file using regex."""
     try:
         with open(path, "r") as f:
             content = f.read()
@@ -62,12 +69,49 @@ def extract_mod_info(path):
         return None
 
     version_m = re.search(r'\bversion\s*=\s*"([^"]+)"', content)
+    mod_id_m = re.search(r'\bmod_id\s*=\s*"([^"]+)"', content)
     file_group_m = re.search(r'\bfile_group_id\s*=\s*"([^"]+)"', content)
 
     return {
         "version": version_m.group(1) if version_m else None,
+        "mod_id": mod_id_m.group(1) if mod_id_m else None,
         "file_group_id": file_group_m.group(1) if file_group_m else None,
     }
+
+
+def resolve_file_group_id(mod_id, api_key):
+    """Resolve file_group_id from the API using the game-scoped mod_id.
+
+    Calls GET /games/{game_domain}/mods/{mod_id} to get the mod UUID, then
+    GET /mods/{uuid}/file-update-groups to list all update groups.
+
+    Returns the group ID if exactly one group exists, otherwise raises.
+    """
+    mod_info = api_request("GET", f"/games/{GAME_DOMAIN}/mods/{mod_id}", api_key)
+    mod_uuid = mod_info.get("id")
+    if not mod_uuid:
+        raise RuntimeError(f"Unexpected response from API: no 'id' field for mod {mod_id}")
+
+    groups_info = api_request("GET", f"/mods/{mod_uuid}/file-update-groups", api_key)
+    groups = groups_info.get("groups", [])
+
+    if not groups:
+        raise RuntimeError(
+            f"No file update groups found for mod {mod_id}. "
+            "Create a file update group on Nexus Mods first."
+        )
+    if len(groups) > 1:
+        names = ", ".join(
+            f"{g.get('id', '?')} ({g.get('name', '?')})" for g in groups
+        )
+        raise RuntimeError(
+            f"Multiple file update groups found for mod {mod_id}: {names}. "
+            "Set file_group_id explicitly in the .mod file."
+        )
+    group_id = groups[0].get("id")
+    if not group_id:
+        raise RuntimeError(f"Unexpected response from API: no 'id' in file update group for mod {mod_id}")
+    return group_id
 
 
 def get_prev_version(path, before):
@@ -267,12 +311,26 @@ def main():
 
         mod_name = Path(path).parts[0]
 
-        if not cur["file_group_id"]:
-            print(f"Skipping {mod_name}: file_group_id not set in .mod file")
-            skipped.append(mod_name)
-            continue
+        file_group_id = cur["file_group_id"]
+        if not file_group_id:
+            if not cur["mod_id"]:
+                print(f"Skipping {mod_name}: neither file_group_id nor mod_id is set in .mod file")
+                skipped.append(mod_name)
+                continue
+            if dry_run:
+                print(f"  Dry run: would resolve file_group_id from API for mod_id={cur['mod_id']}")
+                uploaded.append(mod_name)
+                continue
+            try:
+                print(f"  Resolving file_group_id from API for mod_id={cur['mod_id']}...")
+                file_group_id = resolve_file_group_id(cur["mod_id"], api_key)
+                print(f"  Resolved file_group_id: {file_group_id}")
+            except RuntimeError as e:
+                print(f"Skipping {mod_name}: {e}", file=sys.stderr)
+                skipped.append(mod_name)
+                continue
 
-        print(f"\nProcessing {mod_name} v{cur['version']} (file_group_id={cur['file_group_id']})...")
+        print(f"\nProcessing {mod_name} v{cur['version']} (file_group_id={file_group_id})...")
 
         if dry_run:
             print(f"  Dry run: would zip and upload {mod_name}")
@@ -284,7 +342,7 @@ def main():
             continue
 
         try:
-            upload_mod(mod_name, f"{mod_name}.zip", cur["version"], cur["file_group_id"], api_key)
+            upload_mod(mod_name, f"{mod_name}.zip", cur["version"], file_group_id, api_key)
             uploaded.append(mod_name)
         except Exception as e:
             print(f"Error uploading {mod_name}: {e}", file=sys.stderr)
