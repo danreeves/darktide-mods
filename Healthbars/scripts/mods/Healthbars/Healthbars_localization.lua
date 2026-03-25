@@ -102,6 +102,24 @@ local localization = {
 	warpfire = {
 		en = "Show warpfire (Soulblaze) stacks",
 	},
+	warpfire_color_option = {
+		en = "Choose warpfire color",
+	},
+	warpfire_color_option_one = {
+		en = "Warp-Core",
+	},
+	warpfire_color_option_two = {
+		en = "Soulblaze Cyan",
+	},
+	warpfire_color_option_three = {
+		en = "Sanctified Cerulean",
+	},
+	warpfire_color_option_four = {
+		en = "Ethereal Blue",
+	},
+	warpfire_color_option_five = {
+		en = "Peril Purple",
+	},
 	toxin = {
 		en = "Show toxin stacks",
 	},

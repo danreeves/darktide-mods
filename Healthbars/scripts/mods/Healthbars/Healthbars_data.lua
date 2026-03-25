@@ -78,6 +78,21 @@ local widgets = {
 				setting_id = "warpfire",
 				type = "checkbox",
 				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "warpfire_color_option",
+						type = "dropdown",
+						default_value = "warpfire_color_option_three",
+						options = {
+							{ text = "warpfire_color_option_one",   value = "warpfire_color_option_one" },
+							{ text = "warpfire_color_option_two",   value = "warpfire_color_option_two" },
+							{ text = "warpfire_color_option_three", value = "warpfire_color_option_three" },
+							{ text = "warpfire_color_option_four",  value = "warpfire_color_option_four" },
+							{ text = "warpfire_color_option_five",  value = "warpfire_color_option_five" },
+						},
+					},
+				},
 			},
 			{
 				setting_id = "toxin",

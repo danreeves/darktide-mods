@@ -6,13 +6,13 @@ This fork extends **Healthbars** with additional **DoT/debuff indicators** rende
 - **DoT**
     - **Warpfire / Soulblaze** stacks
 - **Debuffs**
-  - **Brittleness indicator** (rending % against relevant armor types)
-  - **Electrocuted** (presence indicator)
-  - **Skullcrusher** (damage vs staggered; stacks / % / time)
-  - **Thunderstrike** (impact modifier; stacks / % / time)
-  - **Melee damage taken** (from multiple sources; icon-only or %)
-  - **Increased total damage taken** (combined from several buffs; icon-only or %)
-  - **Empyric Shock** (warp damage taken; stacks / % / time)
+    - **Brittleness indicator** (rending % against relevant armor types)
+    - **Electrocuted** (presence indicator)
+    - **Skullcrusher** (damage vs staggered; stacks / % / time)
+    - **Thunderstrike** (impact modifier; stacks / % / time)
+    - **Melee damage taken** (from multiple sources; icon-only or %)
+    - **Increased total damage taken** (combined from several buffs; icon-only or %)
+    - **Empyric Shock** (warp damage taken; stacks / % / time)
 
 ---
 
@@ -29,6 +29,9 @@ Open the mod options and look under **"Toggle features"**:
 - Show Melee damage taken debuff
 - Show Increased damage taken debuff
 - Show Empyric Shock debuff
+
+### Color selection
+- **Warpfire**: `Warp-Core` / `Soulblaze Cyan` / `Sanctified Cerulean` (default) / `Ethereal Blue` / `Peril Purple`
 
 ### Display modes (per effect)
 Some effects have a display dropdown:
@@ -50,10 +53,10 @@ Some effects have a display dropdown:
 
 - Indicators are displayed in an **8-column grid** with up to **2 rows**.
 - If any debuff is active:
-  - **Debuffs** occupy the first visual row
-  - **DoTs** shift into the second visual row
+    - **Debuffs** occupy the first visual row
+    - **DoTs** shift into the second visual row
 - If no debuff is active:
-  - **DoTs** occupy the first visual row
+    - **DoTs** occupy the first visual row
 
 ### Ordering
 - DoTs: `Bleed` → `Burn` → `Warpfire` → `Toxin`
@@ -65,7 +68,7 @@ Some effects have a display dropdown:
 
 | Status | Icon | What it detects / measures | Text display options | Color/state progression |
 |---|---:|---|---|---|
-| **Warpfire (Soulblaze)** | <img src="icons/warpfire.png" width="50"> | DoT stacks from `warp_fire` | Stacks | Fixed color (warpfire tint). |
+| **Warpfire (Soulblaze)** | <img src="icons/warpfire_color_option_three.png" width="50"> | DoT stacks from `warp_fire` | Stacks | <img src="icons/warpfire_color_option_one.png" width="25"> **Warp-Core**<br/><img src="icons/warpfire_color_option_two.png" width="25"> **Soulblaze Cyan**<br/><img src="icons/warpfire_color_option_three.png" width="25"> **Sanctified Cerulean** (default)<br/><img src="icons/warpfire_color_option_four.png" width="25"> **Ethereal Blue**<br/><img src="icons/warpfire_color_option_five.png" width="25"> **Peril Purple** |
 | **Brittleness** | <img src="icons/brittleness_white.png" width="50"> | Total rending % from: `rending_debuff` (2.5%/stack, cap 16), `rending_burn_debuff` (1%/stack, cap 20), `shotgun_special_rending_debuff` (25%/stack, cap 1), `saw_rending_debuff` (2.5%/stack, cap 15). **Only shown for armor types:** Flak, Carapace, Maniac, Unyielding. Hidden below **2.5%**. | `Icon + %` / `Icon only` / `Time (s)` | <img src="icons/brittleness_white.png" width="25"> **2.5-19.9%**<br/><img src="icons/brittleness_yellow.png" width="25"> **20-29.9%**<br/><img src="icons/brittleness_orange.png" width="25"> **30-39.9%**<br/><img src="icons/brittleness_red.png" width="25"> **40-59.9%**<br/><img src="icons/brittleness_magenta.png" width="25"> **≥60%** |
 | **Electrocuted** | <img src="icons/electrocuted.png" width="50"> | Presence of any "electrocution keyword" buff template (e.g. shock grenade/mine/mauls/chain lightning/etc.). | No text | Fixed color (pale electrocuted tint). |
 | **Skullcrusher** | <img src="icons/skullcrusher_white.png" width="50"> | Stagger damage taken debuff: `increase_damage_received_while_staggered` (fallback `damage_vs_staggered`). **10% per stack**, cap **8**. | `Stacks` / `Percent %` / `Icon only` / `Time (s)` | <img src="icons/skullcrusher_white.png" width="25"> **1-2** / 10-20%<br/><img src="icons/skullcrusher_yellow.png" width="25"> **3-4** / 30-40%<br/><img src="icons/skullcrusher_orange.png" width="25"> **5-6** / 50-60%<br/><img src="icons/skullcrusher_red.png" width="25"> **7-8** / 70-80% |
@@ -81,6 +84,7 @@ Some effects have a display dropdown:
 - Debuff changes now trigger the same visibility window as damage, so indicators can appear when a debuff is applied even if the enemy has not taken direct damage yet.
 - **Brittleness** is intentionally suppressed on armor types where it is not meaningful.
 - **Electrocuted** is **presence-only**.
+- **Warpfire** uses a player-selectable icon tint, with **Sanctified Cerulean** as the default option.
 - **Increased damage taken (total)** is a **combined value**, so it can jump between color tiers quickly depending on team debuffs.
 
 ## Known issues

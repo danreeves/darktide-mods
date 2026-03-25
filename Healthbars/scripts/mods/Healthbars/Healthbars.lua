@@ -9,7 +9,7 @@ local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/Healthb
 mod.textures = {
 	bleed = "content/ui/materials/icons/presets/preset_13",
 	burn = "content/ui/materials/icons/presets/preset_20",
-	warpfire = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_encroaching_garden",
+	warpfire = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_ember",
 	toxin = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle",
 	electrocuted = "content/ui/materials/icons/presets/preset_11",
 	brittleness = "content/ui/materials/icons/presets/preset_04",
@@ -19,14 +19,32 @@ mod.textures = {
 	damage_taken = "content/ui/materials/icons/presets/preset_14",
 	empyric_shock = "content/ui/materials/icons/presets/preset_12",
 }
-mod.colors = {
-	bleed = { 255, 255, 0, 0 },
-	burn = { 255, 255, 102, 0 },
-	warpfire = { 255, 80, 160, 255 },
-	toxin = { 255, 0, 255, 0 },
-	electrocuted = { 255, 255, 235, 245 },
-	-- brittleness, skullcrusher, thunderstrike and damage taken debuffs are calculated by applied stacks
+local WARPFIRE_COLOR_OPTIONS = {
+	warpfire_color_option_one = { 255, 200, 255, 255 },
+	warpfire_color_option_two = { 255, 0, 230, 255 },
+	warpfire_color_option_three = { 255, 80, 160, 255 },
+	warpfire_color_option_four = { 255, 45, 140, 255 },
+	warpfire_color_option_five = { 255, 138, 43, 226 },
 }
+
+local function copy_color(color)
+	return { color[1], color[2], color[3], color[4] }
+end
+
+local function refresh_colors()
+	local warpfire_key = mod:get("warpfire_color_option") or "warpfire_color_option_three"
+
+	mod.colors = {
+		bleed = { 255, 255, 0, 0 },
+		burn = { 255, 255, 102, 0 },
+		warpfire = copy_color(WARPFIRE_COLOR_OPTIONS[warpfire_key] or WARPFIRE_COLOR_OPTIONS.warpfire_color_option_three),
+		toxin = { 255, 0, 255, 0 },
+		electrocuted = { 255, 255, 235, 245 },
+		-- brittleness, skullcrusher, thunderstrike and damage taken debuffs are calculated by applied stacks
+	}
+end
+
+refresh_colors()
 
 function mod.on_all_mods_loaded()
 	-- Preload icon packages
@@ -62,6 +80,7 @@ get_toggles()
 
 mod.on_setting_changed = function()
 	get_toggles()
+	refresh_colors()
 end
 
 local function should_enable_healthbar(unit)
