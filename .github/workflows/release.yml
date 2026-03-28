@@ -26,4 +26,4 @@ jobs:
           GITHUB_BEFORE: ${{ github.event.before }}
           GITHUB_SHA: ${{ github.sha }}
           NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
-        run: python3 scripts/ci/publish_mods.py
+        run: node scripts/ci/publish_mods.js
