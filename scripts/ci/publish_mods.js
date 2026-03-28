@@ -55,6 +55,10 @@ async function apiRequest(method, urlPath, apiKey, body) {
     throw new Error(`HTTP ${resp.status} from ${method} ${url}: ${text}`);
   }
   const parsed = JSON.parse(text);
+  console.log(
+    `  Response from ${method} ${url}:`,
+    JSON.stringify(parsed, null, 2),
+  );
   return parsed.data ?? parsed;
 }
 
