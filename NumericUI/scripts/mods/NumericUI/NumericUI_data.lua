@@ -4,7 +4,7 @@ local color_options = {}
 for _, color_name in ipairs(Color.list) do
 	table.insert(color_options, {
 		text = color_name,
-		value = color_name
+		value = color_name,
 	})
 end
 table.sort(color_options, function(a, b)
@@ -122,13 +122,13 @@ return {
 						setting_id = "color_start",
 						type = "dropdown",
 						default_value = "ui_orange_light",
-						options = get_color_options()
+						options = get_color_options(),
 					},
 					{
 						setting_id = "color_end",
 						type = "dropdown",
 						default_value = "ui_red_light",
-						options = get_color_options()
+						options = get_color_options(),
 					},
 					{
 						setting_id = "dodge_timer_y_offset",
@@ -236,9 +236,9 @@ return {
 						type = "dropdown",
 						default_value = "time",
 						options = {
-							{ text = "timer",   value = "time" },
+							{ text = "timer", value = "time" },
 							{ text = "percent", value = "percent" },
-							{ text = "none",    value = "none" },
+							{ text = "none", value = "none" },
 						},
 					},
 					{

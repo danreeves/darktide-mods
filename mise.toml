@@ -1,0 +1,12 @@
+[tools]
+node = "latest"
+stylua = "latest"
+
+[tasks.format]
+run = "stylua ."
+
+[tasks.publish]
+run = "node scripts/ci/publish_mods.js"
+
+[tasks.testpublish]
+run = "node scripts/ci/publish_mods.js --dry-run"
