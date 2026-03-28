@@ -22,7 +22,7 @@
 
 "use strict";
 
-const { execFileSync, spawnSync } = require("child_process");
+const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
