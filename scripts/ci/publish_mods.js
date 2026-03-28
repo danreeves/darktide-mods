@@ -12,7 +12,7 @@
  *     node scripts/ci/publish_mods.js [--dry-run]
  *
  * Required environment variables (unless --dry-run):
- *     NEXUSMODS_API_KEY       Your Nexus Mods v3 API key
+ *     NEXUSMODS_APIKEY       Your Nexus Mods v3 API key
  *     GITHUB_SHA              The current commit SHA
  *     GITHUB_BEFORE           The previous commit SHA (set by GitHub Actions on push)
  *
@@ -30,8 +30,7 @@ const NULL_COMMIT = "0000000000000000000000000000000000000000";
 const API_BASE = (
   process.env.NEXUSMODS_API_BASE || "https://api.nexusmods.com/v3"
 ).replace(/\/$/, "");
-const GAME_DOMAIN =
-  process.env.NEXUSMODS_GAME_DOMAIN || "warhammer40kdarktide";
+const GAME_DOMAIN = process.env.NEXUSMODS_GAME_DOMAIN || "warhammer40kdarktide";
 const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MiB
 
 function execCmd(args) {
@@ -84,26 +83,26 @@ async function resolveFileGroupId(modId, apiKey) {
   const modInfo = await apiRequest(
     "GET",
     `/games/${GAME_DOMAIN}/mods/${modId}`,
-    apiKey
+    apiKey,
   );
   const modUuid = modInfo.id;
   if (!modUuid) {
     throw new Error(
-      `Unexpected response from API: no 'id' field for mod ${modId}`
+      `Unexpected response from API: no 'id' field for mod ${modId}`,
     );
   }
 
   const groupsInfo = await apiRequest(
     "GET",
     `/mods/${modUuid}/file-update-groups`,
-    apiKey
+    apiKey,
   );
   const groups = groupsInfo.groups || [];
 
   if (groups.length === 0) {
     throw new Error(
       `No file update groups found for mod ${modId}. ` +
-        "Create a file update group on Nexus Mods first."
+        "Create a file update group on Nexus Mods first.",
     );
   }
   if (groups.length > 1) {
@@ -112,13 +111,13 @@ async function resolveFileGroupId(modId, apiKey) {
       .join(", ");
     throw new Error(
       `Multiple file update groups found for mod ${modId}: ${names}. ` +
-        "Set file_group_id explicitly in the .mod file."
+        "Set file_group_id explicitly in the .mod file.",
     );
   }
   const groupId = groups[0].id;
   if (!groupId) {
     throw new Error(
-      `Unexpected response from API: no 'id' in file update group for mod ${modId}`
+      `Unexpected response from API: no 'id' in file update group for mod ${modId}`,
     );
   }
   return groupId;
@@ -140,7 +139,15 @@ function getChangedModFiles(before, sha) {
   if (!before || before === NULL_COMMIT) {
     output = execCmd(["git", "ls-files", "*.mod"]);
   } else {
-    output = execCmd(["git", "diff", "--name-only", before, sha, "--", "*.mod"]);
+    output = execCmd([
+      "git",
+      "diff",
+      "--name-only",
+      before,
+      sha,
+      "--",
+      "*.mod",
+    ]);
   }
   return output
     .split("\n")
@@ -182,7 +189,7 @@ async function pollUntilAvailable(uploadId, apiKey) {
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
   throw new Error(
-    `Timed out waiting for upload ${uploadId} to become available`
+    `Timed out waiting for upload ${uploadId} to become available`,
   );
 }
 
@@ -206,7 +213,7 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
     await putToPresignedUrl(presignedUrl, data);
   } else {
     console.log(
-      `  Creating multipart upload (${zipBasename}, ${fileSize} bytes)...`
+      `  Creating multipart upload (${zipBasename}, ${fileSize} bytes)...`,
     );
     const uploadInfo = await apiRequest("POST", "/uploads/multipart", apiKey, {
       filename: zipBasename,
@@ -217,17 +224,19 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
     const partSize = uploadInfo.parts_size;
     const completeUrl = uploadInfo.complete_presigned_url;
     console.log(
-      `  Upload ID: ${uploadId} (${partUrls.length} part(s) of ${partSize} bytes each)`
+      `  Upload ID: ${uploadId} (${partUrls.length} part(s) of ${partSize} bytes each)`,
     );
 
     const fd = fs.openSync(zipPath, "r");
     const parts = [];
     for (let i = 0; i < partUrls.length; i++) {
       const partNumber = i + 1;
-      const chunk = Buffer.alloc(Math.max(0, Math.min(partSize, fileSize - i * partSize)));
+      const chunk = Buffer.alloc(
+        Math.max(0, Math.min(partSize, fileSize - i * partSize)),
+      );
       fs.readSync(fd, chunk, 0, chunk.length, i * partSize);
       console.log(
-        `  Uploading part ${partNumber}/${partUrls.length} (${chunk.length} bytes)...`
+        `  Uploading part ${partNumber}/${partUrls.length} (${chunk.length} bytes)...`,
       );
       const etag = await putToPresignedUrl(partUrls[i], chunk);
       parts.push({ partNumber, etag });
@@ -238,7 +247,7 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
     const xmlParts = parts
       .map(
         ({ partNumber, etag }) =>
-          `  <Part>\n    <PartNumber>${partNumber}</PartNumber>\n    <ETag>${etag}</ETag>\n  </Part>`
+          `  <Part>\n    <PartNumber>${partNumber}</PartNumber>\n    <ETag>${etag}</ETag>\n  </Part>`,
       )
       .join("\n");
     const xml = `<CompleteMultipartUpload>\n${xmlParts}\n</CompleteMultipartUpload>`;
@@ -250,7 +259,7 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
     if (!completeResp.ok) {
       const text = await completeResp.text();
       throw new Error(
-        `HTTP ${completeResp.status} completing multipart upload: ${text}`
+        `HTTP ${completeResp.status} completing multipart upload: ${text}`,
       );
     }
   }
@@ -271,7 +280,7 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
       name: modName,
       version,
       file_category: "main",
-    }
+    },
   );
   const fileUid = result.id;
   console.log(`  Done — new file UID: ${fileUid}`);
@@ -290,12 +299,12 @@ async function main() {
     apiKey = null;
     console.log(`Dry run mode — SHA=${sha}, before=${before}`);
   } else {
-    apiKey = process.env.NEXUSMODS_API_KEY;
+    apiKey = process.env.NEXUSMODS_APIKEY;
     sha = process.env.GITHUB_SHA;
     before = process.env.GITHUB_BEFORE || null;
 
     if (!apiKey) {
-      console.error("Error: NEXUSMODS_API_KEY is not set");
+      console.error("Error: NEXUSMODS_APIKEY is not set");
       process.exit(1);
     }
     if (!sha) {
@@ -327,21 +336,21 @@ async function main() {
     if (!fileGroupId) {
       if (!cur.mod_id) {
         console.log(
-          `Skipping ${modName}: neither file_group_id nor mod_id is set in .mod file`
+          `Skipping ${modName}: neither file_group_id nor mod_id is set in .mod file`,
         );
         skipped.push(modName);
         continue;
       }
       if (dryRun) {
         console.log(
-          `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`
+          `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`,
         );
         uploaded.push(modName);
         continue;
       }
       try {
         console.log(
-          `  Resolving file_group_id from API for mod_id=${cur.mod_id}...`
+          `  Resolving file_group_id from API for mod_id=${cur.mod_id}...`,
         );
         fileGroupId = await resolveFileGroupId(cur.mod_id, apiKey);
         console.log(`  Resolved file_group_id: ${fileGroupId}`);
@@ -353,7 +362,7 @@ async function main() {
     }
 
     console.log(
-      `\nProcessing ${modName} v${cur.version} (file_group_id=${fileGroupId})...`
+      `\nProcessing ${modName} v${cur.version} (file_group_id=${fileGroupId})...`,
     );
 
     if (dryRun) {
@@ -373,7 +382,7 @@ async function main() {
         `${modName}.zip`,
         cur.version,
         fileGroupId,
-        apiKey
+        apiKey,
       );
       uploaded.push(modName);
     } catch (e) {
@@ -391,7 +400,7 @@ async function main() {
 
   if (skipped.length > 0) {
     console.log(
-      `Skipped ${skipped.length} mod(s) with no file_group_id: ${skipped.join(", ")}`
+      `Skipped ${skipped.length} mod(s) with no file_group_id: ${skipped.join(", ")}`,
     );
   }
 

@@ -25,5 +25,5 @@ jobs:
         env:
           GITHUB_BEFORE: ${{ github.event.before }}
           GITHUB_SHA: ${{ github.sha }}
-          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          NEXUSMODS_APIKEY: ${{ secrets.NEXUSMODS_APIKEY }}
         run: node scripts/ci/publish_mods.js
