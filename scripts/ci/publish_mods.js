@@ -54,7 +54,8 @@ async function apiRequest(method, urlPath, apiKey, body) {
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status} from ${method} ${url}: ${text}`);
   }
-  return JSON.parse(text);
+  const parsed = JSON.parse(text);
+  return parsed.data ?? parsed;
 }
 
 function extractModInfo(filePath) {
