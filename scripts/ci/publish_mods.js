@@ -2,11 +2,9 @@
 /**
  * Detect changed mods and upload them to Nexus Mods using the v3 API.
  *
- * Reads version, mod_id, and optionally file_group_id from each mod's .mod
- * file. When file_group_id is not set, it is resolved automatically from the
- * API using the mod_id: the script fetches all file update groups for the mod
- * and uses the group if there is exactly one. Set file_group_id explicitly in
- * the .mod file to choose a specific group when a mod has more than one.
+ * Reads version and mod_id from each mod's .mod file. The file_group_id is
+ * resolved automatically from the API using the mod_id: the script fetches all
+ * file update groups for the mod and uses the group if there is exactly one.
  *
  * Usage:
  *     node scripts/ci/publish_mods.js [--dry-run]
@@ -70,12 +68,10 @@ function extractModInfo(filePath) {
 
   const versionM = content.match(/\bversion\s*=\s*"([^"]+)"/);
   const modIdM = content.match(/\bmod_id\s*=\s*"([^"]+)"/);
-  const fileGroupM = content.match(/\bfile_group_id\s*=\s*"([^"]+)"/);
 
   return {
     version: versionM ? versionM[1] : null,
     mod_id: modIdM ? modIdM[1] : null,
-    file_group_id: fileGroupM ? fileGroupM[1] : null,
   };
 }
 
@@ -332,33 +328,31 @@ async function main() {
 
     const modName = filePath.split("/")[0];
 
-    let fileGroupId = cur.file_group_id;
-    if (!fileGroupId) {
-      if (!cur.mod_id) {
-        console.log(
-          `Skipping ${modName}: neither file_group_id nor mod_id is set in .mod file`,
-        );
-        skipped.push(modName);
-        continue;
-      }
-      if (dryRun) {
-        console.log(
-          `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`,
-        );
-        uploaded.push(modName);
-        continue;
-      }
-      try {
-        console.log(
-          `  Resolving file_group_id from API for mod_id=${cur.mod_id}...`,
-        );
-        fileGroupId = await resolveFileGroupId(cur.mod_id, apiKey);
-        console.log(`  Resolved file_group_id: ${fileGroupId}`);
-      } catch (e) {
-        console.error(`Skipping ${modName}: ${e.message}`);
-        skipped.push(modName);
-        continue;
-      }
+    if (!cur.mod_id) {
+      console.log(`Skipping ${modName}: mod_id is not set in .mod file`);
+      skipped.push(modName);
+      continue;
+    }
+
+    if (dryRun) {
+      console.log(
+        `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`,
+      );
+      uploaded.push(modName);
+      continue;
+    }
+
+    let fileGroupId;
+    try {
+      console.log(
+        `  Resolving file_group_id from API for mod_id=${cur.mod_id}...`,
+      );
+      fileGroupId = await resolveFileGroupId(cur.mod_id, apiKey);
+      console.log(`  Resolved file_group_id: ${fileGroupId}`);
+    } catch (e) {
+      console.error(`Skipping ${modName}: ${e.message}`);
+      skipped.push(modName);
+      continue;
     }
 
     console.log(
