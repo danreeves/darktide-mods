@@ -49,11 +49,13 @@ local function set_presence()
 		local mission_name = mod.get_mission_name()
 		DarktideDiscord.set_details(mission_name)
 		local initial_challenge = Managers.state
-			and Managers.state.difficulty
-			and Managers.state.difficulty:get_initial_challenge()
+				and Managers.state.difficulty
+				and Managers.state.difficulty:get_initial_challenge()
 			or 0
-		local initial_resistance = Managers.state and Managers.state.difficulty and
-			Managers.state.difficulty:get_initial_resistance() or 0
+		local initial_resistance = Managers.state
+				and Managers.state.difficulty
+				and Managers.state.difficulty:get_initial_resistance()
+			or 0
 		local danger_settings = DangerSettings[initial_challenge]
 		if danger_settings then
 			local difficulty_text = Localize(danger_settings.display_name)
@@ -102,10 +104,14 @@ function mod.on_game_state_changed()
 	local presence = Managers.presence._myself
 	local activity_id = presence:activity_id()
 	if activity_id == "mission" or is_soloplay() then
-		local challenge = Managers.state and Managers.state.difficulty and
-			Managers.state.difficulty:get_initial_challenge() or 0
-		local resistance = Managers.state and Managers.state.difficulty and
-			Managers.state.difficulty:get_initial_resistance() or 0
+		local challenge = Managers.state
+				and Managers.state.difficulty
+				and Managers.state.difficulty:get_initial_challenge()
+			or 0
+		local resistance = Managers.state
+				and Managers.state.difficulty
+				and Managers.state.difficulty:get_initial_resistance()
+			or 0
 		local i, danger_settings = table.find_func_array(DangerSettings, function(setting)
 			return setting.challenge == challenge
 		end)

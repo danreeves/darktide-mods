@@ -192,7 +192,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 							local damage_has_started_position =
 								Vector3(x_position, y_position - damage_number_settings.dps_y_offset, z_position)
 							local dps = ui_content.damage_has_started_timer > 1
-								and ui_content.damage_taken / ui_content.damage_has_started_timer
+									and ui_content.damage_taken / ui_content.damage_has_started_timer
 								or ui_content.damage_taken
 							local text = string.format("%d DPS", dps)
 
@@ -585,8 +585,8 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			end
 
 			if mod:get("burn") then
-				local burn_stacks = buff_extension:current_stacks("flamer_assault") +
-				buff_extension:current_stacks("warp_fire")
+				local burn_stacks = buff_extension:current_stacks("flamer_assault")
+					+ buff_extension:current_stacks("warp_fire")
 				if burn_stacks and burn_stacks > 0 then
 					marker.debuffs[#marker.debuffs + 1] = { type = "burn", stacks = burn_stacks }
 				end

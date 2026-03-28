@@ -470,7 +470,7 @@ for _, color_name in ipairs(color_names) do
 	local color_values = Color[color_name](255, true)
 	local text = InputUtils.apply_color_to_input_text(readable(color_name), color_values)
 	loc[color_name] = {
-		en = text
+		en = text,
 	}
 end
 
