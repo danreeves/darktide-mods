@@ -146,10 +146,8 @@ mod:hook_safe("HudElementBossHealth", "update", function(self)
 						current_toughness = max_toughness - toughness_damage
 					else
 						-- MinionToughnessHuskExtension
-						local toughness_damage, max_toughness = _get_network_values(
-							toughness_extension._game_session,
-							toughness_extension._game_object_id
-						)
+						local toughness_damage, max_toughness =
+							_get_network_values(toughness_extension._game_session, toughness_extension._game_object_id)
 						current_toughness = max_toughness - toughness_damage
 					end
 					widget_group.toughness_text.content.text = math.round(current_toughness)

@@ -11,17 +11,16 @@ local backups = mod:persistent_table("player_weapon_hud_backups")
 local UIRenderer = require("scripts/managers/ui/ui_renderer")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
-local HudElementTeamPlayerPanelSettings = require(
-	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings"
-)
+local HudElementTeamPlayerPanelSettings =
+	require("scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings")
 
 --Init global vars for mod: "show_munitions_gained"
-local prev_clip_ammo_char_len = 0        -- Tells where ammo icon should be generated
-local prev_font_size = nil               -- checks to see if the font was changed in some way
-local prev_grenade_charges = 0           --Keeps track of grenade amount in the previous loop.
-local grenade_gained_display_t = 0       --keeps track of how long the grenade gained widget has been displayed
-local grenade_gained_amount = 0          --Keeps track of the amount of grenades gained
-local ammo_gained_cumulative = false     --When true, will use a single widget to show multiple ammo increments
+local prev_clip_ammo_char_len = 0 -- Tells where ammo icon should be generated
+local prev_font_size = nil -- checks to see if the font was changed in some way
+local prev_grenade_charges = 0 --Keeps track of grenade amount in the previous loop.
+local grenade_gained_display_t = 0 --keeps track of how long the grenade gained widget has been displayed
+local grenade_gained_amount = 0 --Keeps track of the amount of grenades gained
+local ammo_gained_cumulative = false --When true, will use a single widget to show multiple ammo increments
 local ammo_gained_available_widgets = {} --List of non-active ammo-gained widgets (for non-cumulative display)
 local ammo_gained_active_widgets = {}
 local ammo_gained_data = {
@@ -41,14 +40,12 @@ for i = 1, 4 do
 	table.insert(ammo_gained_available_widgets, table.clone(ammo_gained_data))
 	ammo_gained_available_widgets[i].widget_name = "ammo_gained_" .. i
 	ammo_gained_available_widgets[i].offset_mod[1] = ammo_gained_data.offset_mod[1] + 5 * (i / directional_magnitude)
-	ammo_gained_available_widgets[i].offset_mod[2] = math.abs(
-		ammo_gained_data.offset_mod[2] + (i / directional_magnitude)
-	)
+	ammo_gained_available_widgets[i].offset_mod[2] =
+		math.abs(ammo_gained_data.offset_mod[2] + (i / directional_magnitude))
 	ammo_gained_available_widgets[i].offset_slow_mod[1] = ammo_gained_data.offset_slow_mod[1]
 		+ 5 * (i / directional_magnitude)
-	ammo_gained_available_widgets[i].offset_slow_mod[2] = math.abs(
-		ammo_gained_data.offset_slow_mod[2] + (i / directional_magnitude)
-	)
+	ammo_gained_available_widgets[i].offset_slow_mod[2] =
+		math.abs(ammo_gained_data.offset_slow_mod[2] + (i / directional_magnitude))
 end
 
 mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
@@ -331,14 +328,15 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 					if mod:get("max_ammo_text") and max_reserve then
 						local display_text = ""
 						if mod:get("show_max_ammo_as_percent") then
-							display_text = string.format("%d%%", math.min(total_current_ammo / total_max_ammo * 100, 100))
+							display_text =
+								string.format("%d%%", math.min(total_current_ammo / total_max_ammo * 100, 100))
 						else
 							display_text = string.format("/%d", max_reserve)
 						end
 						content.max_ammo = display_text
 
 						style.max_ammo.offset[1] = 0 + style.max_ammo.font_size * 2
-						style.max_ammo.offset[2] = (style.ammo_amount_4.offset[2]) + (style.max_ammo.font_size * 1.1)
+						style.max_ammo.offset[2] = style.ammo_amount_4.offset[2] + (style.max_ammo.font_size * 1.1)
 						style.max_ammo.drop_shadow = true
 					end
 				end
@@ -411,9 +409,8 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 						else
 							widget_data = table.remove(ammo_gained_active_widgets, 1) -- If more than 4 widgets are already being shown, we reset and use the oldest one.
 							widget_data.alpha_multiplier = 1
-							self._widgets_by_name[widget_data.widget_name].style.ammo_gained.offset = table.clone(
-								widget_data.offset
-							)
+							self._widgets_by_name[widget_data.widget_name].style.ammo_gained.offset =
+								table.clone(widget_data.offset)
 						end
 
 						widget_data.display_t = _dt

@@ -10,5 +10,5 @@ return {
 	end,
 	packages = {},
 	version = "26.02.08-1",
-	mod_id = "506"
+	mod_id = "506",
 }
