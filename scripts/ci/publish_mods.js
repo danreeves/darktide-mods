@@ -102,16 +102,27 @@ async function resolveFileGroupId(modId, apiKey) {
         "Create a file update group on Nexus Mods first.",
     );
   }
-  if (groups.length > 1) {
-    const names = groups
-      .map((g) => `${g.id || "?"} (${g.name || "?"})`)
-      .join(", ");
-    throw new Error(
-      `Multiple file update groups found for mod ${modId}: ${names}. ` +
-        "Set file_group_id explicitly in the .mod file.",
+
+  const activeGroups = groups.filter((g) => g.is_active);
+  const candidates = activeGroups.length > 0 ? activeGroups : groups;
+
+  candidates.sort((a, b) => {
+    const aTime = a.last_file_uploaded_at
+      ? new Date(a.last_file_uploaded_at).getTime()
+      : 0;
+    const bTime = b.last_file_uploaded_at
+      ? new Date(b.last_file_uploaded_at).getTime()
+      : 0;
+    return bTime - aTime;
+  });
+
+  if (candidates.length > 1) {
+    console.log(
+      `  Multiple file update groups for mod ${modId}, using most recently updated: ${candidates[0].id} (${candidates[0].name || "?"})`,
     );
   }
-  const groupId = groups[0].id;
+
+  const groupId = candidates[0].id;
   if (!groupId) {
     throw new Error(
       `Unexpected response from API: no 'id' in file update group for mod ${modId}`,
