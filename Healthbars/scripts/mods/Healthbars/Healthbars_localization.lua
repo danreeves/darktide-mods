@@ -99,8 +99,83 @@ local localization = {
 		ru = "Заряды горения",
 		fr = "Affiche les brûlures",
 	},
+	warpfire = {
+		en = "Show warpfire (Soulblaze) stacks",
+	},
+	warpfire_color_option = {
+		en = "Choose warpfire color",
+	},
+	warpfire_color_option_one = {
+		en = "Warp-Core",
+	},
+	warpfire_color_option_two = {
+		en = "Soulblaze Cyan",
+	},
+	warpfire_color_option_three = {
+		en = "Sanctified Cerulean",
+	},
+	warpfire_color_option_four = {
+		en = "Ethereal Blue",
+	},
+	warpfire_color_option_five = {
+		en = "Peril Purple",
+	},
 	toxin = {
 		en = "Show toxin stacks",
+	},
+	electrocuted = {
+		en = "Show electrocution debuff",
+	},
+	brittleness_indicator = {
+		en = "Show brittleness indicator",
+	},
+	brittleness_indicator_display = {
+		en = "Brittleness display",
+	},
+	display_icon_text = {
+		en = "Icon + text %%",
+	},
+	skullcrusher = {
+		en = "Show Skullcrusher debuff",
+	},
+	skullcrusher_display = {
+		en = "Skullcrusher display",
+	},
+	display_stacks = {
+		en = "Stacks",
+	},
+	display_percent = {
+		en = "Percent %%",
+	},
+	display_time = {
+		en = "Time (s)",
+	},
+	display_icon_only = {
+		en = "Icon only",
+	},
+	thunderstrike = {
+		en = "Show Thunderstrike debuff",
+	},
+	thunderstrike_display = {
+		en = "Thunderstrike display",
+	},
+	melee_damage_taken = {
+		en = "Show Melee damage taken debuff",
+	},
+	melee_damage_taken_display = {
+		en = "Melee damage taken display",
+	},
+	damage_taken = {
+		en = "Show Increased damage taken debuff",
+	},
+	damage_taken_display = {
+		en = "Increased damage taken display",
+	},
+	empyric_shock = {
+		en = "Show Empyric Shock debuff",
+	},
+	empyric_shock_display = {
+		en = "Empyric Shock display",
 	},
 }
 

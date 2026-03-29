@@ -9,13 +9,42 @@ local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/Healthb
 mod.textures = {
 	bleed = "content/ui/materials/icons/presets/preset_13",
 	burn = "content/ui/materials/icons/presets/preset_20",
+	warpfire = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_ember",
 	toxin = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle",
+	electrocuted = "content/ui/materials/icons/presets/preset_11",
+	brittleness = "content/ui/materials/icons/presets/preset_04",
+	skullcrusher = "content/ui/materials/icons/presets/preset_05",
+	thunderstrike = "content/ui/materials/icons/presets/preset_18",
+	melee_damage_taken = "content/ui/materials/icons/presets/preset_01",
+	damage_taken = "content/ui/materials/icons/presets/preset_14",
+	empyric_shock = "content/ui/materials/icons/presets/preset_12",
 }
-mod.colors = {
-	bleed = { 255, 255, 0, 0 },
-	burn = { 255, 255, 102, 0 },
-	toxin = { 255, 0, 255, 0 },
+local WARPFIRE_COLOR_OPTIONS = {
+	warpfire_color_option_one = { 255, 200, 255, 255 },
+	warpfire_color_option_two = { 255, 0, 230, 255 },
+	warpfire_color_option_three = { 255, 80, 160, 255 },
+	warpfire_color_option_four = { 255, 45, 140, 255 },
+	warpfire_color_option_five = { 255, 138, 43, 226 },
 }
+
+local function copy_color(color)
+	return { color[1], color[2], color[3], color[4] }
+end
+
+local function refresh_colors()
+	local warpfire_key = mod:get("warpfire_color_option") or "warpfire_color_option_three"
+
+	mod.colors = {
+		bleed = { 255, 255, 0, 0 },
+		burn = { 255, 255, 102, 0 },
+		warpfire = copy_color(WARPFIRE_COLOR_OPTIONS[warpfire_key] or WARPFIRE_COLOR_OPTIONS.warpfire_color_option_three),
+		toxin = { 255, 0, 255, 0 },
+		electrocuted = { 255, 255, 235, 245 },
+		-- brittleness, skullcrusher, thunderstrike and damage taken debuffs are calculated by applied stacks
+	}
+end
+
+refresh_colors()
 
 function mod.on_all_mods_loaded()
 	-- Preload icon packages
@@ -28,6 +57,7 @@ function mod.on_all_mods_loaded()
 	load_package("packages/ui/views/inventory_view/inventory_view")
 	load_package("packages/ui/views/inventory_weapons_view/inventory_weapons_view")
 	load_package("packages/ui/hud/player_weapon/player_weapon")
+	load_package("packages/ui/views/inventory_background_view/inventory_background_view")
 end
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
@@ -50,14 +80,10 @@ get_toggles()
 
 mod.on_setting_changed = function()
 	get_toggles()
+	refresh_colors()
 end
 
 local function should_enable_healthbar(unit)
-	local game_mode_name = Managers.state.game_mode:game_mode_name()
-	if game_mode_name == "shooting_range" and not get_mod("creature_spawner") then
-		return false
-	end
-
 	local unit_data_extension = ScriptUnit.extension(unit, "unit_data_system")
 	local breed = unit_data_extension:breed()
 
@@ -95,3 +121,15 @@ mod:hook_safe(
 		end
 	end
 )
+
+mod:hook("HudElementWorldMarkers", "event_add_world_marker_unit", function(func, self, marker_type, unit, callback, data)
+	if marker_type == "damage_indicator" and ALIVE[unit] then
+		local game_mode_name = Managers.state.game_mode and Managers.state.game_mode:game_mode_name()
+
+		if game_mode_name == "shooting_range" and should_enable_healthbar(unit) then
+			return
+		end
+	end
+
+	return func(self, marker_type, unit, callback, data)
+end)
