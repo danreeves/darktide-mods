@@ -6,6 +6,25 @@ local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIRenderer = require("scripts/managers/ui/ui_renderer")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 
+local math_abs = math.abs
+local math_ceil = math.ceil
+local math_clamp = math.clamp
+local math_floor = math.floor
+local math_huge = math.huge
+local math_max = math.max
+local math_min = math.min
+local math_pow = math.pow
+local string_format = string.format
+local table_clear = table.clear
+local table_clone = table.clone
+local table_remove = table.remove
+local tostring = tostring
+local Color = Color
+local Localize = Localize
+local ScriptUnit_extension = ScriptUnit.extension
+local ScriptUnit_has_extension = ScriptUnit.has_extension
+local UIRenderer_draw_text = UIRenderer.draw_text
+
 local template = {}
 
 local size = { 120, 6 }
@@ -92,29 +111,29 @@ local GRID_GAP_X = 4
 local GRID_GAP_Y = 4
 local BAR_TO_DEBUFF_MARGIN_Y = 5
 
-local function _slot_pos(template, slot_index)
-	local cols       = GRID_COLS
-	local col        = (slot_index - 1) % cols
-	local row        = math.floor((slot_index - 1) / cols)
+local SLOT_CACHE = {}
+local DEFAULT_SLOT_BASE_Y = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
+local ARMOUR_TYPE_SLOT_BASE_Y = DEFAULT_SLOT_BASE_Y - 20
 
-	-- left edge of the bar is -width/2 in the widget's local space
-	local bar_left_x = -(template.size[1] * 0.5)
+for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+	local col = (i - 1) % GRID_COLS
+	local row = math_floor((i - 1) / GRID_COLS)
+	local x = -(template.size[1] * 0.5) + (ICON_SIZE * 0.5) + col * (ICON_SIZE + GRID_GAP_X)
+	local row_y_offset = row * (ICON_SIZE + GRID_GAP_Y)
 
-	-- place first icon starting at bar-left, then to the right
-	local x          = bar_left_x + (ICON_SIZE * 0.5) + col * (ICON_SIZE + GRID_GAP_X)
+	SLOT_CACHE[i] = {
+		icon_id = "status_icon_" .. i,
+		stacks_id = "status_stacks_" .. i,
+		x = x,
+		y = DEFAULT_SLOT_BASE_Y - row_y_offset,
+		y_armour = ARMOUR_TYPE_SLOT_BASE_Y - row_y_offset,
+	}
+end
 
-	-- base y directly under the bar (negative is "down")
-	local base_y     = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
+local function _slot_pos(slot_index, use_armour_offset)
+	local slot = SLOT_CACHE[slot_index]
 
-	-- in case armour type display is active move row up
-	if mod:get("show_damage_numbers") and mod:get("show_armour_type") then
-		base_y = base_y - 20
-	end
-
-	-- IMPORTANT: row 2 must be BELOW row 1 => y becomes MORE negative
-	local y = base_y - row * (ICON_SIZE + GRID_GAP_Y)
-
-	return x, y
+	return slot.x, use_armour_offset and slot.y_armour or slot.y
 end
 
 local function _debuff_signature(debuffs)
@@ -123,7 +142,7 @@ local function _debuff_signature(debuffs)
 		local d = debuffs[i]
 		if d then
 			local v = d.stacks or d.percent or ""
-			parts[#parts + 1] = string.format("%s:%s", d.type or "?", tostring(v))
+			parts[#parts + 1] = string_format("%s:%s", d.type or "?", tostring(v))
 		end
 	end
 	return table.concat(parts, "|")
@@ -157,7 +176,7 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 	local crit_color = Color[settings.crit_color](255, true)
 	local weakspot_color = Color[settings.weakspot_color](255, true)
 
-	local text_color = table.clone(default_color)
+	local text_color = table_clone(default_color)
 
 	local z0 = position[3]
 	local x0 = position[1] + settings.x_offset
@@ -165,10 +184,10 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 
 	for i = num, 1, -1 do
 		local dn = damage_numbers[i]
-		local progress = math.clamp(dn.time / dn.duration, 0, 1)
+		local progress = math_clamp(dn.time / dn.duration, 0, 1)
 
 		if progress >= 1 then
-			table.remove(damage_numbers, i)
+			table_remove(damage_numbers, i)
 		else
 			dn.time = dn.time + dt
 		end
@@ -187,7 +206,7 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 
 		-- Expand then shrink behavior (same timing logic as original)
 		if dn.expand_duration then
-			local expand_progress = math.clamp(dn.expand_time / dn.expand_duration, 0, 1)
+			local expand_progress = math_clamp(dn.expand_time / dn.expand_duration, 0, 1)
 			local anim_progress = 1 - expand_progress
 			font_size = font_size + settings.expand_bonus_scale * anim_progress
 
@@ -215,7 +234,7 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 		position[2] = y0
 		position[1] = x0 + current_order * settings.x_offset_between_numbers
 
-		UIRenderer.draw_text(ui_renderer, value, font_size, font_type, position, ui_style.size, text_color, {})
+		UIRenderer_draw_text(ui_renderer, value, font_size, font_type, position, ui_style.size, text_color, {})
 	end
 
 	-- DPS (only drawn when dead in the original logic)
@@ -230,9 +249,9 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 			local dps_pos = Vector3(x0, y0 - settings.dps_y_offset, z0)
 			local elapsed = ui_content.damage_has_started_timer
 			local dps = (elapsed and elapsed > 1) and (ui_content.damage_taken / elapsed) or ui_content.damage_taken
-			local text = string.format("%d DPS", dps)
+			local text = string_format("%d DPS", dps)
 
-			UIRenderer.draw_text(ui_renderer, text, dps_font_size, font_type, dps_pos, ui_style.size, ui_style
+			UIRenderer_draw_text(ui_renderer, text, dps_font_size, font_type, dps_pos, ui_style.size, ui_style
 				.text_color, {})
 		end
 	end
@@ -251,7 +270,7 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 		local armor_type_text = Localize(armor_type_loc_string)
 		local armor_pos = Vector3(x0, y0 - settings.has_taken_damage_timer_y_offset, z0)
 
-		UIRenderer.draw_text(ui_renderer, armor_type_text, dps_font_size, font_type, armor_pos, ui_style.size,
+		UIRenderer_draw_text(ui_renderer, armor_type_text, dps_font_size, font_type, armor_pos, ui_style.size,
 			ui_style.text_color, {})
 	end
 
@@ -271,6 +290,36 @@ local ICON_DEFAULT_COLORS = {
 	{ 255, 120, 210, 255 },
 	{ 255, 255, 255, 255 },
 }
+
+local DOT_ORDER = { "bleed", "burn", "warpfire", "toxin" }
+local DEBUFF_ORDER = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike",
+	"empyric_shock", "electrocuted" }
+
+local DEBUFF_RULES = {
+	brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
+	skullcrusher = { setting = "skullcrusher_display", default = "stacks", center_on = "percent" },
+	thunderstrike = { setting = "thunderstrike_display", default = "stacks", center_on = "percent" },
+	melee_damage_taken = { setting = "melee_damage_taken_display", default = "icon_only", center_on = "icon_text" },
+	damage_taken = { setting = "damage_taken_display", default = "icon_text", center_on = "icon_text" },
+	empyric_shock = { setting = "empyric_shock_display", default = "stacks", center_on = "percent" },
+}
+
+local function _center_small_text(stacks_style)
+	if not stacks_style then
+		return
+	end
+
+	stacks_style.font_size = 11
+	stacks_style.text_horizontal_alignment = "center"
+	stacks_style.text_vertical_alignment = "center"
+end
+
+local function _set_style_color(style_color, src_color)
+	style_color[1] = src_color[1]
+	style_color[2] = src_color[2]
+	style_color[3] = src_color[3]
+	style_color[4] = src_color[4]
+end
 
 template.create_widget_defintion = function(template, scenegraph_id)
 	local header_font_setting_name = "nameplates"
@@ -359,9 +408,10 @@ template.create_widget_defintion = function(template, scenegraph_id)
 
 	-- Debuff slots (1..MAX_DEBUFF_SLOTS_ALLOC) in a centered grid (max 8 per row)
 	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
-		local icon_id = "status_icon_" .. i
-		local stacks_id = "status_stacks_" .. i
-		local x, y = _slot_pos(template, i)
+		local slot = SLOT_CACHE[i]
+		local icon_id = slot.icon_id
+		local stacks_id = slot.stacks_id
+		local x, y = _slot_pos(i, mod:get("show_damage_numbers") and mod:get("show_armour_type"))
 
 		passes[#passes + 1] = {
 			pass_type = "texture",
@@ -416,11 +466,12 @@ template.on_enter = function(widget, marker, template)
 	marker.bar_logic = HudHealthBarLogic:new(bar_settings)
 
 	local unit = marker.unit
-	local unit_data_extension = ScriptUnit.extension(unit, "unit_data_system")
+	local unit_data_extension = ScriptUnit_extension(unit, "unit_data_system")
 	local breed = unit_data_extension:breed()
 
 	content.header_text = breed.name
 	content.breed = breed
+	content.weakspots = breed.hit_zone_weakspot_types
 
 	marker.debuff_check_timer = 0
 	marker.debuffs = {}
@@ -433,6 +484,10 @@ template.on_enter = function(widget, marker, template)
 
 	marker._debuff_sig = ""
 	marker._had_active_debuff = false
+	marker._active_by_type = {}
+	marker._active_debuffs = {}
+	marker._active_dots = {}
+	marker._placements = {}
 end
 
 -- Buff templates that apply the electrocution keyword (see weapon_buff_templates.lua)
@@ -584,7 +639,7 @@ local function _compute_total_damage_taken_percent(buff_extension)
 		end
 
 		local per = VETERAN_FOCUS_TARGET_DEBUFF.per_stack or 0
-		total_multiplier = total_multiplier * math.pow(1 + per, tag_stacks)
+		total_multiplier = total_multiplier * math_pow(1 + per, tag_stacks)
 	end
 
 	-- Enfeeble: +10% damage taken while electrocuted by you (improved chain lightning target debuff)
@@ -696,7 +751,7 @@ local function _min_remaining_time_for_templates(buff_extension, debuff_template
 		return 0
 	end
 
-	local best = math.huge
+	local best = math_huge
 	local saw_active_stack = false
 
 	for i = 1, #debuff_template do
@@ -719,7 +774,7 @@ local function _min_remaining_time_for_templates(buff_extension, debuff_template
 		end
 	end
 
-	if best ~= math.huge then
+	if best ~= math_huge then
 		return best
 	end
 
@@ -779,7 +834,7 @@ local function _compute_empyric_shock(buff_extension)
 		stacks = EMPYRIC_SHOCK_DEBUFF[1].cap
 	end
 
-	local mult = math.pow(1 + (EMPYRIC_SHOCK_DEBUFF[1].per_stack or 0), stacks)
+	local mult = math_pow(1 + (EMPYRIC_SHOCK_DEBUFF[1].per_stack or 0), stacks)
 	local percent = (mult - 1) * 100
 
 	return stacks, percent
@@ -805,8 +860,8 @@ end
 local function _format_percent(value)
 	-- Round to full percent:
 	-- 0.1-0.4 down, 0.5-0.9 up (round half up)
-	local rounded = math.floor((value or 0) + 0.5)
-	return string.format("%d%%", rounded)
+	local rounded = math_floor((value or 0) + 0.5)
+	return string_format("%d%%", rounded)
 end
 
 local function _brittleness_color(percent)
@@ -951,7 +1006,7 @@ local DEBUFF_DEFS = {
 					return ""
 				end
 
-				local secs = math.ceil(data.time_left or 0)
+				local secs = math_ceil(data.time_left or 0)
 				return secs > 0 and tostring(secs) or "0"
 			end
 			return ""
@@ -985,7 +1040,7 @@ local DEBUFF_DEFS = {
 					return ""
 				end
 
-				local secs = math.ceil(data.time_left or 0)
+				local secs = math_ceil(data.time_left or 0)
 				return secs > 0 and tostring(secs) or "0"
 			end
 
@@ -1019,7 +1074,7 @@ local DEBUFF_DEFS = {
 					return ""
 				end
 
-				local secs = math.ceil(data.time_left or 0)
+				local secs = math_ceil(data.time_left or 0)
 				return secs > 0 and tostring(secs) or "0"
 			end
 			return tostring(data.stacks or "")
@@ -1115,7 +1170,7 @@ local DEBUFF_DEFS = {
 					return ""
 				end
 
-				local secs = math.ceil((data.time_left or 0))
+				local secs = math_ceil((data.time_left or 0))
 				return secs > 0 and tostring(secs) or "0"
 			end
 			return tostring(data.stacks or "")
@@ -1130,8 +1185,11 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local content = widget.content
 	local style = widget.style
 	local unit = marker.unit
+	local show_damage_numbers = mod:get("show_damage_numbers")
+	local show_armour_type = mod:get("show_armour_type")
+	local use_armour_slot_offset = show_damage_numbers and show_armour_type
 
-	local health_extension = ScriptUnit.has_extension(unit, "health_system")
+	local health_extension = ScriptUnit_has_extension(unit, "health_system")
 	local is_dead = not health_extension or not health_extension:is_alive()
 	local health_percent = is_dead and 0 or health_extension:current_health_percent()
 
@@ -1146,9 +1204,9 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	if marker.debuff_check_timer >= 0.1 then
 		marker.debuff_check_timer = 0
 
-		local buff_extension = ScriptUnit.extension(unit, "buff_system")
+		local buff_extension = ScriptUnit_extension(unit, "buff_system")
 		if buff_extension then
-			table.clear(marker.debuffs)
+			table_clear(marker.debuffs)
 
 			for i = 1, #DEBUFF_DEFS do
 				local def = DEBUFF_DEFS[i]
@@ -1187,48 +1245,46 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 	-- Clear all allocated slots first
 	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
-		local icon_id = "status_icon_" .. i
-		local stacks_id = "status_stacks_" .. i
-		content[icon_id] = nil
-		content[stacks_id] = ""
+		local slot = SLOT_CACHE[i]
+		content[slot.icon_id] = nil
+		content[slot.stacks_id] = ""
 	end
 
-	local function _find_active(t, id)
-		for i = 1, #t do
-			if t[i] and t[i].type == id then
-				return t[i]
-			end
-		end
-		return nil
-	end
+	local active_by_type = marker._active_by_type
+	local active_debuffs = marker._active_debuffs
+	local active_dots = marker._active_dots
+	local placements = marker._placements
 
-	local dot_order = { "bleed", "burn", "warpfire", "toxin" }
-	local debuff_order = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike",
-		"empyric_shock", "electrocuted" }
+	table_clear(active_by_type)
+	table_clear(active_debuffs)
+	table_clear(active_dots)
+	table_clear(placements)
 
-	local active_debuffs = {}
-	for i = 1, #debuff_order do
-		local d = _find_active(marker.debuffs, debuff_order[i])
-		if d then
-			active_debuffs[#active_debuffs + 1] = d
+	for i = 1, #marker.debuffs do
+		local debuff = marker.debuffs[i]
+		if debuff then
+			active_by_type[debuff.type] = debuff
 		end
 	end
 
-	local active_dots = {}
-	for i = 1, #dot_order do
-		local d = _find_active(marker.debuffs, dot_order[i])
-		if d then
-			active_dots[#active_dots + 1] = d
+	for i = 1, #DEBUFF_ORDER do
+		local debuff = active_by_type[DEBUFF_ORDER[i]]
+		if debuff then
+			active_debuffs[#active_debuffs + 1] = debuff
+		end
+	end
+
+	for i = 1, #DOT_ORDER do
+		local debuff = active_by_type[DOT_ORDER[i]]
+		if debuff then
+			active_dots[#active_dots + 1] = debuff
 		end
 	end
 
 	local has_any_debuff = #active_debuffs > 0
 
 	-- slot mapping we want to show; ensure at least 2 rows are available
-	local max_slots_used = math.min(GRID_COLS * 2, MAX_DEBUFF_SLOTS_ALLOC)
-
-	-- Build a list of {slot = n, debuff = d}
-	local placements = {}
+	local max_slots_used = math_min(GRID_COLS * 2, MAX_DEBUFF_SLOTS_ALLOC)
 
 	if has_any_debuff then
 		-- Debuffs in top row from slot 1
@@ -1256,37 +1312,20 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		end
 	end
 
-	-- helper: apply the shared "center + small" style
-	local function center_small_text(stacks_style)
-		if not stacks_style then return end
-		stacks_style.font_size                 = 11
-		stacks_style.text_horizontal_alignment = "center"
-		stacks_style.text_vertical_alignment   = "center"
-	end
-
-	-- "switch table" / rules per debuff type
-	local debuff_rules = {
-		brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
-		skullcrusher = { setting = "skullcrusher_display", default = "stacks", center_on = "percent" },
-		thunderstrike = { setting = "thunderstrike_display", default = "stacks", center_on = "percent" },
-		melee_damage_taken = { setting = "melee_damage_taken_display", default = "icon_only", center_on = "icon_text" },
-		damage_taken = { setting = "damage_taken_display", default = "icon_text", center_on = "icon_text" },
-		empyric_shock = { setting = "empyric_shock_display", default = "stacks", center_on = "percent" },
-	}
-
 	-- Apply placements to widget content/styles
 	for p = 1, #placements do
 		local slot = placements[p].slot
 		local debuff = placements[p].debuff
 
 		if slot <= max_slots_used and debuff then
-			local icon_id = "status_icon_" .. slot
-			local stacks_id = "status_stacks_" .. slot
+			local slot_data = SLOT_CACHE[slot]
+			local icon_id = slot_data.icon_id
+			local stacks_id = slot_data.stacks_id
 
 			local icon_style = style[icon_id]
 			local stacks_style = style[stacks_id]
 
-			local x, y = _slot_pos(template, slot)
+			local x, y = _slot_pos(slot, use_armour_slot_offset)
 			if icon_style then
 				icon_style.offset[1], icon_style.offset[2] = x, y
 			end
@@ -1305,8 +1344,8 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			-- icon color
 			if icon_style then
 				local c = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
-					{ 255, 255, 255, 255 }
-				icon_style.color = c
+				{ 255, 255, 255, 255 }
+				_set_style_color(icon_style.color, c)
 			end
 
 			-- text
@@ -1317,11 +1356,11 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			end
 
 			-- text for brittleness, skullcrusher, thunderstrike, melee_damage_taken and damage_taken debuffs
-			local rule = debuff_rules[debuff.type]
+			local rule = DEBUFF_RULES[debuff.type]
 			if rule then
 				local mode = mod:get(rule.setting) or rule.default
 				if mode == rule.center_on then
-					center_small_text(stacks_style)
+					_center_small_text(stacks_style)
 				end
 			end
 
@@ -1346,8 +1385,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		if last_damaging_unit then
 			content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
 
-			local breed = content.breed
-			local weakspots = breed.hit_zone_weakspot_types
+			local weakspots = content.weakspots
 			content.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
 			content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
 		end
@@ -1365,7 +1403,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 		if old_damage_taken < damage_taken and mod:get("show_damage_numbers") then
 			local damage_numbers = content.damage_numbers
-			local damage_diff = math.ceil(damage_taken - old_damage_taken)
+			local damage_diff = math_ceil(damage_taken - old_damage_taken)
 			local latest = damage_numbers[#damage_numbers]
 			local was_critical = health_extension and health_extension:was_hit_by_critical_hit_this_render_frame()
 
@@ -1384,8 +1422,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 					expand_duration = dns.expand_duration,
 				}
 
-				local breed = content.breed
-				local weakspots = breed.hit_zone_weakspot_types
+				local weakspots = content.weakspots
 				dn.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
 				dn.was_critical = was_critical
 
@@ -1398,13 +1435,12 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 					content.add_on_next_number = true
 				end
 			else
-				latest.value = math.clamp(latest.value + damage_diff, 0, max_health)
+				latest.value = math_clamp(latest.value + damage_diff, 0, max_health)
 				latest.time = 0
 				latest.y_position = nil
 				latest.start_time = t
 
-				local breed = content.breed
-				local weakspots = breed.hit_zone_weakspot_types
+				local weakspots = content.weakspots
 				latest.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
 				latest.was_critical = was_critical
 			end
@@ -1433,21 +1469,21 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		local health_width = bar_width * health_fraction
 		style.bar.size[1] = health_width
 
-		local ghost_bar_width = math.max(bar_width * health_ghost_fraction - health_width, 0)
+		local ghost_bar_width = math_max(bar_width * health_ghost_fraction - health_width, 0)
 		style.ghost_bar.offset[1] = default_width_offset + health_width
 		style.ghost_bar.size[1] = ghost_bar_width
 
-		local background_width = math.max(bar_width - ghost_bar_width - health_width, 0)
-		background_width = math.max(background_width - spacing, 0)
+		local background_width = math_max(bar_width - ghost_bar_width - health_width, 0)
+		background_width = math_max(background_width - spacing, 0)
 		style.background.offset[1] = default_width_offset + bar_width - background_width
 		style.background.size[1] = background_width
 
-		local health_max_width = bar_width - math.max(bar_width * health_max_fraction, 0)
-		health_max_width = math.max(health_max_width - spacing, 0)
+		local health_max_width = bar_width - math_max(bar_width * health_max_fraction, 0)
+		health_max_width = math_max(health_max_width - spacing, 0)
 		style.health_max.offset[1] = default_width_offset + bar_width - health_max_width * 0.5
 		style.health_max.size[1] = health_max_width
 
-		style.bar_end.offset[1] = -(bar_width - bar_width * health_fraction) + 6 + math.abs(default_width_offset)
+		style.bar_end.offset[1] = -(bar_width - bar_width * health_fraction) + 6 + math_abs(default_width_offset)
 
 		marker.health_fraction = health_fraction
 	end
@@ -1470,9 +1506,9 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		local speed = 10
 
 		if raycast_result then
-			line_of_sight_progress = math.max(line_of_sight_progress - dt * speed, 0)
+			line_of_sight_progress = math_max(line_of_sight_progress - dt * speed, 0)
 		else
-			line_of_sight_progress = math.min(line_of_sight_progress + dt * speed, 1)
+			line_of_sight_progress = math_min(line_of_sight_progress + dt * speed, 1)
 		end
 	end
 
@@ -1525,7 +1561,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		if fade_delay then
 			fade_delay = fade_delay - dt
 			content.fade_delay = (fade_delay >= 0) and fade_delay or nil
-			local progress = math.clamp(fade_delay / dns.fade_delay, 0, 1)
+			local progress = math_clamp(fade_delay / dns.fade_delay, 0, 1)
 			alpha_multiplier = alpha_multiplier * progress
 		elseif not visibility_delay then
 			alpha_multiplier = 0
