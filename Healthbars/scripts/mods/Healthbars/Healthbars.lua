@@ -29,7 +29,6 @@ local WARPFIRE_COLOR_OPTIONS = {
 
 local ScriptUnit = ScriptUnit
 local Managers = Managers
-local ALIVE = ALIVE
 local pairs = pairs
 local setmetatable = setmetatable
 local type = type
@@ -41,6 +40,11 @@ end
 
 local function new_marker_cache()
 	return setmetatable({}, { __mode = "k" })
+end
+
+local function is_unit_alive(unit)
+	local alive = rawget(_G, "ALIVE")
+	return alive and alive[unit] or false
 end
 
 mod._custom_marker_units = mod._custom_marker_units or new_marker_cache()
@@ -92,7 +96,7 @@ local function is_psykhanium()
 end
 
 local function should_enable_healthbar(unit)
-	if not ALIVE[unit] then
+	if not is_unit_alive(unit) then
 		return false
 	end
 
@@ -136,11 +140,11 @@ local function visit_units_from_container(container, seen_units)
 	for key, value in pairs(container) do
 		local unit = nil
 
-		if ALIVE[key] then
+		if is_unit_alive(key) then
 			unit = key
 		elseif type(value) == "table" then
 			local value_unit = value._unit
-			if ALIVE[value_unit] then
+			if is_unit_alive(value_unit) then
 				unit = value_unit
 			end
 		end
