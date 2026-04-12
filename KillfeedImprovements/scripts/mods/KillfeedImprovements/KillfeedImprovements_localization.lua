@@ -19,6 +19,9 @@ local localizations = {
 	merge_kills = {
 		en = "Merge kills",
 	},
+	filter_teammate_kills = {
+		en = "Hide teammate kills",
+	},
 	enable_in_psykanium = {
 		en = "Enable in Psykanium",
 	},

@@ -52,6 +52,11 @@ return {
 				default_value = true,
 			},
 			{
+				setting_id = "filter_teammate_kills",
+				type = "checkbox",
+				default_value = false,
+			},
+			{
 				setting_id = "include_breeds",
 				type = "group",
 				sub_widgets = breed_toggles,

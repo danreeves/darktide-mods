@@ -2,7 +2,6 @@ local mod = get_mod("CareerColourOutlines")
 local UISettings = require("scripts/settings/ui/ui_settings")
 local player_slot_colors = UISettings.player_slot_colors
 local player_manager = Managers.player
-local slot_color_vectors = {}
 local set_outline_color = Unit.set_vector3_for_materials
 
 local function _slot_color_vector(player_slot)
@@ -10,23 +9,13 @@ local function _slot_color_vector(player_slot)
 		return nil
 	end
 
-	local cached = slot_color_vectors[player_slot]
-
-	if cached ~= nil then
-		return cached ~= false and cached or nil
-	end
-
 	local player_slot_color = player_slot_colors[player_slot]
 
 	if not player_slot_color then
-		slot_color_vectors[player_slot] = false
 		return nil
 	end
 
-	cached = Vector3(player_slot_color[2] / 255, player_slot_color[3] / 255, player_slot_color[4] / 255)
-	slot_color_vectors[player_slot] = cached
-
-	return cached
+	return Vector3(player_slot_color[2] / 255, player_slot_color[3] / 255, player_slot_color[4] / 255)
 end
 
 mod:hook_safe("OutlineSystem", "update", function(self)
