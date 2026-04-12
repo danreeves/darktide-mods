@@ -50,16 +50,19 @@ local widgets = {
 				setting_id = "show_damage_numbers",
 				type = "checkbox",
 				default_value = true,
-			},
-			{
-				setting_id = "show_dps",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "show_armour_type",
-				type = "checkbox",
-				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "show_dps",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "show_armour_type",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
 			},
 			{
 				setting_id = "bleed",
@@ -72,9 +75,142 @@ local widgets = {
 				default_value = true,
 			},
 			{
+				setting_id = "warpfire",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "warpfire_color_option",
+						type = "dropdown",
+						default_value = "warpfire_color_option_three",
+						options = {
+							{ text = "warpfire_color_option_one",   value = "warpfire_color_option_one" },
+							{ text = "warpfire_color_option_two",   value = "warpfire_color_option_two" },
+							{ text = "warpfire_color_option_three", value = "warpfire_color_option_three" },
+							{ text = "warpfire_color_option_four",  value = "warpfire_color_option_four" },
+							{ text = "warpfire_color_option_five",  value = "warpfire_color_option_five" },
+						},
+					},
+				},
+			},
+			{
 				setting_id = "toxin",
 				type = "checkbox",
 				default_value = true,
+			},
+			{
+				setting_id = "brittleness_indicator",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "brittleness_indicator_display",
+						type = "dropdown",
+						default_value = "icon_text",
+						options = {
+							{ text = "display_icon_text", value = "icon_text" },
+							{ text = "display_icon_only", value = "icon_only" },
+							{ text = "display_time",      value = "time" },
+						},
+					},
+				},
+			},
+			{
+				setting_id = "electrocuted",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "skullcrusher",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "skullcrusher_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							{ text = "display_stacks",    value = "stacks" },
+							{ text = "display_percent",   value = "percent" },
+							{ text = "display_icon_only", value = "icon_only" },
+							{ text = "display_time",      value = "time" },
+						},
+					}
+				},
+			},
+			{
+				setting_id = "thunderstrike",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "thunderstrike_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							{ text = "display_stacks",    value = "stacks" },
+							{ text = "display_percent",   value = "percent" },
+							{ text = "display_icon_only", value = "icon_only" },
+							{ text = "display_time",      value = "time" },
+						},
+					},
+				},
+			},
+			{
+				setting_id = "melee_damage_taken",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "melee_damage_taken_display",
+						type = "dropdown",
+						default_value = "icon_only",
+						options = {
+							{ text = "display_icon_text", value = "icon_text" },
+							{ text = "display_icon_only", value = "icon_only" },
+						},
+					}
+				},
+			},
+			{
+				setting_id = "damage_taken",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "damage_taken_display",
+						type = "dropdown",
+						default_value = "icon_text",
+						options = {
+							{ text = "display_icon_text", value = "icon_text" },
+							{ text = "display_icon_only", value = "icon_only" },
+						},
+					},
+				},
+			},
+			{
+				setting_id = "empyric_shock",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "empyric_shock_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							{ text = "display_stacks",  value = "stacks" },
+							{ text = "display_percent", value = "percent" },
+							{ text = "display_time",    value = "time" },
+						},
+					},
+				},
 			},
 		},
 	},
