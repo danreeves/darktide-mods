@@ -44,11 +44,20 @@ local localization = {
 		fr = "Affiche les DPS",
 	},
 	show_armour_type = {
-		en = "Show armour type hit",
+		en = "Show info label",
 		["zh-cn"] = "显示命中护甲类型",
 		["zh-tw"] = "顯示命中護甲類型",
 		ru = "Тип поражённой брони",
 		fr = "Affiche le type d'armure touché",
+	},
+	show_armour_type_display = {
+		en = "Label text",
+	},
+	display_armour_type = {
+		en = "Armour type",
+	},
+	display_enemy_name = {
+		en = "Enemy name",
 	},
 	horde_breeds = {
 		en = "Horde/Roamer",
