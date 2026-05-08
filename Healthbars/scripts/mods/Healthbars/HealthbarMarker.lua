@@ -14,6 +14,7 @@ local math_huge = math.huge
 local math_max = math.max
 local math_min = math.min
 local math_pow = math.pow
+local string_find = string.find
 local string_format = string.format
 local table_clear = table.clear
 local table_clone = table.clone
@@ -81,6 +82,9 @@ local armor_type_string_lookup = {
 	berserker = "loc_weapon_stats_display_berzerker",
 	unarmored = "loc_weapon_stats_display_unarmored",
 }
+local DEFAULT_HIT_ZONE_NAME = "center_mass"
+local LABEL_DISPLAY_MODE_ARMOUR_TYPE = "armour_type"
+local LABEL_DISPLAY_MODE_ENEMY_NAME = "enemy_name"
 
 template.fade_settings = {
 	fade_to = 1,
@@ -97,6 +101,60 @@ template.fade_settings = {
 
 local function _set_rgb(dst, src)
 	dst[2], dst[3], dst[4] = src[2], src[3], src[4]
+end
+
+local function _localize_or_fallback(loc_key, fallback)
+	if not loc_key or loc_key == "" then
+		return fallback or ""
+	end
+
+	local localized_text = Localize(loc_key)
+	if localized_text == "" or string_find(localized_text, "<unlocalized") then
+		return fallback or ""
+	end
+
+	return localized_text
+end
+
+local function _localized_breed_name(breed)
+	if not breed then
+		return ""
+	end
+
+	return _localize_or_fallback(breed.display_name, "")
+end
+
+local function _damage_label_enabled()
+	return mod:get("show_armour_type") == true
+end
+
+local function _damage_label_display_mode()
+	return mod:get("show_armour_type_display") or LABEL_DISPLAY_MODE_ARMOUR_TYPE
+end
+
+local function _damage_label_uses_hit_zone()
+	return _damage_label_enabled() and _damage_label_display_mode() == LABEL_DISPLAY_MODE_ARMOUR_TYPE
+end
+
+local function _damage_label_text(ui_content)
+	local display_mode = _damage_label_display_mode()
+
+	if display_mode == LABEL_DISPLAY_MODE_ENEMY_NAME then
+		return ui_content.enemy_name_text or _localized_breed_name(ui_content.breed)
+	end
+
+	local hit_zone_name = ui_content.last_hit_zone_name or DEFAULT_HIT_ZONE_NAME
+
+	local breed = ui_content.breed
+	local armor_type = breed and breed.armor_type
+
+	if breed and breed.hitzone_armor_override and breed.hitzone_armor_override[hit_zone_name] then
+		armor_type = breed.hitzone_armor_override[hit_zone_name]
+	end
+
+	local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
+
+	return _localize_or_fallback(armor_type_loc_string, "")
 end
 
 -- ---------------------------------------------------------------------------
@@ -151,6 +209,29 @@ end
 -- ---------------------------------------------------------------------------
 -- Damage number rendering (logic pass)
 -- ---------------------------------------------------------------------------
+
+local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
+	if not ui_content.damage_has_started or not _damage_label_enabled() then
+		return
+	end
+
+	local settings = template.damage_number_settings
+	local scale = RESOLUTION_LOOKUP.scale
+	local font_type = ui_style.font_type
+	local font_size = settings.dps_font_size * scale
+	local label_text = _damage_label_text(ui_content)
+
+	if label_text == "" then
+		return
+	end
+
+	local z0 = position[3]
+	local x0 = position[1] + settings.x_offset
+	local y0 = position[2] + settings.y_offset
+	local label_pos = Vector3(x0, y0 - settings.has_taken_damage_timer_y_offset, z0)
+
+	UIRenderer_draw_text(ui_renderer, label_text, font_size, font_type, label_pos, ui_style.size, ui_style.text_color, {})
+end
 
 local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
 	if not mod:get("show_damage_numbers") then
@@ -256,24 +337,6 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 		end
 	end
 
-	-- Armour type label
-	if ui_content.damage_has_started and ui_content.last_hit_zone_name and mod:get("show_armour_type") then
-		local hit_zone_name = ui_content.last_hit_zone_name
-		local breed = ui_content.breed
-		local armor_type = breed.armor_type
-
-		if breed.hitzone_armor_override and breed.hitzone_armor_override[hit_zone_name] then
-			armor_type = breed.hitzone_armor_override[hit_zone_name]
-		end
-
-		local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
-		local armor_type_text = Localize(armor_type_loc_string)
-		local armor_pos = Vector3(x0, y0 - settings.has_taken_damage_timer_y_offset, z0)
-
-		UIRenderer_draw_text(ui_renderer, armor_type_text, dps_font_size, font_type, armor_pos, ui_style.size,
-			ui_style.text_color, {})
-	end
-
 	-- restore values for any later pass that might use them
 	ui_style.font_size = default_font_size
 	position[3], position[2], position[1] = z0, y0, x0
@@ -334,6 +397,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			pass_type = "logic",
 			value = function(pass, ui_renderer, ui_style, ui_content, position, size)
 				_draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
+				_draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
 			end,
 			style = {
 				horizontal_alignment = "left",
@@ -411,7 +475,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 		local slot = SLOT_CACHE[i]
 		local icon_id = slot.icon_id
 		local stacks_id = slot.stacks_id
-		local x, y = _slot_pos(i, mod:get("show_damage_numbers") and mod:get("show_armour_type"))
+		local x, y = _slot_pos(i, _damage_label_enabled())
 
 		passes[#passes + 1] = {
 			pass_type = "texture",
@@ -471,6 +535,7 @@ template.on_enter = function(widget, marker, template)
 
 	content.header_text = breed.name
 	content.breed = breed
+	content.enemy_name_text = _localized_breed_name(breed)
 	content.weakspots = breed.hit_zone_weakspot_types
 
 	marker.debuff_check_timer = 0
@@ -1186,8 +1251,9 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local style = widget.style
 	local unit = marker.unit
 	local show_damage_numbers = mod:get("show_damage_numbers")
-	local show_armour_type = mod:get("show_armour_type")
-	local use_armour_slot_offset = show_damage_numbers and show_armour_type
+	local use_armour_slot_offset = _damage_label_enabled()
+	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
+	local needs_hit_reaction_data = show_damage_numbers
 
 	local health_extension = ScriptUnit_has_extension(unit, "health_system")
 	local is_dead = not health_extension or not health_extension:is_alive()
@@ -1380,14 +1446,18 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		damage_taken = max_health
 	end
 
-	if health_extension then
+	if health_extension and (needs_last_hit_zone or needs_hit_reaction_data) then
 		local last_damaging_unit = health_extension:last_damaging_unit()
 		if last_damaging_unit then
-			content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
+			if needs_last_hit_zone then
+				content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
+			end
 
-			local weakspots = content.weakspots
-			content.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
-			content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
+			if needs_hit_reaction_data then
+				local weakspots = content.weakspots
+				content.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
+				content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
+			end
 		end
 	end
 

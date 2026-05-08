@@ -61,6 +61,18 @@ local widgets = {
 						setting_id = "show_armour_type",
 						type = "checkbox",
 						default_value = true,
+
+						sub_widgets = {
+							{
+								setting_id = "show_armour_type_display",
+								type = "dropdown",
+								default_value = "armour_type",
+								options = {
+									{ text = "display_armour_type", value = "armour_type" },
+									{ text = "display_enemy_name", value = "enemy_name" },
+								},
+							},
+						},
 					},
 				},
 			},
