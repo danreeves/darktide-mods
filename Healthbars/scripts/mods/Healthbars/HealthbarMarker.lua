@@ -193,6 +193,9 @@ local DEFAULT_STATUS_TEXT_COLOR = COLOR_YELLOW
 local SLOT_CACHE = {}
 local DEFAULT_SLOT_BASE_Y = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
 local ARMOUR_TYPE_SLOT_BASE_Y = DEFAULT_SLOT_BASE_Y - 20
+local BOSS_INDICATOR_BASE_Y = -61
+local BOSS_INDICATOR_Z = 100
+local BOSS_INDICATOR_SLOT_CACHE = {}
 
 for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
 	local col = (i - 1) % GRID_COLS
@@ -206,6 +209,13 @@ for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
 		x = x,
 		y = DEFAULT_SLOT_BASE_Y - row_y_offset,
 		y_armour = ARMOUR_TYPE_SLOT_BASE_Y - row_y_offset,
+	}
+
+	BOSS_INDICATOR_SLOT_CACHE[i] = {
+		icon_id = "boss_status_icon_" .. i,
+		stacks_id = "boss_status_stacks_" .. i,
+		row = row,
+		col = col,
 	}
 end
 
@@ -408,6 +418,64 @@ local function _set_style_color(style_color, src_color)
 	style_color[2] = src_color[2]
 	style_color[3] = src_color[3]
 	style_color[4] = src_color[4]
+end
+
+template.create_vanilla_boss_indicator_definition = function(bar_width, center_x)
+	local header_font_setting_name = "nameplates"
+	local header_font_settings = UIFontSettings[header_font_setting_name]
+	local passes = {}
+	local row_stride_y = ICON_SIZE + GRID_GAP_Y
+	local col_stride_x = ICON_SIZE + GRID_GAP_X
+	local left_x = center_x - bar_width * 0.5 + ICON_SIZE * 0.5
+
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local slot = BOSS_INDICATOR_SLOT_CACHE[i]
+		local icon_id = slot.icon_id
+		local stacks_id = slot.stacks_id
+		local x = left_x + slot.col * col_stride_x
+		local y = BOSS_INDICATOR_BASE_Y + slot.row * row_stride_y
+
+		passes[#passes + 1] = {
+			pass_type = "texture",
+			style_id = icon_id,
+			value_id = icon_id,
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "center",
+				offset = { x, y, BOSS_INDICATOR_Z },
+				size = { ICON_SIZE, ICON_SIZE },
+				color = ICON_DEFAULT_COLORS[i] or COLOR_WHITE,
+			},
+			visibility_function = function(content, style)
+				return content[icon_id] ~= nil
+			end,
+		}
+
+		passes[#passes + 1] = {
+			pass_type = "text",
+			style_id = stacks_id,
+			value_id = stacks_id,
+			value = "",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "center",
+				text_vertical_alignment = "bottom",
+				text_horizontal_alignment = "right",
+				offset = { x, y, BOSS_INDICATOR_Z + 1 },
+				size = { ICON_SIZE, ICON_SIZE },
+				font_type = header_font_settings.font_type,
+				font_size = DEFAULT_DOT_TEXT_FONT_SIZE,
+				text_color = {
+					DEFAULT_STATUS_TEXT_COLOR[1],
+					DEFAULT_STATUS_TEXT_COLOR[2],
+					DEFAULT_STATUS_TEXT_COLOR[3],
+					DEFAULT_STATUS_TEXT_COLOR[4],
+				},
+			}
+		}
+	end
+
+	return UIWidget.create_definition(passes, "health_bar")
 end
 
 template.create_widget_defintion = function(template, scenegraph_id)
@@ -1278,6 +1346,272 @@ local DEBUFF_DEFS = {
 		end,
 	},
 }
+
+-- ---------------------------------------------------------------------------
+-- Vanilla boss health bar indicator support
+-- ---------------------------------------------------------------------------
+
+local function _is_vanilla_boss_indicator_breed(breed)
+	if not breed then
+		return false
+	end
+
+	local tags = breed.tags
+
+	if tags and (tags.monster or tags.captain or tags.cultist_captain or tags.ritualist) then
+		return true
+	end
+
+	return breed.trigger_boss_health_bar_on_aggro == true or breed.trigger_boss_health_bar_on_damaged == true
+end
+
+local function _clear_boss_indicator_slots(content)
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local slot = BOSS_INDICATOR_SLOT_CACHE[i]
+
+		content[slot.icon_id] = nil
+		content[slot.stacks_id] = ""
+	end
+end
+
+local function _hide_boss_indicator_widget(widget)
+	if not widget then
+		return
+	end
+
+	widget.visible = false
+
+	local content = widget.content
+	if content then
+		_clear_boss_indicator_slots(content)
+	end
+end
+
+local function _new_boss_indicator_state(breed)
+	return {
+		breed = breed,
+		content = {
+			breed = breed,
+		},
+		debuff_check_timer = 0.1,
+		debuffs = {},
+		_active_by_type = {},
+		_active_debuffs = {},
+		_active_dots = {},
+		_placement_slots = {},
+		_placement_debuffs = {},
+	}
+end
+
+local function _poll_status_indicators(state, buff_extension)
+	local debuffs = state.debuffs
+
+	table_clear(debuffs)
+
+	for i = 1, #DEBUFF_DEFS do
+		local def = DEBUFF_DEFS[i]
+		local enabled = (def.setting == nil) or mod:get(def.setting)
+
+		if enabled then
+			local data = def.poll(buff_extension, state.content)
+
+			if data then
+				debuffs[#debuffs + 1] = {
+					type = def.id,
+					def = def,
+					stacks = data.stacks,
+					percent = data.percent,
+					time_left = data.time_left,
+				}
+			end
+		end
+	end
+end
+
+local function _pack_indicator_placements(state)
+	local active_by_type = state._active_by_type
+	local active_debuffs = state._active_debuffs
+	local active_dots = state._active_dots
+	local placement_slots = state._placement_slots
+	local placement_debuffs = state._placement_debuffs
+
+	table_clear(active_by_type)
+	table_clear(active_debuffs)
+	table_clear(active_dots)
+	table_clear(placement_slots)
+	table_clear(placement_debuffs)
+
+	local debuffs = state.debuffs
+
+	for i = 1, #debuffs do
+		local debuff = debuffs[i]
+
+		if debuff then
+			active_by_type[debuff.type] = debuff
+		end
+	end
+
+	for i = 1, #DEBUFF_ORDER do
+		local debuff = active_by_type[DEBUFF_ORDER[i]]
+
+		if debuff then
+			active_debuffs[#active_debuffs + 1] = debuff
+		end
+	end
+
+	for i = 1, #DOT_ORDER do
+		local debuff = active_by_type[DOT_ORDER[i]]
+
+		if debuff then
+			active_dots[#active_dots + 1] = debuff
+		end
+	end
+
+	-- Vanilla boss bars keep rows type-stable when both are present:
+	-- DoTs above, debuffs below. With no debuffs, DoTs use the lower row.
+	local dot_slot_offset = #active_debuffs > 0 and 0 or GRID_COLS
+
+	for i = 1, #active_dots do
+		if i > GRID_COLS then
+			break
+		end
+
+		placement_slots[#placement_slots + 1] = dot_slot_offset + i
+		placement_debuffs[#placement_debuffs + 1] = active_dots[i]
+	end
+
+	if #active_debuffs > 0 then
+		for i = 1, #active_debuffs do
+			if i > GRID_COLS then
+				break
+			end
+
+			placement_slots[#placement_slots + 1] = GRID_COLS + i
+			placement_debuffs[#placement_debuffs + 1] = active_debuffs[i]
+		end
+	end
+end
+
+local function _apply_boss_indicator_placements(widget, state)
+	local content = widget.content
+	local style = widget.style
+	local placement_slots = state._placement_slots
+	local placement_debuffs = state._placement_debuffs
+	local max_slots_used = math_min(GRID_COLS * 2, MAX_DEBUFF_SLOTS_ALLOC)
+	local dot_text_font_size = mod:get("dot_text_font_size") or DEFAULT_DOT_TEXT_FONT_SIZE
+	local debuff_text_font_size = mod:get("debuff_text_font_size") or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+	local dot_numbers_only = mod:get("dot_numbers_only") == true
+
+	_clear_boss_indicator_slots(content)
+
+	for p = 1, #placement_slots do
+		local slot = placement_slots[p]
+		local debuff = placement_debuffs[p]
+
+		if slot <= max_slots_used and debuff then
+			local slot_data = BOSS_INDICATOR_SLOT_CACHE[slot]
+			local icon_id = slot_data.icon_id
+			local stacks_id = slot_data.stacks_id
+			local icon_style = style[icon_id]
+			local stacks_style = style[stacks_id]
+			local def = debuff.def
+			local is_dot = def and def.is_dot == true
+			local debuff_color = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
+				COLOR_WHITE
+			local rule = DEBUFF_RULES[debuff.type]
+			local mode = rule and (mod:get(rule.setting) or rule.default) or nil
+			local status_text_font_size = nil
+
+			if is_dot then
+				status_text_font_size = dot_text_font_size
+			elseif mode == "stacks" or mode == "time" then
+				status_text_font_size = debuff_text_font_size
+			end
+
+			if stacks_style then
+				stacks_style.size[1], stacks_style.size[2] = ICON_SIZE, ICON_SIZE
+				stacks_style.text_horizontal_alignment = "right"
+				stacks_style.text_vertical_alignment = "bottom"
+				stacks_style.font_size = status_text_font_size or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+				_set_style_color(stacks_style.text_color, DEFAULT_STATUS_TEXT_COLOR)
+
+				if is_dot and dot_numbers_only then
+					stacks_style.text_horizontal_alignment = "center"
+					stacks_style.text_vertical_alignment = "center"
+					_set_style_color(stacks_style.text_color, debuff_color)
+				end
+			end
+
+			if is_dot and dot_numbers_only then
+				content[icon_id] = nil
+			else
+				content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
+			end
+
+			if icon_style then
+				_set_style_color(icon_style.color, debuff_color)
+			end
+
+			if def and def.text then
+				content[stacks_id] = def.text(debuff) or ""
+			else
+				content[stacks_id] = tostring(debuff.stacks or "")
+			end
+
+			if rule and mode == rule.center_on then
+				_center_small_text(stacks_style)
+			end
+
+			if debuff.type == "electrocuted" then
+				content[stacks_id] = ""
+			end
+		end
+	end
+end
+
+template.update_vanilla_boss_indicator = function(widget, target, dt)
+	if not widget or not target or not mod:get("show_vanilla_boss_bar_indicators") then
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
+	local unit = target.unit
+	local breed = target.breed
+
+	if not unit or not ALIVE[unit] or not _is_vanilla_boss_indicator_breed(breed) then
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
+	local buff_extension = ScriptUnit_has_extension(unit, "buff_system")
+
+	if not buff_extension then
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
+	local state = target.healthbars_vanilla_boss_indicator_state
+
+	if not state then
+		state = _new_boss_indicator_state(breed)
+		target.healthbars_vanilla_boss_indicator_state = state
+	end
+
+	state.debuff_check_timer = state.debuff_check_timer + dt
+
+	if state.debuff_check_timer >= 0.1 then
+		state.debuff_check_timer = 0
+		_poll_status_indicators(state, buff_extension)
+	end
+
+	_pack_indicator_placements(state)
+	_apply_boss_indicator_placements(widget, state)
+
+	widget.visible = #state._placement_slots > 0
+end
 
 -- ---------------------------------------------------------------------------
 -- Update

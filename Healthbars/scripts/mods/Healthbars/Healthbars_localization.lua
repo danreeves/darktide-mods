@@ -29,6 +29,13 @@ local localization = {
 		ru = "Полоски здоровья",
 		fr = "Affiche les barres de santé",
 	},
+	show_vanilla_boss_bar_indicators = {
+    	en = "Show DoT/debuff markers on vanilla boss health bars",
+    	["zh-cn"] = "在原版首领生命条上显示持续伤害/减益标记",
+    	["zh-tw"] = "在原版首領生命條上顯示持續傷害/減益標記",
+    	ru = "Показывать маркеры периодического урона/ослаблений на стандартных полосах здоровья боссов",
+    	fr = "Afficher les marqueurs de dégâts sur la durée/affaiblissements sur les barres de santé des boss d’origine",
+    },
 	show_damage_numbers = {
 		en = "Show damage numbers",
 		["zh-cn"] = "显示伤害数字",

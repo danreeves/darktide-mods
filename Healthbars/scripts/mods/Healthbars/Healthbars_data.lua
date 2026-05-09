@@ -47,6 +47,11 @@ local widgets = {
 				default_value = true,
 			},
 			{
+				setting_id = "show_vanilla_boss_bar_indicators",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
 				setting_id = "show_damage_numbers",
 				type = "checkbox",
 				default_value = true,

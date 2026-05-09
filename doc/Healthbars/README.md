@@ -25,6 +25,7 @@
   - **Melee damage taken** (from multiple sources, icon-only or %)
   - **Increased total damage taken** (combined from several buffs, icon-only or %)
   - **Empyric Shock** (warp damage taken, stacks / % / time)
+- **Optional DoT/debuff indicators on vanilla boss health bars**, using the same status settings as the Healthbars marker
 
 ---
 
@@ -34,6 +35,7 @@ Open the mod options and look under **"Toggle features"**.
 
 ### Toggles (on/off)
 - Show health bar
+- Show DoT/debuff markers on vanilla boss health bars
 - Show damage numbers
 - Show DPS report
 - Show info label
@@ -71,6 +73,20 @@ This lets you keep the display focused on the enemies that matter most to you.
 - **Debuff stack/time text size**: adjusts the font size for debuff `Stacks` and `Time (s)` display modes. Range: `10-24`, default: `14`.
 - **DOT numbers only**: hides DOT icons and shows only the stack number, tinted with the DOT effect color.
 
+### Vanilla boss health bar indicators
+
+When enabled, Healthbars can also draw the configured DoT and debuff indicators on the game's normal boss health bars.
+
+This is independent from **Show health bar**, so players can disable the custom overhead boss healthbar while still seeing boss DoTs and debuffs on the vanilla boss UI.
+
+The vanilla boss indicators reuse the existing status settings:
+- Per-effect toggles
+- Display modes such as stacks, percent, time, icon-only, and icon + text
+- DOT stack number size
+- Debuff stack/time text size
+- DOT numbers only
+- Warpfire color
+
 ### Display modes (per effect)
 Some effects have a display dropdown:
 - **Info label**: `Armour type` / `Enemy name`
@@ -91,7 +107,7 @@ Some effects have a display dropdown:
 
 ---
 
-## Layout rules (how they appear above the healthbar)
+## Layout rules: overhead Healthbars marker
 
 - Indicators are displayed in an **8-column grid** with up to **2 rows**.
 - If any debuff is active:
@@ -99,6 +115,14 @@ Some effects have a display dropdown:
   - **DoTs** shift into the second visual row.
 - If no debuff is active:
   - **DoTs** occupy the first visual row.
+
+## Layout rules: vanilla boss health bar indicators
+
+- Indicators are displayed above the vanilla boss health bar.
+- DoTs use the upper row when any tracked debuff is active.
+- Debuffs use the lower row.
+- If no tracked debuff is active, DoTs move to the lower row so they sit closer to the boss health bar.
+- The game normally renders up to two vanilla boss health bars. Additional tracked enemies can still use the regular head-anchored Healthbars marker when enabled.
 
 ### Ordering
 - DoTs: `Bleed` -> `Burn` -> `Warpfire` -> `Toxin`
@@ -148,6 +172,7 @@ Some effects have a display dropdown:
 - Very dense fights can produce a lot of simultaneous information if many status toggles are enabled at once.
 
 ## Recent additions
+- Added optional DoT/debuff indicators for vanilla boss health bars, independent from the custom overhead healthbar.
 - Added **Post-kill display duration** to keep the healthbar, info label, and DPS report visible for longer after an enemy dies.
 - Improved info-label visibility so armour type or enemy name can appear from debuff-only marker visibility, even before direct damage is dealt.
 - Added a configurable **info label** that can show either **armour type** or **enemy name**.

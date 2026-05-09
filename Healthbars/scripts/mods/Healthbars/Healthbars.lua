@@ -30,6 +30,7 @@ local WARPFIRE_COLOR_OPTIONS = {
 local ScriptUnit = ScriptUnit
 local Managers = Managers
 local pairs = pairs
+local math_min = math.min
 local setmetatable = setmetatable
 local type = type
 local string_match = string.match
@@ -200,6 +201,42 @@ mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
 	mod._custom_marker_units = new_marker_cache()
 	resync_existing_healthbars()
+end)
+
+mod:hook_require("scripts/ui/hud/elements/boss_health/hud_element_boss_health_definitions", function(instance)
+	local HudElementBossHealthSettings = require("scripts/ui/hud/elements/boss_health/hud_element_boss_health_settings")
+	local health_bar_width = HudElementBossHealthSettings.size[1]
+	local health_bar_width_small = HudElementBossHealthSettings.size_small[1]
+	local small_bar_center_offset = (health_bar_width - health_bar_width_small) * 0.5
+
+	instance.single_target_widget_definitions.healthbars_indicators =
+		MarkerTemplate.create_vanilla_boss_indicator_definition(health_bar_width, 0)
+	instance.left_double_target_widget_definitions.healthbars_indicators =
+		MarkerTemplate.create_vanilla_boss_indicator_definition(health_bar_width_small, -small_bar_center_offset)
+	instance.right_double_target_widget_definitions.healthbars_indicators =
+		MarkerTemplate.create_vanilla_boss_indicator_definition(health_bar_width_small, small_bar_center_offset)
+end)
+
+mod:hook_safe("HudElementBossHealth", "update", function(self, dt)
+	local widget_groups = self._widget_groups
+	local active_targets_array = self._active_targets_array
+
+	if not widget_groups or not active_targets_array then
+		return
+	end
+
+	local num_active_targets = #active_targets_array
+	local num_health_bars_to_update = math_min(num_active_targets, self._max_health_bars or 2)
+
+	for i = 1, num_health_bars_to_update do
+		local widget_group_index = num_active_targets > 1 and i + 1 or i
+		local widget_group = widget_groups[widget_group_index]
+		local widget = widget_group and widget_group.healthbars_indicators
+
+		if widget then
+			MarkerTemplate.update_vanilla_boss_indicator(widget, active_targets_array[i], dt)
+		end
+	end
 end)
 
 mod:hook_safe(
