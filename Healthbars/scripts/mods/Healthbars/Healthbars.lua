@@ -49,15 +49,20 @@ end
 
 mod._custom_marker_units = mod._custom_marker_units or new_marker_cache()
 
+local COLOR_BLEED = { 255, 255, 0, 0 }
+local COLOR_BURN = { 255, 255, 102, 0 }
+local COLOR_TOXIN = { 255, 0, 255, 0 }
+local COLOR_ELECTROCUTED = { 255, 255, 235, 245 }
+
 local function refresh_colors()
 	local warpfire_key = mod:get("warpfire_color_option") or "warpfire_color_option_three"
 
 	mod.colors = {
-		bleed = { 255, 255, 0, 0 },
-		burn = { 255, 255, 102, 0 },
+		bleed = COLOR_BLEED,
+		burn = COLOR_BURN,
 		warpfire = copy_color(WARPFIRE_COLOR_OPTIONS[warpfire_key] or WARPFIRE_COLOR_OPTIONS.warpfire_color_option_three),
-		toxin = { 255, 0, 255, 0 },
-		electrocuted = { 255, 255, 235, 245 },
+		toxin = COLOR_TOXIN,
+		electrocuted = COLOR_ELECTROCUTED,
 		-- brittleness, skullcrusher, thunderstrike and damage taken debuffs are calculated by applied stacks
 	}
 end

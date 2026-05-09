@@ -61,6 +61,11 @@ This lets you keep the display focused on the enemies that matter most to you.
 ### Color selection
 - **Warpfire**: `Warp-Core` / `Soulblaze Cyan` / `Sanctified Cerulean` (default) / `Ethereal Blue` / `Peril Purple`
 
+### Readability options
+- **DOT stack number size**: adjusts the font size for Bleed, Burn, Warpfire / Soulblaze, and Toxin stack numbers. Range: `10-24`, default: `14`.
+- **Debuff stack/time text size**: adjusts the font size for debuff `Stacks` and `Time (s)` display modes. Range: `10-24`, default: `14`.
+- **DOT numbers only**: hides DOT icons and shows only the stack number, tinted with the DOT effect color.
+
 ### Display modes (per effect)
 Some effects have a display dropdown:
 - **Info label**: `Armour type` / `Enemy name`
@@ -74,6 +79,9 @@ Some effects have a display dropdown:
 ### Text placement behavior
 - `Percent` and `Icon + text %` modes render the text **centered and smaller** inside the icon.
 - `Stacks` and `Time (s)` render a **bigger number** in the **bottom-right** of the icon.
+- DOT stack numbers use the configured **DOT stack number size**.
+- Debuff `Stacks` and `Time (s)` modes use the configured **Debuff stack/time text size**.
+- When **DOT numbers only** is enabled, DOT icons are hidden and the stack number is centered using the DOT effect color.
 - If the game reports active stacks but no reliable duration progress, the icon remains visible and the **time text is hidden** instead of showing a misleading `0`.
 
 ---
@@ -140,6 +148,7 @@ Some effects have a display dropdown:
 - Added support for a broader status suite, including **Bleed**, **Burn**, **Warpfire**, **Toxin**, **Brittleness**, **Electrocuted**, **Skullcrusher**, **Thunderstrike**, **Melee damage taken**, **Increased damage taken**, and **Empyric Shock**.
 - Added `Time (s)` display mode for **Skullcrusher** and **Thunderstrike**.
 - Improved `Time (s)` behavior so invalid duration data hides the number instead of displaying a misleading `0`.
+- Added readability options for status text: separate DOT and debuff font sizes, plus an optional DOT numbers-only mode.
 - Increased the indicator layout to an **8-column / 2-row** grid.
 - Switched healthbar anchoring to the native head node.
 - Added a resync path so healthbars can recover more reliably for already-existing enemies when settings or marker state change.

@@ -112,6 +112,25 @@ local widgets = {
 				default_value = true,
 			},
 			{
+				setting_id = "dot_text_font_size",
+				type = "numeric",
+				default_value = 14,
+				range = { 10, 24 },
+				step_size_value = 1,
+			},
+			{
+				setting_id = "debuff_text_font_size",
+				type = "numeric",
+				default_value = 14,
+				range = { 10, 24 },
+				step_size_value = 1,
+			},
+			{
+				setting_id = "dot_numbers_only",
+				type = "checkbox",
+				default_value = false,
+			},
+			{
 				setting_id = "brittleness_indicator",
 				type = "checkbox",
 				default_value = true,
