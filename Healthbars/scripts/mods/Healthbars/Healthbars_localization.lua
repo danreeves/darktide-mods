@@ -43,6 +43,20 @@ local localization = {
 		ru = "Отчёт Урон в секунду",
 		fr = "Affiche les DPS",
 	},
+	post_kill_display_duration = {
+		en = "Post-kill display duration (s)",
+		["zh-cn"] = "击杀后显示时长（秒）",
+		["zh-tw"] = "擊殺後顯示時長（秒）",
+		ru = "Длительность после убийства (с)",
+		fr = "Durée d'affichage après élimination (s)",
+	},
+	post_kill_display_duration_tooltip = {
+		en = "Controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. If the enemy body is removed sooner, the marker disappears with it.",
+		["zh-cn"] = "控制敌人死亡后血条、信息标签和 DPS 报告保持显示的时长。如果敌人尸体更早被移除，标记也会随之消失。",
+		["zh-tw"] = "控制敵人死亡後血條、資訊標籤和 DPS 報告保持顯示的時長。如果敵人屍體更早被移除，標記也會隨之消失。",
+		ru = "Управляет тем, как долго после смерти врага видны полоска здоровья, информационная метка и отчёт DPS. Если тело врага исчезнет раньше, маркер исчезнет вместе с ним.",
+		fr = "Contrôle la durée pendant laquelle la barre de santé, l'étiquette d'information et le rapport DPS restent visibles après la mort d'un ennemi. Si le corps disparaît plus tôt, le marqueur disparaît avec lui.",
+	},
 	show_armour_type = {
 		en = "Show info label",
 		["zh-cn"] = "显示信息标签",

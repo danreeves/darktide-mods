@@ -85,6 +85,9 @@ local armor_type_string_lookup = {
 local DEFAULT_HIT_ZONE_NAME = "center_mass"
 local LABEL_DISPLAY_MODE_ARMOUR_TYPE = "armour_type"
 local LABEL_DISPLAY_MODE_ENEMY_NAME = "enemy_name"
+local DEFAULT_POST_KILL_DISPLAY_DURATION = 3
+local MIN_POST_KILL_DISPLAY_DURATION = 1
+local MAX_POST_KILL_DISPLAY_DURATION = 10
 
 template.fade_settings = {
 	fade_to = 1,
@@ -134,6 +137,16 @@ end
 
 local function _damage_label_uses_hit_zone()
 	return _damage_label_enabled() and _damage_label_display_mode() == LABEL_DISPLAY_MODE_ARMOUR_TYPE
+end
+
+local function _damage_label_visible(ui_content)
+	return ui_content.damage_has_started or ui_content.has_active_debuff or ui_content.visibility_delay or ui_content.fade_delay
+end
+
+local function _post_kill_display_duration()
+	local duration = mod:get("post_kill_display_duration") or DEFAULT_POST_KILL_DISPLAY_DURATION
+
+	return math_clamp(duration, MIN_POST_KILL_DISPLAY_DURATION, MAX_POST_KILL_DISPLAY_DURATION)
 end
 
 local function _damage_label_text(ui_content)
@@ -219,7 +232,7 @@ end
 -- ---------------------------------------------------------------------------
 
 local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
-	if not ui_content.damage_has_started or not _damage_label_enabled() then
+	if not _damage_label_enabled() or not _damage_label_visible(ui_content) then
 		return
 	end
 
@@ -249,7 +262,8 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 	local settings = template.damage_number_settings
 	local damage_numbers = ui_content.damage_numbers
 	local num = #damage_numbers
-	if num == 0 then
+	local show_dps = ui_content.damage_has_started and mod:get("show_dps")
+	if num == 0 and not show_dps then
 		return
 	end
 
@@ -258,76 +272,80 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 
 	local default_font_size = settings.default_font_size * scale
 	local dps_font_size = settings.dps_font_size * scale
-	local hundreds_font_size = settings.hundreds_font_size * scale
 	local font_type = ui_style.font_type
 
-	local default_color = Color[settings.default_color](255, true)
-	local crit_color = Color[settings.crit_color](255, true)
-	local weakspot_color = Color[settings.weakspot_color](255, true)
+	local original_x = position[1]
+	local original_y = position[2]
+	local original_z = position[3]
+	local z0 = original_z
+	local x0 = original_x + settings.x_offset
+	local y0 = original_y + settings.y_offset
 
-	local text_color = table_clone(default_color)
+	if num > 0 then
+		local hundreds_font_size = settings.hundreds_font_size * scale
+		local default_color = Color[settings.default_color](255, true)
+		local crit_color = Color[settings.crit_color](255, true)
+		local weakspot_color = Color[settings.weakspot_color](255, true)
+		local text_color = table_clone(default_color)
 
-	local z0 = position[3]
-	local x0 = position[1] + settings.x_offset
-	local y0 = position[2] + settings.y_offset
+		for i = num, 1, -1 do
+			local dn = damage_numbers[i]
+			local progress = math_clamp(dn.time / dn.duration, 0, 1)
 
-	for i = num, 1, -1 do
-		local dn = damage_numbers[i]
-		local progress = math_clamp(dn.time / dn.duration, 0, 1)
-
-		if progress >= 1 then
-			table_remove(damage_numbers, i)
-		else
-			dn.time = dn.time + dt
-		end
-
-		if dn.was_critical then
-			_set_rgb(text_color, crit_color)
-			dn.expand_duration = settings.expand_duration
-		elseif dn.hit_weakspot then
-			_set_rgb(text_color, weakspot_color)
-		else
-			_set_rgb(text_color, default_color)
-		end
-
-		local value = dn.value
-		local font_size = (value <= 99) and default_font_size or hundreds_font_size
-
-		-- Expand then shrink behavior (same timing logic as original)
-		if dn.expand_duration then
-			local expand_progress = math_clamp(dn.expand_time / dn.expand_duration, 0, 1)
-			local anim_progress = 1 - expand_progress
-			font_size = font_size + settings.expand_bonus_scale * anim_progress
-
-			if expand_progress >= 1 then
-				dn.expand_duration = nil
-				dn.shrink_start_t = dn.duration - settings.shrink_duration
+			if progress >= 1 then
+				table_remove(damage_numbers, i)
 			else
-				dn.expand_time = dn.expand_time + dt
+				dn.time = dn.time + dt
 			end
-		elseif dn.shrink_start_t and dn.shrink_start_t < dn.time then
-			local diff = dn.time - dn.shrink_start_t
-			local percentage = diff / settings.shrink_duration
-			local s = 1 - percentage
-			font_size = font_size * s
-			text_color[1] = text_color[1] * s
+
+			if dn.was_critical then
+				_set_rgb(text_color, crit_color)
+				dn.expand_duration = settings.expand_duration
+			elseif dn.hit_weakspot then
+				_set_rgb(text_color, weakspot_color)
+			else
+				_set_rgb(text_color, default_color)
+			end
+
+			local value = dn.value
+			local font_size = (value <= 99) and default_font_size or hundreds_font_size
+
+			-- Expand then shrink behavior (same timing logic as original)
+			if dn.expand_duration then
+				local expand_progress = math_clamp(dn.expand_time / dn.expand_duration, 0, 1)
+				local anim_progress = 1 - expand_progress
+				font_size = font_size + settings.expand_bonus_scale * anim_progress
+
+				if expand_progress >= 1 then
+					dn.expand_duration = nil
+					dn.shrink_start_t = dn.duration - settings.shrink_duration
+				else
+					dn.expand_time = dn.expand_time + dt
+				end
+			elseif dn.shrink_start_t and dn.shrink_start_t < dn.time then
+				local diff = dn.time - dn.shrink_start_t
+				local percentage = diff / settings.shrink_duration
+				local s = 1 - percentage
+				font_size = font_size * s
+				text_color[1] = text_color[1] * s
+			end
+
+			local current_order = num - i
+			if current_order == 0 then
+				local scale_size = dn.was_critical and settings.crit_hit_size_scale or settings.first_hit_size_scale
+				font_size = font_size * scale_size
+			end
+
+			position[3] = z0 + current_order
+			position[2] = y0
+			position[1] = x0 + current_order * settings.x_offset_between_numbers
+
+			UIRenderer_draw_text(ui_renderer, value, font_size, font_type, position, ui_style.size, text_color, {})
 		end
-
-		local current_order = num - i
-		if current_order == 0 then
-			local scale_size = dn.was_critical and settings.crit_hit_size_scale or settings.first_hit_size_scale
-			font_size = font_size * scale_size
-		end
-
-		position[3] = z0 + current_order
-		position[2] = y0
-		position[1] = x0 + current_order * settings.x_offset_between_numbers
-
-		UIRenderer_draw_text(ui_renderer, value, font_size, font_type, position, ui_style.size, text_color, {})
 	end
 
 	-- DPS (only drawn when dead in the original logic)
-	if ui_content.damage_has_started and mod:get("show_dps") then
+	if show_dps then
 		if not ui_content.damage_has_started_timer then
 			ui_content.damage_has_started_timer = dt
 		elseif not ui_content.dead then
@@ -347,7 +365,7 @@ local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_con
 
 	-- restore values for any later pass that might use them
 	ui_style.font_size = default_font_size
-	position[3], position[2], position[1] = z0, y0, x0
+	position[3], position[2], position[1] = original_z, original_y, original_x
 end
 
 -- ---------------------------------------------------------------------------
@@ -538,6 +556,7 @@ template.on_enter = function(widget, marker, template)
 	content.spawn_progress_timer = 0
 	content.damage_taken = 0
 	content.damage_numbers = {}
+	content.has_active_debuff = false
 
 	local bar_settings = template.bar_settings
 	marker.bar_logic = HudHealthBarLogic:new(bar_settings)
@@ -1622,8 +1641,16 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 	if not HEALTH_ALIVE[unit] then
 		if not content.remove_timer then
-			content.remove_timer = template.remove_on_death_duration
 			content.dead = true
+
+			if content.damage_has_started then
+				local post_kill_display_duration = _post_kill_display_duration()
+
+				content.remove_timer = post_kill_display_duration
+				content.visibility_delay = math_max(content.visibility_delay or 0, post_kill_display_duration)
+			else
+				content.remove_timer = template.remove_on_death_duration
+			end
 		else
 			content.remove_timer = content.remove_timer - dt
 			if content.remove_timer <= 0 and (not marker.health_fraction or marker.health_fraction == 0) then
@@ -1641,6 +1668,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	content.line_of_sight_progress = line_of_sight_progress
 
 	local has_active_debuff = marker.debuffs and #marker.debuffs > 0
+	content.has_active_debuff = has_active_debuff
 
 	if has_active_debuff then
 		-- Hard-visible as long as any debuff is active

@@ -6,6 +6,7 @@
 - **Enemy healthbars** for selected enemy types in regular game modes
 - **Damage numbers** when tracked enemies take damage
 - **DPS report** for tracked targets after the damage window ends
+- **Configurable post-kill display duration** for the healthbar, info label, and DPS report
 - **Info label** above the bar
   - **Armour type**
   - **Enemy name**
@@ -60,6 +61,10 @@ This lets you keep the display focused on the enemies that matter most to you.
 
 ### Color selection
 - **Warpfire**: `Warp-Core` / `Soulblaze Cyan` / `Sanctified Cerulean` (default) / `Ethereal Blue` / `Peril Purple`
+
+### Display duration
+- **Post-kill display duration**: controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. Range: `1-10` seconds, default: `3`.
+- This duration only applies while the enemy unit still exists in the world. Healthbars are anchored to the enemy unit's head node, so when the game removes the body, the marker loses its world anchor and cannot continue rendering in the current implementation.
 
 ### Readability options
 - **DOT stack number size**: adjusts the font size for Bleed, Burn, Warpfire / Soulblaze, and Toxin stack numbers. Range: `10-24`, default: `14`.
@@ -122,6 +127,8 @@ Some effects have a display dropdown:
 ## Notes / Implementation details
 - Healthbars are anchored natively to the enemy **head node** instead of relying on custom world-position logic, which helps prevent the occasional bar-at-the-feet issue.
 - Debuff changes trigger the same visibility window as damage, so indicators can appear when a debuff is applied even if the enemy has not taken direct damage yet.
+- Debuff-only visibility also supports the **info label**, so armour type or enemy name can appear when a debuff is applied without direct damage.
+- The **Post-kill display duration** extends the marker lifetime after damage has started, but it intentionally does not detach healthbars from enemy units. The current implementation relies on Fatshark's world marker anchoring to the enemy unit and its head node; once the game despawns that unit/body, there is no valid source transform for the healthbar to follow. Keeping a marker alive past that point would require a different fallback marker system, so Healthbars lets the marker disappear with the body instead of inventing a disconnected position.
 - The mod supports **per-enemy healthbar toggles**, grouped by Horde/Roamer, Elite, Special, Monster/Captain, and Ritualist.
 - **Damage numbers**, **DPS**, and the **info label** are handled independently, so the label can still work when damage numbers are disabled.
 - **Enemy name** mode uses the game's localized `breed.display_name`.
@@ -141,6 +148,8 @@ Some effects have a display dropdown:
 - Very dense fights can produce a lot of simultaneous information if many status toggles are enabled at once.
 
 ## Recent additions
+- Added **Post-kill display duration** to keep the healthbar, info label, and DPS report visible for longer after an enemy dies.
+- Improved info-label visibility so armour type or enemy name can appear from debuff-only marker visibility, even before direct damage is dealt.
 - Added a configurable **info label** that can show either **armour type** or **enemy name**.
 - Added safe localized enemy-name handling to prevent `<unlocalized ...>` strings or internal breed ids from appearing in the HUD.
 - Decoupled the info label from damage-number rendering so the label can still display when damage numbers are disabled.
