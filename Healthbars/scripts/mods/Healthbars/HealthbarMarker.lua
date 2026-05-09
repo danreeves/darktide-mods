@@ -164,10 +164,18 @@ end
 local MAX_DEBUFF_SLOTS_ALLOC = 16 -- maximum number of slots
 
 local ICON_SIZE = 25
+local DEFAULT_DOT_TEXT_FONT_SIZE = 14
+local DEFAULT_DEBUFF_TEXT_FONT_SIZE = 14
 local GRID_COLS = 8
 local GRID_GAP_X = 4
 local GRID_GAP_Y = 4
 local BAR_TO_DEBUFF_MARGIN_Y = 5
+local COLOR_WHITE = { 255, 255, 255, 255 }
+local COLOR_YELLOW = { 255, 255, 255, 0 }
+local COLOR_ORANGE = { 255, 255, 165, 0 }
+local COLOR_RED = { 255, 255, 0, 0 }
+local COLOR_MAGENTA = { 255, 255, 0, 255 }
+local DEFAULT_STATUS_TEXT_COLOR = COLOR_YELLOW
 
 local SLOT_CACHE = {}
 local DEFAULT_SLOT_BASE_Y = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
@@ -351,7 +359,7 @@ local ICON_DEFAULT_COLORS = {
 	{ 255, 255, 102, 0 },
 	{ 255, 0,   255, 0 },
 	{ 255, 120, 210, 255 },
-	{ 255, 255, 255, 255 },
+	COLOR_WHITE,
 }
 
 local DOT_ORDER = { "bleed", "burn", "warpfire", "toxin" }
@@ -465,7 +473,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				horizontal_alignment = "right",
 				offset = { bar_offset[1], bar_offset[2], 4 },
 				size = { 12, bar_size[2] + 12 },
-				color = { 255, 255, 255, 255 },
+				color = COLOR_WHITE,
 			},
 		},
 	}
@@ -486,7 +494,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				horizontal_alignment = "center",
 				offset = { x, y, 10 },
 				size = { ICON_SIZE, ICON_SIZE },
-				color = ICON_DEFAULT_COLORS[i] or { 255, 255, 255, 255 },
+				color = ICON_DEFAULT_COLORS[i] or COLOR_WHITE,
 			},
 			visibility_function = function(content, style)
 				return content[icon_id] ~= nil
@@ -507,8 +515,13 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				size = { ICON_SIZE, ICON_SIZE },
 
 				font_type = header_font_settings.font_type,
-				font_size = 14,
-				text_color = { 255, 255, 255, 0 },
+				font_size = DEFAULT_DOT_TEXT_FONT_SIZE,
+				text_color = {
+					DEFAULT_STATUS_TEXT_COLOR[1],
+					DEFAULT_STATUS_TEXT_COLOR[2],
+					DEFAULT_STATUS_TEXT_COLOR[3],
+					DEFAULT_STATUS_TEXT_COLOR[4],
+				},
 			}
 		}
 	end
@@ -725,28 +738,28 @@ local function _damage_taken_color(percent)
 	-- 0..14.9 white, 15..29.9 yellow, 30..44.9 orange, 45..59.9 red, >=60 magenta
 	percent = percent or 0
 	if percent >= 60 then
-		return { 255, 255, 0, 255 } -- magenta
+		return COLOR_MAGENTA -- magenta
 	elseif percent >= 45 then
-		return { 255, 255, 0, 0 } -- red
+		return COLOR_RED -- red
 	elseif percent >= 30 then
-		return { 255, 255, 165, 0 } -- orange
+		return COLOR_ORANGE -- orange
 	elseif percent >= 15 then
-		return { 255, 255, 255, 0 } -- yellow
+		return COLOR_YELLOW -- yellow
 	end
-	return { 255, 255, 255, 255 } -- white
+	return COLOR_WHITE -- white
 end
 
 local function _staggered_color_by_stacks(stacks)
 	-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
 	stacks = stacks or 0
 	if stacks <= 2 then
-		return { 255, 255, 255, 255 } -- white
+		return COLOR_WHITE -- white
 	elseif stacks <= 4 then
-		return { 255, 255, 255, 0 } -- yellow
+		return COLOR_YELLOW -- yellow
 	elseif stacks <= 6 then
-		return { 255, 255, 165, 0 } -- orange
+		return COLOR_ORANGE -- orange
 	else
-		return { 255, 255, 0, 0 } -- red
+		return COLOR_RED -- red
 	end
 end
 
@@ -852,11 +865,11 @@ end
 
 local function _melee_damage_taken_color(sources)
 	if sources >= 2 then
-		return { 255, 255, 0, 0 } -- red
+		return COLOR_RED -- red
 	elseif sources == 1 then
-		return { 255, 255, 255, 255 } -- white
+		return COLOR_WHITE -- white
 	end
-	return { 255, 255, 255, 255 }
+	return COLOR_WHITE
 end
 
 
@@ -865,15 +878,15 @@ local function _empyric_shock_color_by_stacks(stacks)
 	stacks = stacks or 0
 
 	if stacks <= 0 then
-		return { 255, 255, 255, 255 } -- fallback white
+		return COLOR_WHITE -- fallback white
 	elseif stacks <= 2 then
-		return { 255, 255, 255, 255 } -- 1-2: white
+		return COLOR_WHITE -- 1-2: white
 	elseif stacks == 3 then
-		return { 255, 255, 255, 0 } -- 3: yellow
+		return COLOR_YELLOW -- 3: yellow
 	elseif stacks == 4 then
-		return { 255, 255, 165, 0 } -- 4: orange
+		return COLOR_ORANGE -- 4: orange
 	else
-		return { 255, 255, 0, 0 } -- 5: red
+		return COLOR_RED -- 5: red
 	end
 end
 
@@ -971,6 +984,7 @@ local DEBUFF_DEFS = {
 	{
 		id = "bleed",
 		setting = "bleed",
+		is_dot = true,
 		icon = function() return mod.textures and mod.textures.bleed end,
 		color = function() return mod.colors and mod.colors.bleed end,
 		poll = function(buff_extension)
@@ -982,6 +996,7 @@ local DEBUFF_DEFS = {
 	{
 		id = "burn",
 		setting = "burn",
+		is_dot = true,
 		icon = function() return mod.textures and mod.textures.burn end,
 		color = function() return mod.colors and mod.colors.burn end,
 		poll = function(buff_extension)
@@ -993,6 +1008,7 @@ local DEBUFF_DEFS = {
 	{
 		id = "warpfire",
 		setting = "warpfire",
+		is_dot = true,
 		icon = function() return mod.textures and mod.textures.warpfire end,
 		color = function() return mod.colors and mod.colors.warpfire end,
 		poll = function(buff_extension)
@@ -1004,6 +1020,7 @@ local DEBUFF_DEFS = {
 	{
 		id = "toxin",
 		setting = "toxin",
+		is_dot = true,
 		icon = function() return mod.textures and mod.textures.toxin end,
 		color = function() return mod.colors and mod.colors.toxin end,
 		poll = function(buff_extension)
@@ -1254,6 +1271,9 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local use_armour_slot_offset = _damage_label_enabled()
 	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
 	local needs_hit_reaction_data = show_damage_numbers
+	local dot_text_font_size = mod:get("dot_text_font_size") or DEFAULT_DOT_TEXT_FONT_SIZE
+	local debuff_text_font_size = mod:get("debuff_text_font_size") or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+	local dot_numbers_only = mod:get("dot_numbers_only") == true
 
 	local health_extension = ScriptUnit_has_extension(unit, "health_system")
 	local is_dead = not health_extension or not health_extension:is_alive()
@@ -1390,6 +1410,18 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 			local icon_style = style[icon_id]
 			local stacks_style = style[stacks_id]
+			local def = debuff.def
+			local is_dot = def and def.is_dot == true
+			local debuff_color = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
+				COLOR_WHITE
+			local rule = DEBUFF_RULES[debuff.type]
+			local mode = rule and (mod:get(rule.setting) or rule.default) or nil
+			local status_text_font_size = nil
+			if is_dot then
+				status_text_font_size = dot_text_font_size
+			elseif mode == "stacks" or mode == "time" then
+				status_text_font_size = debuff_text_font_size
+			end
 
 			local x, y = _slot_pos(slot, use_armour_slot_offset)
 			if icon_style then
@@ -1401,17 +1433,25 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 				stacks_style.size[1], stacks_style.size[2] = ICON_SIZE, ICON_SIZE
 				stacks_style.text_horizontal_alignment = "right"
 				stacks_style.text_vertical_alignment = "bottom"
-				stacks_style.font_size = 14
+				stacks_style.font_size = status_text_font_size or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+				_set_style_color(stacks_style.text_color, DEFAULT_STATUS_TEXT_COLOR)
+
+				if is_dot and dot_numbers_only then
+					stacks_style.text_horizontal_alignment = "center"
+					stacks_style.text_vertical_alignment = "center"
+					_set_style_color(stacks_style.text_color, debuff_color)
+				end
 			end
 
-			local def = debuff.def
-			content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
+			if is_dot and dot_numbers_only then
+				content[icon_id] = nil
+			else
+				content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
+			end
 
 			-- icon color
 			if icon_style then
-				local c = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
-				{ 255, 255, 255, 255 }
-				_set_style_color(icon_style.color, c)
+				_set_style_color(icon_style.color, debuff_color)
 			end
 
 			-- text
@@ -1422,9 +1462,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			end
 
 			-- text for brittleness, skullcrusher, thunderstrike, melee_damage_taken and damage_taken debuffs
-			local rule = DEBUFF_RULES[debuff.type]
 			if rule then
-				local mode = mod:get(rule.setting) or rule.default
 				if mode == rule.center_on then
 					_center_small_text(stacks_style)
 				end
