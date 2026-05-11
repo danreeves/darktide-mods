@@ -6,6 +6,7 @@
 - **Enemy healthbars** for selected enemy types in regular game modes
 - **Damage numbers** when tracked enemies take damage
 - **DPS report** for tracked targets after the damage window ends
+- **Configurable post-kill display duration** for the healthbar, info label, and DPS report
 - **Info label** above the bar
   - **Armour type**
   - **Enemy name**
@@ -24,6 +25,7 @@
   - **Melee damage taken** (from multiple sources, icon-only or %)
   - **Increased total damage taken** (combined from several buffs, icon-only or %)
   - **Empyric Shock** (warp damage taken, stacks / % / time)
+- **Optional DoT/debuff indicators on vanilla boss health bars**, using the same status settings as the Healthbars marker
 
 ---
 
@@ -33,6 +35,7 @@ Open the mod options and look under **"Toggle features"**.
 
 ### Toggles (on/off)
 - Show health bar
+- Show DoT/debuff markers on vanilla boss health bars
 - Show damage numbers
 - Show DPS report
 - Show info label
@@ -61,6 +64,29 @@ This lets you keep the display focused on the enemies that matter most to you.
 ### Color selection
 - **Warpfire**: `Warp-Core` / `Soulblaze Cyan` / `Sanctified Cerulean` (default) / `Ethereal Blue` / `Peril Purple`
 
+### Display duration
+- **Post-kill display duration**: controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. Range: `1-10` seconds, default: `3`.
+- This duration only applies while the enemy unit still exists in the world. Healthbars are anchored to the enemy unit's head node, so when the game removes the body, the marker loses its world anchor and cannot continue rendering in the current implementation.
+
+### Readability options
+- **DOT stack number size**: adjusts the font size for Bleed, Burn, Warpfire / Soulblaze, and Toxin stack numbers. Range: `10-24`, default: `14`.
+- **Debuff stack/time text size**: adjusts the font size for debuff `Stacks` and `Time (s)` display modes. Range: `10-24`, default: `14`.
+- **DOT numbers only**: hides DOT icons and shows only the stack number, tinted with the DOT effect color.
+
+### Vanilla boss health bar indicators
+
+When enabled, Healthbars can also draw the configured DoT and debuff indicators on the game's normal boss health bars.
+
+This is independent from **Show health bar**, so players can disable the custom overhead boss healthbar while still seeing boss DoTs and debuffs on the vanilla boss UI.
+
+The vanilla boss indicators reuse the existing status settings:
+- Per-effect toggles
+- Display modes such as stacks, percent, time, icon-only, and icon + text
+- DOT stack number size
+- Debuff stack/time text size
+- DOT numbers only
+- Warpfire color
+
 ### Display modes (per effect)
 Some effects have a display dropdown:
 - **Info label**: `Armour type` / `Enemy name`
@@ -74,11 +100,14 @@ Some effects have a display dropdown:
 ### Text placement behavior
 - `Percent` and `Icon + text %` modes render the text **centered and smaller** inside the icon.
 - `Stacks` and `Time (s)` render a **bigger number** in the **bottom-right** of the icon.
+- DOT stack numbers use the configured **DOT stack number size**.
+- Debuff `Stacks` and `Time (s)` modes use the configured **Debuff stack/time text size**.
+- When **DOT numbers only** is enabled, DOT icons are hidden and the stack number is centered using the DOT effect color.
 - If the game reports active stacks but no reliable duration progress, the icon remains visible and the **time text is hidden** instead of showing a misleading `0`.
 
 ---
 
-## Layout rules (how they appear above the healthbar)
+## Layout rules: overhead Healthbars marker
 
 - Indicators are displayed in an **8-column grid** with up to **2 rows**.
 - If any debuff is active:
@@ -86,6 +115,14 @@ Some effects have a display dropdown:
   - **DoTs** shift into the second visual row.
 - If no debuff is active:
   - **DoTs** occupy the first visual row.
+
+## Layout rules: vanilla boss health bar indicators
+
+- Indicators are displayed above the vanilla boss health bar.
+- DoTs use the upper row when any tracked debuff is active.
+- Debuffs use the lower row.
+- If no tracked debuff is active, DoTs move to the lower row so they sit closer to the boss health bar.
+- The game normally renders up to two vanilla boss health bars. Additional tracked enemies can still use the regular head-anchored Healthbars marker when enabled.
 
 ### Ordering
 - DoTs: `Bleed` -> `Burn` -> `Warpfire` -> `Toxin`
@@ -114,6 +151,8 @@ Some effects have a display dropdown:
 ## Notes / Implementation details
 - Healthbars are anchored natively to the enemy **head node** instead of relying on custom world-position logic, which helps prevent the occasional bar-at-the-feet issue.
 - Debuff changes trigger the same visibility window as damage, so indicators can appear when a debuff is applied even if the enemy has not taken direct damage yet.
+- Debuff-only visibility also supports the **info label**, so armour type or enemy name can appear when a debuff is applied without direct damage.
+- The **Post-kill display duration** extends the marker lifetime after damage has started, but it intentionally does not detach healthbars from enemy units. The current implementation relies on Fatshark's world marker anchoring to the enemy unit and its head node; once the game despawns that unit/body, there is no valid source transform for the healthbar to follow. Keeping a marker alive past that point would require a different fallback marker system, so Healthbars lets the marker disappear with the body instead of inventing a disconnected position.
 - The mod supports **per-enemy healthbar toggles**, grouped by Horde/Roamer, Elite, Special, Monster/Captain, and Ritualist.
 - **Damage numbers**, **DPS**, and the **info label** are handled independently, so the label can still work when damage numbers are disabled.
 - **Enemy name** mode uses the game's localized `breed.display_name`.
@@ -133,6 +172,9 @@ Some effects have a display dropdown:
 - Very dense fights can produce a lot of simultaneous information if many status toggles are enabled at once.
 
 ## Recent additions
+- Added optional DoT/debuff indicators for vanilla boss health bars, independent from the custom overhead healthbar.
+- Added **Post-kill display duration** to keep the healthbar, info label, and DPS report visible for longer after an enemy dies.
+- Improved info-label visibility so armour type or enemy name can appear from debuff-only marker visibility, even before direct damage is dealt.
 - Added a configurable **info label** that can show either **armour type** or **enemy name**.
 - Added safe localized enemy-name handling to prevent `<unlocalized ...>` strings or internal breed ids from appearing in the HUD.
 - Decoupled the info label from damage-number rendering so the label can still display when damage numbers are disabled.
@@ -140,6 +182,7 @@ Some effects have a display dropdown:
 - Added support for a broader status suite, including **Bleed**, **Burn**, **Warpfire**, **Toxin**, **Brittleness**, **Electrocuted**, **Skullcrusher**, **Thunderstrike**, **Melee damage taken**, **Increased damage taken**, and **Empyric Shock**.
 - Added `Time (s)` display mode for **Skullcrusher** and **Thunderstrike**.
 - Improved `Time (s)` behavior so invalid duration data hides the number instead of displaying a misleading `0`.
+- Added readability options for status text: separate DOT and debuff font sizes, plus an optional DOT numbers-only mode.
 - Increased the indicator layout to an **8-column / 2-row** grid.
 - Switched healthbar anchoring to the native head node.
 - Added a resync path so healthbars can recover more reliably for already-existing enemies when settings or marker state change.

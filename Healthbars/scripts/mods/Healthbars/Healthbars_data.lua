@@ -47,6 +47,11 @@ local widgets = {
 				default_value = true,
 			},
 			{
+				setting_id = "show_vanilla_boss_bar_indicators",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
 				setting_id = "show_damage_numbers",
 				type = "checkbox",
 				default_value = true,
@@ -75,6 +80,15 @@ local widgets = {
 						},
 					},
 				},
+			},
+			{
+				setting_id = "post_kill_display_duration",
+				type = "numeric",
+				default_value = 3,
+				range = { 1, 10 },
+				decimals_number = 0,
+				step_size_value = 1,
+				tooltip = "post_kill_display_duration_tooltip",
 			},
 			{
 				setting_id = "bleed",
@@ -110,6 +124,25 @@ local widgets = {
 				setting_id = "toxin",
 				type = "checkbox",
 				default_value = true,
+			},
+			{
+				setting_id = "dot_text_font_size",
+				type = "numeric",
+				default_value = 14,
+				range = { 10, 24 },
+				step_size_value = 1,
+			},
+			{
+				setting_id = "debuff_text_font_size",
+				type = "numeric",
+				default_value = 14,
+				range = { 10, 24 },
+				step_size_value = 1,
+			},
+			{
+				setting_id = "dot_numbers_only",
+				type = "checkbox",
+				default_value = false,
 			},
 			{
 				setting_id = "brittleness_indicator",
