@@ -5,6 +5,7 @@ local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIRenderer = require("scripts/managers/ui/ui_renderer")
 local UIWidget = require("scripts/managers/ui/ui_widget")
+local BuffSettings = require("scripts/settings/buff/buff_settings")
 
 local math_abs = math.abs
 local math_ceil = math.ceil
@@ -25,6 +26,7 @@ local Localize = Localize
 local ScriptUnit_extension = ScriptUnit.extension
 local ScriptUnit_has_extension = ScriptUnit.has_extension
 local UIRenderer_draw_text = UIRenderer.draw_text
+local BUFF_KEYWORD_ELECTROCUTED = BuffSettings.keywords.electrocuted
 
 local template = {}
 
@@ -655,29 +657,14 @@ template.on_enter = function(widget, marker, template)
 	marker._placements = {}
 end
 
--- Buff templates that apply the electrocution keyword (see weapon_buff_templates.lua)
-local ELECTROCUTED_BUFFS = {
-	"shock_grenade_interval",
-	"shock_mine_interval",
-	"shockmaul_stun_interval",
-	"power_maul_p2_special_hit_primer",
-	"power_maul_p2_activated_stun_extra",
-	"power_maul_p2_activated_stun_basic",
-	"power_maul_stun",
-	"shotgun_special_stun",
-	"chain_lightning_interval",
-	"psyker_protectorate_spread_chain_lightning_interval",
-	"shock_effect",
-	"toxin_special_stun",
-}
-
 -- Brittleness (enemy-side) is implemented via rending_multiplier statbuffs on the enemy.
 local BRITTLENESS_BUFFS = {
-	{ name = "rending_debuff",                 per_stack = 2.5,  cap = 16, duration = 5 },
-	{ name = "rending_debuff_medium",          per_stack = 10.0, cap = 2,  duration = 5 },
-	{ name = "rending_burn_debuff",            per_stack = 1.0,  cap = 20, duration = 5 },
-	{ name = "shotgun_special_rending_debuff", per_stack = 25.0, cap = 1,  duration = 8 },
-	{ name = "saw_rending_debuff",             per_stack = 2.5,  cap = 15, duration = 5 },
+	{ name = "rending_debuff",                 								per_stack = 2.5,  cap = 16, duration = 5 },
+	{ name = "rending_debuff_medium",          								per_stack = 10.0, cap = 2,  duration = 5 },
+	{ name = "rending_burn_debuff",           								per_stack = 1.0,  cap = 20, duration = 5 },
+	{ name = "shotgun_special_rending_debuff", 								per_stack = 25.0, cap = 1,  duration = 8 },
+	{ name = "saw_rending_debuff",             								per_stack = 2.5,  cap = 15, duration = 5 },
+	{ name = "hordes_buff_grenade_explosion_applies_rending_debuff_effect", per_stack = 75.0, cap = 6 },
 }
 
 -- Skullcrusher / Damage vs staggered debuff
@@ -716,16 +703,18 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- Values taken from the game templates (see provided Darktide source):
 -- - ogryn_recieve_damage_taken_increase_debuff: damage_taken_modifier = 0.1 (5s)
 -- - ogryn_taunt_increased_damage_taken_buff: damage_taken_multiplier = 1.2 (15s)
--- - increase_damage_taken (weapon special debuff): damage_taken_modifier = 0.1 per stack (5s, max 1)
+-- - increase_damage_taken (weapon special debuff): damage_taken_modifier = 0.1 per stack (5s, max 8)
 -- - adamant_drone_enemy_debuff: damage_taken_multiplier = 1.15
 -- - psyker_discharge_damage_debuff: damage_taken_multiplier = 1.1 (8s)
 -- - veteran_improved_tag_debuff: +0.05 per stack (max 6)
 -- - zealot_bled_enemies_take_more_damage_effect: damage_taken_multiplier = 1.15 (5s)
 -- - broker_passive_toxin_infected_enemies_take_increased_damage_debuff: damage_taken_modifier = 0.1 (5s)
+-- - hordes_buff_broker_flash_grenade_increase_damage_taken_effect: damage_taken_modifier = 2.0 (30s, max 6)
 local DAMAGE_TAKEN_MODIFIER_BUFFS = {
 	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.10, cap = 1 }, -- Soften them up
-	{ name = "increase_damage_taken",                                              per_stack = 0.10, cap = 1 }, -- Pickaxe weapon special
+	{ name = "increase_damage_taken",                                              per_stack = 0.10, cap = 8 }, -- Pickaxe weapon special
 	{ name = "broker_passive_toxin_infected_enemies_take_increased_damage_debuff", per_stack = 0.10, cap = 1 }, -- Virulent Strain
+	{ name = "hordes_buff_broker_flash_grenade_increase_damage_taken_effect",      per_stack = 2.00, cap = 6 }, -- Blinding Weakness
 }
 
 local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
@@ -1127,11 +1116,9 @@ local DEBUFF_DEFS = {
 		icon = function() return mod.textures and mod.textures.electrocuted end,
 		color = function() return mod.colors and mod.colors.electrocuted end,
 		poll = function(buff_extension)
-			for i = 1, #ELECTROCUTED_BUFFS do
-				local stacks = buff_extension:current_stacks(ELECTROCUTED_BUFFS[i]) or 0
-				if stacks > 0 then
-					return {} -- presence-only
-				end
+			if BUFF_KEYWORD_ELECTROCUTED and buff_extension.has_keyword and
+				buff_extension:has_keyword(BUFF_KEYWORD_ELECTROCUTED) then
+				return {} -- presence-only
 			end
 			return nil
 		end,
