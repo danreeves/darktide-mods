@@ -85,10 +85,17 @@ function mod.on_all_mods_loaded()
 end
 
 local show = {}
+local MUTATOR_BREED_SETTING_OVERRIDES = {
+	chaos_mutator_ritualist = "cultist_ritualist",
+}
 
 local function get_toggles()
 	for breed_name in pairs(Breeds) do
-		if string_match(breed_name, "mutator") then
+		local setting_id = MUTATOR_BREED_SETTING_OVERRIDES[breed_name]
+
+		if setting_id then
+			show[breed_name] = mod:get(setting_id)
+		elseif string_match(breed_name, "mutator") then
 			show[breed_name] = mod:get((breed_name):gsub("_mutator", ""))
 		else
 			show[breed_name] = mod:get(breed_name)
