@@ -3,6 +3,7 @@
 -- Author: raindish
 local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
+require("scripts/extension_systems/health/health_extension_base")
 local HealthExtension = require("scripts/extension_systems/health/health_extension")
 local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarMarker")
 
