@@ -31,7 +31,16 @@
 
 ## Configuration
 
-Open the mod options and look under **"Toggle features"**.
+Open the Healthbars page in the mod options.
+
+The standard DMF page organizes settings into groups for general features, damage numbers, DoT/debuff indicators, and enemy selection.
+
+If **Alf's DMF Mod Settings Extensions** is installed, the same settings are presented in localized tabs:
+- **General** — general feature toggles and damage-number settings
+- **DoT & Debuffs** — status indicators, display modes, text sizing, and Warpfire color
+- **Enemies** — per-enemy healthbar toggles
+
+The extension is optional. Healthbars retains the same settings and functionality with standard DMF.
 
 ### Toggles (on/off)
 - Show health bar
@@ -65,7 +74,7 @@ This lets you keep the display focused on the enemies that matter most to you.
 - **Warpfire**: `Warp-Core` / `Soulblaze Cyan` / `Sanctified Cerulean` (default) / `Ethereal Blue` / `Peril Purple`
 
 ### Display duration
-- **Post-kill display duration**: controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. Range: `1-10` seconds, default: `3`.
+- **Post-kill display duration**: controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. Range: `0.2-10` seconds, default: `1`, adjustable in `0.2` second steps.
 - This duration only applies while the enemy unit still exists in the world. Healthbars are anchored to the enemy unit's head node, so when the game removes the body, the marker loses its world anchor and cannot continue rendering in the current implementation.
 
 ### Readability options
@@ -96,6 +105,8 @@ Some effects have a display dropdown:
 - **Melee damage taken**: `Icon + text %` / `Icon only`
 - **Increased damage taken**: `Icon + text %` / `Icon only`
 - **Empyric Shock**: `Stacks` / `Percent %` / `Time (s)`
+
+With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff display dropdowns include matching colored status icons. Dynamic-color debuffs use their base active color in the dropdown. These icons are a settings-menu enhancement only and do not change indicator behavior.
 
 ### Text placement behavior
 - `Percent` and `Icon + text %` modes render the text **centered and smaller** inside the icon.
@@ -172,6 +183,8 @@ Some effects have a display dropdown:
 - Very dense fights can produce a lot of simultaneous information if many status toggles are enabled at once.
 
 ## Recent additions
+- Added optional support for **Alf's DMF Mod Settings Extensions**, including localized tabs and colored DoT/debuff dropdown icons.
+- Reduced the minimum **Post-kill display duration** to `0.2` seconds, changed the default to `1` second, and added `0.2` second adjustment steps.
 - Added optional DoT/debuff indicators for vanilla boss health bars, independent from the custom overhead healthbar.
 - Added **Post-kill display duration** to keep the healthbar, info label, and DPS report visible for longer after an enemy dies.
 - Improved info-label visibility so armour type or enemy name can appear from debuff-only marker visibility, even before direct damage is dealt.
