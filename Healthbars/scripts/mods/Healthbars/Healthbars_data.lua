@@ -7,6 +7,11 @@ local specials = {}
 local monsters = {}
 local ritualists = {}
 
+local VANGUARD_BREEDS = {
+	cultist_vanguard = true,
+	renegade_vanguard = true,
+}
+
 local function add(tbl, breed_name, default_value)
 	tbl[#tbl + 1] = {
 		setting_id = breed_name,
@@ -22,7 +27,7 @@ for breed_name, breed in pairs(Breeds) do
 			default_value = true
 		end
 
-		if breed.tags.horde or breed.tags.roamer then
+		if breed.tags.horde or breed.tags.roamer or VANGUARD_BREEDS[breed_name] then
 			add(horde_and_roamers, breed_name, default_value)
 		elseif breed.tags.elite then
 			add(elites, breed_name, default_value)

@@ -23,6 +23,8 @@ local table_remove = table.remove
 local tostring = tostring
 local Color = Color
 local Localize = Localize
+local Managers = Managers
+local GameSession_game_object_field = GameSession.game_object_field
 local ScriptUnit_extension = ScriptUnit.extension
 local ScriptUnit_has_extension = ScriptUnit.has_extension
 local UIRenderer_draw_text = UIRenderer.draw_text
@@ -91,6 +93,11 @@ local DEFAULT_POST_KILL_DISPLAY_DURATION = 3
 local MIN_POST_KILL_DISPLAY_DURATION = 1
 local MAX_POST_KILL_DISPLAY_DURATION = 10
 
+local BREED_NAME_LOCALIZATION_FALLBACKS = {
+	cultist_vanguard = "breed_display_name_cultist_vanguard",
+	renegade_vanguard = "breed_display_name_renegade_vanguard",
+}
+
 template.fade_settings = {
 	fade_to = 1,
 	fade_from = 0.1,
@@ -114,7 +121,7 @@ local function _localize_or_fallback(loc_key, fallback)
 	end
 
 	local localized_text = Localize(loc_key)
-	if localized_text == "" or string_find(localized_text, "<unlocalized") then
+	if not localized_text or localized_text == "" or string_find(localized_text, "<unlocalized") then
 		return fallback or ""
 	end
 
@@ -126,7 +133,10 @@ local function _localized_breed_name(breed)
 		return ""
 	end
 
-	return _localize_or_fallback(breed.display_name, "")
+	local fallback_loc_key = BREED_NAME_LOCALIZATION_FALLBACKS[breed.name]
+	local fallback = fallback_loc_key and mod:localize(fallback_loc_key) or ""
+
+	return _localize_or_fallback(breed.display_name, fallback)
 end
 
 local function _damage_label_enabled()
@@ -191,6 +201,7 @@ local COLOR_ORANGE = { 255, 255, 165, 0 }
 local COLOR_RED = { 255, 255, 0, 0 }
 local COLOR_MAGENTA = { 255, 255, 0, 255 }
 local DEFAULT_STATUS_TEXT_COLOR = COLOR_YELLOW
+local SHIELD_BAR_HEIGHT = 2
 
 local SLOT_CACHE = {}
 local DEFAULT_SLOT_BASE_Y = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
@@ -237,6 +248,38 @@ local function _debuff_signature(debuffs)
 		end
 	end
 	return table.concat(parts, "|")
+end
+
+local function get_minion_shield_health(unit)
+	local shield_extension = ScriptUnit_has_extension(unit, "shield_system")
+
+	if not shield_extension then
+		return nil
+	end
+
+	local state_managers = Managers.state
+	local game_session_manager = state_managers and state_managers.game_session
+	local unit_spawner_manager = state_managers and state_managers.unit_spawner
+
+	if not game_session_manager or not unit_spawner_manager then
+		return nil
+	end
+
+	local game_session = game_session_manager:game_session()
+	local game_object_id = unit_spawner_manager:game_object_id(unit)
+
+	if not game_session or not game_object_id then
+		return nil
+	end
+
+	local shield_health = GameSession_game_object_field(game_session, game_object_id, "shield_health")
+	local shield_max_health = GameSession_game_object_field(game_session, game_object_id, "shield_max_health")
+
+	if not shield_health or not shield_max_health or shield_max_health <= 0 then
+		return nil
+	end
+
+	return shield_health, shield_max_health, shield_health / shield_max_health
 end
 
 -- ---------------------------------------------------------------------------
@@ -553,6 +596,22 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			},
 		},
 		{
+			value = "content/ui/materials/backgrounds/default_square",
+			style_id = "shield_bar",
+			pass_type = "rect",
+			style = {
+				vertical_alignment = "center",
+				offset = {
+					bar_offset[1],
+					bar_offset[2] - (bar_size[2] - SHIELD_BAR_HEIGHT) * 0.5,
+					5,
+				},
+				size = { bar_size[1], SHIELD_BAR_HEIGHT },
+				color = COLOR_WHITE,
+				visible = false,
+			},
+		},
+		{
 			value = "content/ui/materials/bars/simple/end",
 			style_id = "bar_end",
 			pass_type = "texture",
@@ -627,6 +686,7 @@ template.on_enter = function(widget, marker, template)
 	content.damage_taken = 0
 	content.damage_numbers = {}
 	content.has_active_debuff = false
+	content.shield_health = nil
 
 	local bar_settings = template.bar_settings
 	marker.bar_logic = HudHealthBarLogic:new(bar_settings)
@@ -1618,9 +1678,20 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local health_extension = ScriptUnit_has_extension(unit, "health_system")
 	local is_dead = not health_extension or not health_extension:is_alive()
 	local health_percent = is_dead and 0 or health_extension:current_health_percent()
+	local shield_health, _, shield_fraction = get_minion_shield_health(unit)
 
 	local max_health = Managers.state.difficulty:get_minion_max_health(content.breed.name)
 	local damage_taken
+
+	if shield_health ~= nil then
+		local old_shield_health = content.shield_health
+
+		if old_shield_health ~= nil and shield_health ~= old_shield_health then
+			content.visibility_delay = template.damage_number_settings.visibility_delay
+		end
+
+		content.shield_health = shield_health
+	end
 
 	-- ----------------------------
 	-- Debuffs (polled via registry)
@@ -1937,12 +2008,18 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	end
 
 	local show_bar = mod:get("show_bar")
+	local show_shield_bar = show_bar and shield_fraction ~= nil and shield_fraction > 0 or false
+
+	if show_shield_bar then
+		style.shield_bar.size[1] = template.size[1] * math_clamp(shield_fraction, 0, 1)
+	end
 
 	style.bar.visible = show_bar
 	style.ghost_bar.visible = show_bar
 	style.health_max.visible = show_bar
 	style.bar_end.visible = show_bar
 	style.background.visible = show_bar
+	style.shield_bar.visible = show_shield_bar
 
 	-- ----------------------------
 	-- LOS fade + removal timing

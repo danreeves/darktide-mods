@@ -92,6 +92,20 @@ local localization = {
 		ru = "Название врага",
 		fr = "Nom de l'ennemi",
 	},
+	breed_display_name_cultist_vanguard = {
+		en = "Dreg Vanguard",
+		["zh-cn"] = "渣滓先锋",
+		["zh-tw"] = "渣滓先鋒",
+		ru = "Авангард отребья",
+		fr = "Avant-garde Dreg",
+	},
+	breed_display_name_renegade_vanguard = {
+		en = "Scab Vanguard",
+		["zh-cn"] = "血痂先锋",
+		["zh-tw"] = "血痂先鋒",
+		ru = "Авангард ренегатов",
+		fr = "Avant-garde Scab",
+	},
 	horde_breeds = {
 		en = "Horde/Roamer",
 		["zh-cn"] = "群怪/游荡",
@@ -350,14 +364,30 @@ local unlocalized_breeds = {
 	chaos_lesser_mutated_poxwalker = {
 		en = "Show Lesser mutated poxwalker health",
 		["zh-cn"] = "显示变异瘟疫行者的血量",
+		["zh-tw"] = "顯示低階變異瘟疫行者的生命值",
 		ru = "Показывать здоровье малого мутировавшего чумного ходока",
 		fr = "Affiche la santé des scrofuleux inférieures muté",
 	},
 	chaos_mutated_poxwalker = {
 		en = "Show Mutated poxwalker health",
 		["zh-cn"] = "显示完全变异瘟疫行者的血量",
+		["zh-tw"] = "顯示變異瘟疫行者的生命值",
 		ru = "Показывать здоровье мутировавшего чумного ходока",
 		fr = "Affiche la santé des scrofuleux muté",
+	},
+	cultist_vanguard = {
+		en = "Show Dreg Vanguard health",
+		["zh-cn"] = "显示渣滓先锋的血量",
+		["zh-tw"] = "顯示渣滓先鋒的生命值",
+		ru = "Показывать здоровье авангарда отребья",
+		fr = "Afficher la santé de l'avant-garde Dreg",
+	},
+	renegade_vanguard = {
+		en = "Show Scab Vanguard health",
+		["zh-cn"] = "显示血痂先锋的血量",
+		["zh-tw"] = "顯示血痂先鋒的生命值",
+		ru = "Показывать здоровье авангарда ренегатов",
+		fr = "Afficher la santé de l'avant-garde Scab",
 	},
 }
 
@@ -365,7 +395,7 @@ for breed_name, breed in pairs(Breeds) do
 	if breed.tags and breed.tags.minion then
 		local display_name = Localize(breed.display_name)
 
-		if string.find(display_name, "<unlocalized") then
+		if not display_name or display_name == "" or string.find(display_name, "<unlocalized") then
 			if unlocalized_breeds[breed_name] then
 				localization[breed_name] = unlocalized_breeds[breed_name]
 			else
