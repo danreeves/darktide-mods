@@ -21,12 +21,18 @@ local REQUIRED_ICON_PACKAGES = {
 	"packages/ui/views/inventory_weapons_view/inventory_weapons_view",
 	"packages/ui/hud/player_weapon/player_weapon",
 	"packages/ui/views/inventory_background_view/inventory_background_view",
+	"packages/ui/views/character_appearance_view/character_appearance_view",
 	"packages/ui/material_sets/circumstances",
 }
 
 mod.required_icon_packages = REQUIRED_ICON_PACKAGES
 
 local ICON_WARPFIRE = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_ember"
+local ICON_BLEED = "content/ui/materials/icons/presets/preset_13"
+local ICON_CHORDCLAW_BLEED = "content/ui/materials/icons/item_types/scars"
+local ICON_BURN = "content/ui/materials/icons/presets/preset_20"
+local ICON_PHOSPHOR_BURN = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_rotten_armor"
+local ICON_TOXIN = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle"
 local ICON_BRITTLENESS = "content/ui/materials/icons/presets/preset_04"
 local ICON_SKULLCRUSHER = "content/ui/materials/icons/presets/preset_05"
 local ICON_THUNDERSTRIKE = "content/ui/materials/icons/presets/preset_18"
@@ -35,6 +41,11 @@ local ICON_DAMAGE_TAKEN = "content/ui/materials/icons/presets/preset_14"
 local ICON_EMPYRIC_SHOCK = "content/ui/materials/icons/presets/preset_12"
 
 local ICON_COLOUR_WHITE = { 255, 255, 255, 255 }
+local ICON_COLOUR_BLEED = { 255, 255, 0, 0 }
+local ICON_COLOUR_CHORDCLAW_BLEED = { 255, 255, 0, 0 }
+local ICON_COLOUR_BURN = { 255, 255, 102, 0 }
+local ICON_COLOUR_PHOSPHOR_BURN = { 255, 255, 130, 20 }
+local ICON_COLOUR_TOXIN = { 255, 0, 255, 0 }
 local ICON_COLOUR_WARPFIRE_ONE = { 255, 200, 255, 255 }
 local ICON_COLOUR_WARPFIRE_TWO = { 255, 0, 230, 255 }
 local ICON_COLOUR_WARPFIRE_THREE = { 255, 80, 160, 255 }
@@ -152,11 +163,73 @@ local widgets = {
 				setting_id = "bleed",
 				type = "checkbox",
 				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "bleed_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							dropdown_option("display_stacks", "stacks", ICON_BLEED, ICON_COLOUR_BLEED),
+							dropdown_option("display_icon_only", "icon_only", ICON_BLEED, ICON_COLOUR_BLEED),
+						},
+					},
+				},
+			},
+			{
+				setting_id = "chordclaw_bleed",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "chordclaw_bleed_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							dropdown_option("display_stacks", "stacks", ICON_CHORDCLAW_BLEED,
+								ICON_COLOUR_CHORDCLAW_BLEED),
+							dropdown_option("display_time", "time", ICON_CHORDCLAW_BLEED,
+								ICON_COLOUR_CHORDCLAW_BLEED),
+						},
+					},
+				},
 			},
 			{
 				setting_id = "burn",
 				type = "checkbox",
 				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "burn_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							dropdown_option("display_stacks", "stacks", ICON_BURN, ICON_COLOUR_BURN),
+							dropdown_option("display_icon_only", "icon_only", ICON_BURN, ICON_COLOUR_BURN),
+						},
+					},
+				},
+			},
+			{
+				setting_id = "phosphor_burn",
+				type = "checkbox",
+				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "phosphor_burn_display",
+						type = "dropdown",
+						default_value = "icon_only",
+						options = {
+							dropdown_option("display_icon_only", "icon_only", ICON_PHOSPHOR_BURN,
+								ICON_COLOUR_PHOSPHOR_BURN),
+							dropdown_option("display_time", "time", ICON_PHOSPHOR_BURN,
+								ICON_COLOUR_PHOSPHOR_BURN),
+						},
+					},
+				},
 			},
 			{
 				setting_id = "warpfire",
@@ -187,6 +260,18 @@ local widgets = {
 				setting_id = "toxin",
 				type = "checkbox",
 				default_value = true,
+
+				sub_widgets = {
+					{
+						setting_id = "toxin_display",
+						type = "dropdown",
+						default_value = "stacks",
+						options = {
+							dropdown_option("display_stacks", "stacks", ICON_TOXIN, ICON_COLOUR_TOXIN),
+							dropdown_option("display_icon_only", "icon_only", ICON_TOXIN, ICON_COLOUR_TOXIN),
+						},
+					},
+				},
 			},
 			{
 				setting_id = "dot_text_font_size",
@@ -218,6 +303,7 @@ local widgets = {
 						type = "dropdown",
 						default_value = "icon_text",
 						options = {
+							dropdown_option("display_stacks", "stacks", ICON_BRITTLENESS, ICON_COLOUR_WHITE),
 							dropdown_option("display_icon_text", "icon_text", ICON_BRITTLENESS, ICON_COLOUR_WHITE),
 							dropdown_option("display_icon_only", "icon_only", ICON_BRITTLENESS, ICON_COLOUR_WHITE),
 							dropdown_option("display_time", "time", ICON_BRITTLENESS, ICON_COLOUR_WHITE),
@@ -227,6 +313,11 @@ local widgets = {
 			},
 			{
 				setting_id = "electrocuted",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "weapon_malfunction",
 				type = "checkbox",
 				default_value = true,
 			},

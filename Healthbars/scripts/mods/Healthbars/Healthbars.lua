@@ -9,10 +9,13 @@ local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/Healthb
 
 mod.textures = {
 	bleed = "content/ui/materials/icons/presets/preset_13",
+	chordclaw_bleed = "content/ui/materials/icons/item_types/scars",
 	burn = "content/ui/materials/icons/presets/preset_20",
+	phosphor_burn = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_rotten_armor",
 	warpfire = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_ember",
 	toxin = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle",
 	electrocuted = "content/ui/materials/icons/presets/preset_11",
+	weapon_malfunction = "content/ui/materials/icons/circumstances/darkness_01",
 	brittleness = "content/ui/materials/icons/presets/preset_04",
 	skullcrusher = "content/ui/materials/icons/presets/preset_05",
 	thunderstrike = "content/ui/materials/icons/presets/preset_18",
@@ -53,18 +56,23 @@ mod._custom_marker_units = mod._custom_marker_units or new_marker_cache()
 
 local COLOR_BLEED = { 255, 255, 0, 0 }
 local COLOR_BURN = { 255, 255, 102, 0 }
+local COLOUR_PHOSPHOR_BURN = { 255, 255, 130, 20 }
 local COLOR_TOXIN = { 255, 0, 255, 0 }
 local COLOR_ELECTROCUTED = { 255, 255, 235, 245 }
+local COLOR_WEAPON_MALFUNCTION = { 255, 255, 245, 80 }
 
 local function refresh_colors()
 	local warpfire_key = mod:get("warpfire_color_option") or "warpfire_color_option_three"
 
 	mod.colors = {
 		bleed = COLOR_BLEED,
+		chordclaw_bleed = COLOR_BLEED,
 		burn = COLOR_BURN,
+		phosphor_burn = COLOUR_PHOSPHOR_BURN,
 		warpfire = copy_color(WARPFIRE_COLOR_OPTIONS[warpfire_key] or WARPFIRE_COLOR_OPTIONS.warpfire_color_option_three),
 		toxin = COLOR_TOXIN,
 		electrocuted = COLOR_ELECTROCUTED,
+		weapon_malfunction = COLOR_WEAPON_MALFUNCTION,
 		-- brittleness, skullcrusher, thunderstrike and damage taken debuffs are calculated by applied stacks
 	}
 end
@@ -79,10 +87,13 @@ function mod.on_all_mods_loaded()
 		end
 	end
 
-	load_package("packages/ui/views/inventory_view/inventory_view")
-	load_package("packages/ui/views/inventory_weapons_view/inventory_weapons_view")
-	load_package("packages/ui/hud/player_weapon/player_weapon")
-	load_package("packages/ui/views/inventory_background_view/inventory_background_view")
+	local required_icon_packages = mod.required_icon_packages
+
+	if required_icon_packages then
+		for i = 1, #required_icon_packages do
+			load_package(required_icon_packages[i])
+		end
+	end
 end
 
 local show = {}

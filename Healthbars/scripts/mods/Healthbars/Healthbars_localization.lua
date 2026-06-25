@@ -183,6 +183,27 @@ local localization = {
 		ru = "Заряды кровотечения",
 		fr = "Affiche les saignements",
 	},
+	bleed_display = {
+    	en = "Bleed display",
+    	["zh-cn"] = "流血显示",
+    	["zh-tw"] = "流血顯示",
+    	ru = "Отображение кровотечения",
+    	fr = "Affichage du saignement",
+    },
+    chordclaw_bleed = {
+    	en = "Show Chordclaw Bleed",
+    	["zh-cn"] = "显示弦爪流血",
+    	["zh-tw"] = "顯示弦爪流血",
+    	ru = "Показывать кровотечение Chordclaw",
+    	fr = "Afficher le saignement Chordclaw",
+    },
+    chordclaw_bleed_display = {
+    	en = "Chordclaw Bleed display",
+    	["zh-cn"] = "弦爪流血显示",
+    	["zh-tw"] = "弦爪流血顯示",
+    	ru = "Отображение кровотечения Chordclaw",
+    	fr = "Affichage du saignement Chordclaw",
+    },
 	burn = {
 		en = "Show burn stacks",
 		["zh-cn"] = "显示燃烧层数",
@@ -190,6 +211,27 @@ local localization = {
 		ru = "Заряды горения",
 		fr = "Affiche les brûlures",
 	},
+	burn_display = {
+    	en = "Burn display",
+    	["zh-cn"] = "燃烧显示",
+    	["zh-tw"] = "燃燒顯示",
+    	ru = "Отображение горения",
+    	fr = "Affichage de la brûlure",
+    },
+    phosphor_burn = {
+    	en = "Show Phosphor Burn",
+    	["zh-cn"] = "显示磷火燃烧",
+    	["zh-tw"] = "顯示磷火燃燒",
+    	ru = "Показывать фосфорное горение",
+    	fr = "Afficher la brûlure au phosphore",
+    },
+    phosphor_burn_display = {
+    	en = "Phosphor Burn display",
+    	["zh-cn"] = "磷火燃烧显示",
+    	["zh-tw"] = "磷火燃燒顯示",
+    	ru = "Отображение фосфорного горения",
+    	fr = "Affichage de la brûlure au phosphore",
+    },
 	warpfire = {
 	en = "Show warpfire (Soulblaze) stacks",
 	["zh-cn"] = "显示亚空间火焰（魂火）层数",
@@ -246,6 +288,13 @@ local localization = {
 		ru = "Показывать стаки токсина",
 		fr = "Afficher les cumuls de toxine",
 	},
+	toxin_display = {
+    	en = "Toxin display",
+    	["zh-cn"] = "毒素显示",
+    	["zh-tw"] = "毒素顯示",
+    	ru = "Отображение токсина",
+    	fr = "Affichage de la toxine",
+    },
 	dot_text_font_size = {
 		en = "DOT stack number size",
 		["zh-cn"] = "持续伤害层数字号",
@@ -274,6 +323,13 @@ local localization = {
 		ru = "Показывать ослабление от поражения током",
 		fr = "Afficher l'affaiblissement d'électrocution",
 	},
+	weapon_malfunction = {
+    	en = "Show Weapon Malfunction debuff",
+    	["zh-cn"] = "显示武器故障减益",
+    	["zh-tw"] = "顯示武器故障減益",
+    	ru = "Показывать ослабление от неисправности оружия",
+    	fr = "Afficher l'affaiblissement de dysfonctionnement d'arme",
+    },
 	brittleness_indicator = {
 		en = "Show brittleness indicator",
 		["zh-cn"] = "显示脆弱指示器",
