@@ -795,6 +795,7 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- - psyker_discharge_damage_debuff: damage_taken_multiplier = 1.1 (8s)
 -- - veteran_improved_tag_debuff: +0.05 per stack (max 6)
 -- - zealot_bled_enemies_take_more_damage_effect: damage_taken_multiplier = 1.15 (5s)
+-- - cryptic_overload_keystone_increase_damage_taken_debuff: damage_taken_multiplier = 1.15 (8s)
 -- - broker_passive_toxin_infected_enemies_take_increased_damage_debuff: damage_taken_modifier = 0.1 (5s)
 -- - hordes_buff_broker_flash_grenade_increase_damage_taken_effect: damage_taken_modifier = 2.0 (30s, max 6)
 -- - cryptic_servo_skull_debuff: damage_taken_modifier = 0.15 (5s)
@@ -811,6 +812,7 @@ local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
 	{ name = "adamant_drone_enemy_debuff",                  multiplier = 1.15 }, -- Nuncio-Aquila
 	{ name = "psyker_discharge_damage_debuff",              multiplier = 1.10 }, -- Warp Rupture
 	{ name = "zealot_bled_enemies_take_more_damage_effect", multiplier = 1.15 }, -- Blinded by Blood
+	{ name = "cryptic_overload_keystone_increase_damage_taken_debuff", multiplier = 1.15 }, -- Critical Power Overload
 }
 
 -- Enfeeble (Psyker): Smite/Charged Smite applies +10% damage taken while actively affected
