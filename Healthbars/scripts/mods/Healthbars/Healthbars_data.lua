@@ -97,6 +97,17 @@ local widgets = {
 		tab = TAB_GENERAL,
 		sub_widgets = {
 			{
+				setting_id = "psykhanium_healthbar_behavior",
+				type = "dropdown",
+				default_value = "normal",
+				tooltip = "psykhanium_healthbar_behavior_tooltip",
+				options = {
+					{ text = "psykhanium_healthbar_behavior_normal", value = "normal" },
+					{ text = "psykhanium_healthbar_behavior_vanilla_only", value = "vanilla_only" },
+					{ text = "psykhanium_healthbar_behavior_full_debug", value = "full_debug" },
+				},
+			},
+			{
 				setting_id = "show_bar",
 				type = "checkbox",
 				default_value = true,

@@ -100,6 +100,9 @@ local show = {}
 local MUTATOR_BREED_SETTING_OVERRIDES = {
 	chaos_mutator_ritualist = "cultist_ritualist",
 }
+local PSYKHANIUM_BEHAVIOR_NORMAL = "normal"
+local PSYKHANIUM_BEHAVIOR_VANILLA_ONLY = "vanilla_only"
+local PSYKHANIUM_BEHAVIOR_FULL_DEBUG = "full_debug"
 
 local function get_toggles()
 	for breed_name in pairs(Breeds) do
@@ -120,18 +123,53 @@ local function is_psykhanium()
 	return game_mode_manager and game_mode_manager:game_mode_name() == "shooting_range"
 end
 
-local function should_enable_healthbar(unit)
+local function current_psykhanium_behavior()
+	local behavior = nil
+
+	if is_psykhanium() then
+		behavior = mod:get("psykhanium_healthbar_behavior") or PSYKHANIUM_BEHAVIOR_NORMAL
+	end
+
+	mod._active_psykhanium_healthbar_behavior = behavior
+	mod._psykhanium_full_debug_display = behavior == PSYKHANIUM_BEHAVIOR_FULL_DEBUG
+	mod._psykhanium_vanilla_only = behavior == PSYKHANIUM_BEHAVIOR_VANILLA_ONLY
+
+	return behavior
+end
+
+local function healthbar_breed(unit)
 	if not is_unit_alive(unit) then
-		return false
+		return nil
 	end
 
 	local unit_data_extension = ScriptUnit.has_extension(unit, "unit_data_system")
 	if not unit_data_extension then
+		return nil
+	end
+
+	return unit_data_extension:breed()
+end
+
+local function should_enable_healthbar(unit, psykhanium_behavior)
+	local breed = healthbar_breed(unit)
+	if not breed then
 		return false
 	end
 
-	local breed = unit_data_extension:breed()
-	return breed and show[breed.name] == true or false
+	local behavior = psykhanium_behavior
+	if behavior == nil then
+		behavior = current_psykhanium_behavior()
+	end
+
+	if behavior == PSYKHANIUM_BEHAVIOR_VANILLA_ONLY then
+		return false
+	end
+
+	if behavior == PSYKHANIUM_BEHAVIOR_FULL_DEBUG then
+		return show[breed.name] ~= nil
+	end
+
+	return show[breed.name] == true
 end
 
 local function add_custom_healthbar_marker(unit)
@@ -155,7 +193,7 @@ local function add_custom_healthbar_marker(unit)
 	return true
 end
 
-local function visit_units_from_container(container, seen_units)
+local function visit_units_from_container(container, seen_units, visitor)
 	if not container then
 		return 0
 	end
@@ -177,7 +215,7 @@ local function visit_units_from_container(container, seen_units)
 		if unit and not seen_units[unit] then
 			seen_units[unit] = true
 
-			if add_custom_healthbar_marker(unit) then
+			if visitor(unit) then
 				count = count + 1
 			end
 		end
@@ -199,26 +237,122 @@ local function resync_existing_healthbars()
 	end
 
 	local seen_units = {}
+	local behavior = current_psykhanium_behavior()
+	local world_markers = mod._world_markers
+
+	if not behavior or not world_markers then
+		local added = 0
+		local add_custom = function(unit)
+			return add_custom_healthbar_marker(unit)
+		end
+
+		added = added + visit_units_from_container(health_system._unit_to_extension_map, seen_units, add_custom)
+		added = added + visit_units_from_container(health_system._health_extensions, seen_units, add_custom)
+		added = added + visit_units_from_container(health_system._extensions, seen_units, add_custom)
+
+		return added
+	end
+
+	local markers_by_type = world_markers._markers_by_type
+	local custom_markers = markers_by_type and markers_by_type[MarkerTemplate.name]
+	local vanilla_markers = markers_by_type and markers_by_type.damage_indicator
+	local custom_by_unit = {}
+	local vanilla_by_unit = {}
+
+	if custom_markers then
+		for i = 1, #custom_markers do
+			local marker = custom_markers[i]
+			custom_by_unit[marker.unit] = marker.id
+		end
+	end
+
+	if vanilla_markers then
+		for i = 1, #vanilla_markers do
+			local marker = vanilla_markers[i]
+			vanilla_by_unit[marker.unit] = marker.id
+		end
+	end
+
+	local marker_ids_to_remove = {}
+	local custom_units_to_add = {}
+	local vanilla_units_to_add = {}
+	local custom_marker_units = mod._custom_marker_units
+
+	local function reconcile_unit(unit)
+		local breed = healthbar_breed(unit)
+		if not breed or show[breed.name] == nil then
+			return false
+		end
+
+		if should_enable_healthbar(unit, behavior) then
+			local vanilla_marker_id = vanilla_by_unit[unit]
+			if vanilla_marker_id then
+				marker_ids_to_remove[#marker_ids_to_remove + 1] = vanilla_marker_id
+				vanilla_by_unit[unit] = nil
+			end
+
+			if not custom_by_unit[unit] then
+				custom_marker_units[unit] = nil
+				custom_units_to_add[#custom_units_to_add + 1] = unit
+			end
+		else
+			local custom_marker_id = custom_by_unit[unit]
+			if custom_marker_id then
+				marker_ids_to_remove[#marker_ids_to_remove + 1] = custom_marker_id
+				custom_by_unit[unit] = nil
+				custom_marker_units[unit] = nil
+			end
+
+			if not vanilla_by_unit[unit] then
+				vanilla_units_to_add[#vanilla_units_to_add + 1] = unit
+			end
+		end
+
+		return true
+	end
+
+	visit_units_from_container(health_system._unit_to_extension_map, seen_units, reconcile_unit)
+	visit_units_from_container(health_system._health_extensions, seen_units, reconcile_unit)
+	visit_units_from_container(health_system._extensions, seen_units, reconcile_unit)
+
+	local event_manager = Managers.event
+
+	for i = 1, #marker_ids_to_remove do
+		event_manager:trigger("remove_world_marker", marker_ids_to_remove[i])
+	end
+
 	local added = 0
 
-	added = added + visit_units_from_container(health_system._unit_to_extension_map, seen_units)
-	added = added + visit_units_from_container(health_system._health_extensions, seen_units)
-	added = added + visit_units_from_container(health_system._extensions, seen_units)
+	for i = 1, #custom_units_to_add do
+		if add_custom_healthbar_marker(custom_units_to_add[i]) then
+			added = added + 1
+		end
+	end
+
+	for i = 1, #vanilla_units_to_add do
+		event_manager:trigger("add_world_marker_unit", "damage_indicator", vanilla_units_to_add[i])
+		added = added + 1
+	end
 
 	return added
 end
 
 get_toggles()
+mod._healthbar_breed_toggles = show
+current_psykhanium_behavior()
 
 mod.on_setting_changed = function()
 	get_toggles()
 	refresh_colors()
+	current_psykhanium_behavior()
 	resync_existing_healthbars()
 end
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
+	mod._world_markers = self
 	mod._custom_marker_units = new_marker_cache()
+	current_psykhanium_behavior()
 	resync_existing_healthbars()
 end)
 
@@ -283,8 +417,12 @@ mod:hook_safe(
 )
 
 mod:hook("HudElementWorldMarkers", "event_add_world_marker_unit", function(func, self, marker_type, unit, callback, data)
-	if marker_type == "damage_indicator" and is_psykhanium() and should_enable_healthbar(unit) then
-		return
+	if marker_type == "damage_indicator" then
+		local behavior = current_psykhanium_behavior()
+
+		if behavior and should_enable_healthbar(unit, behavior) then
+			return
+		end
 	end
 
 	return func(self, marker_type, unit, callback, data)

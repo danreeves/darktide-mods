@@ -113,6 +113,10 @@ local BREED_NAME_LOCALIZATION_FALLBACKS = {
 	renegade_vanguard = "breed_display_name_renegade_vanguard",
 }
 
+local function _feature_enabled(setting_id)
+	return mod._psykhanium_full_debug_display == true or mod:get(setting_id) == true
+end
+
 template.fade_settings = {
 	fade_to = 1,
 	fade_from = 0.1,
@@ -155,10 +159,14 @@ local function _localized_breed_name(breed)
 end
 
 local function _damage_label_enabled()
-	return mod:get("show_armour_type") == true
+	return _feature_enabled("show_armour_type")
 end
 
 local function _damage_label_display_mode()
+	if mod._psykhanium_full_debug_display then
+		return LABEL_DISPLAY_MODE_ARMOUR_TYPE
+	end
+
 	return mod:get("show_armour_type_display") or LABEL_DISPLAY_MODE_ARMOUR_TYPE
 end
 
@@ -325,14 +333,14 @@ local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, p
 end
 
 local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
-	if not mod:get("show_damage_numbers") then
+	if not _feature_enabled("show_damage_numbers") then
 		return
 	end
 
 	local settings = template.damage_number_settings
 	local damage_numbers = ui_content.damage_numbers
 	local num = #damage_numbers
-	local show_dps = ui_content.damage_has_started and mod:get("show_dps")
+	local show_dps = ui_content.damage_has_started and _feature_enabled("show_dps")
 	if num == 0 and not show_dps then
 		return
 	end
@@ -1401,7 +1409,7 @@ local DEBUFF_DEFS = {
 			return { a, r, g, b }
 		end,
 		poll = function(buff_extension, content)
-			if not mod:get("brittleness_indicator") then
+			if not _feature_enabled("brittleness_indicator") then
 				return nil
 			end
 			if not _is_brittleness_relevant(content) then
@@ -1514,7 +1522,7 @@ local DEBUFF_DEFS = {
 		end,
 
 		poll = function(buff_extension)
-			if not mod:get("melee_damage_taken") then
+			if not _feature_enabled("melee_damage_taken") then
 				return nil
 			end
 
@@ -1547,7 +1555,7 @@ local DEBUFF_DEFS = {
 			return _damage_taken_color((data and data.percent) or 0)
 		end,
 		poll = function(buff_extension)
-			if not mod:get("damage_taken") then
+			if not _feature_enabled("damage_taken") then
 				return nil
 			end
 			local percent = _compute_total_damage_taken_percent(buff_extension)
@@ -1570,7 +1578,7 @@ local DEBUFF_DEFS = {
 		icon = function() return mod.textures and mod.textures.empyric_shock end,
 		color = function(data) return _empyric_shock_color_by_stacks((data and data.stacks) or 0) end,
 		poll = function(buff_extension, _content)
-			if not mod:get("empyric_shock") then
+			if not _feature_enabled("empyric_shock") then
 				return nil
 			end
 			local stacks, percent = _compute_empyric_shock(buff_extension)
@@ -1666,7 +1674,7 @@ local function _poll_status_indicators(state, buff_extension)
 
 	for i = 1, #DEBUFF_DEFS do
 		local def = DEBUFF_DEFS[i]
-		local enabled = (def.setting == nil) or mod:get(def.setting)
+		local enabled = (def.setting == nil) or _feature_enabled(def.setting)
 
 		if enabled then
 			local data = def.poll(buff_extension, state.content)
@@ -1831,7 +1839,8 @@ local function _apply_boss_indicator_placements(widget, state)
 end
 
 template.update_vanilla_boss_indicator = function(widget, target, dt)
-	if not widget or not target or not mod:get("show_vanilla_boss_bar_indicators") then
+	if not widget or not target or mod._psykhanium_vanilla_only or
+		not _feature_enabled("show_vanilla_boss_bar_indicators") then
 		_hide_boss_indicator_widget(widget)
 
 		return
@@ -1881,7 +1890,23 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local content = widget.content
 	local style = widget.style
 	local unit = marker.unit
-	local show_damage_numbers = mod:get("show_damage_numbers")
+	local psykhanium_behavior = mod._active_psykhanium_healthbar_behavior
+	local breed_toggles = mod._healthbar_breed_toggles
+	local breed = content.breed
+
+	if mod._psykhanium_vanilla_only or
+		(psykhanium_behavior == "normal" and breed_toggles and breed and breed_toggles[breed.name] ~= true) then
+		local custom_marker_units = mod._custom_marker_units
+		if custom_marker_units then
+			custom_marker_units[unit] = nil
+		end
+
+		marker.remove = true
+
+		return
+	end
+
+	local show_damage_numbers = _feature_enabled("show_damage_numbers")
 	local use_armour_slot_offset = _damage_label_enabled()
 	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
 	local needs_hit_reaction_data = show_damage_numbers
@@ -1921,7 +1946,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 			for i = 1, #DEBUFF_DEFS do
 				local def = DEBUFF_DEFS[i]
-				local enabled = (def.setting == nil) or mod:get(def.setting)
+				local enabled = (def.setting == nil) or _feature_enabled(def.setting)
 				if enabled then
 					local data = def.poll(buff_extension, content)
 					if data then
@@ -2139,7 +2164,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		content.visibility_delay = dns.visibility_delay
 		content.damage_taken = damage_taken
 
-		if old_damage_taken < damage_taken and mod:get("show_damage_numbers") then
+		if old_damage_taken < damage_taken and show_damage_numbers then
 			local damage_numbers = content.damage_numbers
 			local damage_diff = math_ceil(damage_taken - old_damage_taken)
 			local latest = damage_numbers[#damage_numbers]
@@ -2226,7 +2251,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		marker.health_fraction = health_fraction
 	end
 
-	local show_bar = mod:get("show_bar")
+	local show_bar = _feature_enabled("show_bar")
 	local show_shield_bar = show_bar and shield_fraction ~= nil and shield_fraction > 0 or false
 
 	if show_shield_bar then
