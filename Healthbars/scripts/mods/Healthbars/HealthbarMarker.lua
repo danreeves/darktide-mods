@@ -108,7 +108,7 @@ local DEFAULT_POST_KILL_DISPLAY_DURATION = 1
 local MIN_POST_KILL_DISPLAY_DURATION = 0.2
 local MAX_POST_KILL_DISPLAY_DURATION = 10
 
-local BREED_NAME_LOCALIZATION_FALLBACKS = {
+local BREED_NAME_LOCALIZATION_OVERRIDES = {
 	cultist_vanguard = "breed_display_name_cultist_vanguard",
 	renegade_vanguard = "breed_display_name_renegade_vanguard",
 }
@@ -152,10 +152,13 @@ local function _localized_breed_name(breed)
 		return ""
 	end
 
-	local fallback_loc_key = BREED_NAME_LOCALIZATION_FALLBACKS[breed.name]
-	local fallback = fallback_loc_key and mod:localize(fallback_loc_key) or ""
+	local override_loc_key = BREED_NAME_LOCALIZATION_OVERRIDES[breed.name]
 
-	return _localize_or_fallback(breed.display_name, fallback)
+	if override_loc_key then
+		return mod:localize(override_loc_key)
+	end
+
+	return _localize_or_fallback(breed.display_name, "")
 end
 
 local function _damage_label_enabled()
