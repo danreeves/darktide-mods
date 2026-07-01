@@ -108,11 +108,6 @@ local DEFAULT_POST_KILL_DISPLAY_DURATION = 1
 local MIN_POST_KILL_DISPLAY_DURATION = 0.2
 local MAX_POST_KILL_DISPLAY_DURATION = 10
 
-local BREED_NAME_LOCALIZATION_OVERRIDES = {
-	cultist_vanguard = "breed_display_name_cultist_vanguard",
-	renegade_vanguard = "breed_display_name_renegade_vanguard",
-}
-
 local function _feature_enabled(setting_id)
 	return mod._psykhanium_full_debug_display == true or mod:get(setting_id) == true
 end
@@ -150,12 +145,6 @@ end
 local function _localized_breed_name(breed)
 	if not breed then
 		return ""
-	end
-
-	local override_loc_key = BREED_NAME_LOCALIZATION_OVERRIDES[breed.name]
-
-	if override_loc_key then
-		return mod:localize(override_loc_key)
 	end
 
 	return _localize_or_fallback(breed.display_name, "")

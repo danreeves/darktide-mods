@@ -323,34 +323,6 @@ local localization = {
 		ru = "Название врага",
 		fr = "Nom de l'ennemi",
 	},
-	breed_display_name_cultist_vanguard = {
-		en = "Dreg Vanguard",
-		de = "Dreg-Vorhut",
-		it = "Avanguardia Dreg",
-		es = "Vanguardia Dreg",
-		pl = "Awangarda Dregów",
-		["pt-br"] = "Vanguarda Dreg",
-		ja = "ドレッグ・ヴァンガード",
-		ko = "드렉 뱅가드",
-		["zh-cn"] = "渣滓先锋",
-		["zh-tw"] = "渣滓先鋒",
-		ru = "Авангард отребья",
-		fr = "Avant-garde Dreg",
-	},
-	breed_display_name_renegade_vanguard = {
-		en = "Scab Vanguard",
-		de = "Scab-Vorhut",
-		it = "Avanguardia Scab",
-		es = "Vanguardia Scab",
-		pl = "Awangarda Scabów",
-		["pt-br"] = "Vanguarda Scab",
-		ja = "スキャブ・ヴァンガード",
-		ko = "스캡 뱅가드",
-		["zh-cn"] = "血痂先锋",
-		["zh-tw"] = "血痂先鋒",
-		ru = "Авангард ренегатов",
-		fr = "Avant-garde Scab",
-	},
 	horde_breeds = {
 		en = "Horde/Roamer",
 		de = "Horde/Streuner",
@@ -969,105 +941,40 @@ local localization = {
 	},
 }
 
-local breed_setting_localization_overrides = {
-	chaos_lesser_mutated_poxwalker = {
-		en = "Show Lesser mutated poxwalker health",
-		de = "Gesundheit des kleinen mutierten Poxwalkers anzeigen",
-		it = "Mostra la salute del Poxwalker mutato minore",
-		es = "Mostrar la salud del caminante de la plaga mutado menor",
-		pl = "Pokaż zdrowie pomniejszego zmutowanego Poxwalkera",
-		["pt-br"] = "Exibir vida do Poxwalker mutante menor",
-		ja = "下位変異ポックスウォーカーの体力を表示",
-		ko = "하급 변이 폭스워커의 체력 표시",
-		["zh-cn"] = "显示变异瘟疫行者的血量",
-		["zh-tw"] = "顯示低階變異瘟疫行者的生命值",
-		ru = "Показывать здоровье малого мутировавшего чумного ходока",
-		fr = "Affiche la santé des scrofuleux inférieures muté",
-	},
-	chaos_mutated_poxwalker = {
-		en = "Show Mutated poxwalker health",
-		de = "Gesundheit des mutierten Poxwalkers anzeigen",
-		it = "Mostra la salute del Poxwalker mutato",
-		es = "Mostrar la salud del caminante de la plaga mutado",
-		pl = "Pokaż zdrowie zmutowanego Poxwalkera",
-		["pt-br"] = "Exibir vida do Poxwalker mutante",
-		ja = "変異ポックスウォーカーの体力を表示",
-		ko = "변이 폭스워커의 체력 표시",
-		["zh-cn"] = "显示完全变异瘟疫行者的血量",
-		["zh-tw"] = "顯示變異瘟疫行者的生命值",
-		ru = "Показывать здоровье мутировавшего чумного ходока",
-		fr = "Affiche la santé des scrofuleux muté",
-	},
-	cultist_vanguard = {
-		en = "Show Dreg Vanguard health",
-		de = "Gesundheit der Dreg-Vorhut anzeigen",
-		it = "Mostra la salute dell'Avanguardia Dreg",
-		es = "Mostrar la salud de la Vanguardia Dreg",
-		pl = "Pokaż zdrowie Awangardy Dregów",
-		["pt-br"] = "Exibir vida da Vanguarda Dreg",
-		ja = "ドレッグ・ヴァンガードの体力を表示",
-		ko = "드렉 뱅가드의 체력 표시",
-		["zh-cn"] = "显示渣滓先锋的血量",
-		["zh-tw"] = "顯示渣滓先鋒的生命值",
-		ru = "Показывать здоровье авангарда отребья",
-		fr = "Afficher la santé de l'avant-garde Dreg",
-	},
-	renegade_vanguard = {
-		en = "Show Scab Vanguard health",
-		de = "Gesundheit der Scab-Vorhut anzeigen",
-		it = "Mostra la salute dell'Avanguardia Scab",
-		es = "Mostrar la salud de la Vanguardia Scab",
-		pl = "Pokaż zdrowie Awangardy Scabów",
-		["pt-br"] = "Exibir vida da Vanguarda Scab",
-		ja = "スキャブ・ヴァンガードの体力を表示",
-		ko = "스캡 뱅가드의 체력 표시",
-		["zh-cn"] = "显示血痂先锋的血量",
-		["zh-tw"] = "顯示血痂先鋒的生命值",
-		ru = "Показывать здоровье авангарда ренегатов",
-		fr = "Afficher la santé de l'avant-garde Scab",
-	},
-}
-
 for breed_name, breed in pairs(Breeds) do
 	if breed.tags and breed.tags.minion then
-		local localization_override = breed_setting_localization_overrides[breed_name]
+		local display_name = Localize(breed.display_name)
 
-		if localization_override then
-			localization[breed_name] = localization_override
+		if not display_name or display_name == "" or string.find(display_name, "<unlocalized") then
+			localization[breed_name] = {
+				en = "Show " .. breed_name .. " health",
+				de = "Gesundheit von " .. breed_name .. " anzeigen",
+				it = "Mostra la salute di " .. breed_name,
+				es = "Mostrar la salud de " .. breed_name,
+				pl = "Pokaż zdrowie: " .. breed_name,
+				["pt-br"] = "Exibir vida de " .. breed_name,
+				ja = breed_name .. "の体力を表示",
+				ko = breed_name .. " 체력 표시",
+				["zh-cn"] = "显示" .. breed_name .. "的血量",
+				["zh-tw"] = "顯示" .. breed_name .. "的血量",
+				ru = "Показать здоровье:\n" .. breed_name,
+				fr = "Affiche la santé de " .. breed_name,
+			}
 		else
-			local display_name = Localize(breed.display_name)
-
-			if not display_name or display_name == "" or string.find(display_name, "<unlocalized") then
-				localization[breed_name] = {
-					en = "Show " .. breed_name .. " health",
-					de = "Gesundheit von " .. breed_name .. " anzeigen",
-					it = "Mostra la salute di " .. breed_name,
-					es = "Mostrar la salud de " .. breed_name,
-					pl = "Pokaż zdrowie: " .. breed_name,
-					["pt-br"] = "Exibir vida de " .. breed_name,
-					ja = breed_name .. "の体力を表示",
-					ko = breed_name .. " 체력 표시",
-					["zh-cn"] = "显示" .. breed_name .. "的血量",
-					["zh-tw"] = "顯示" .. breed_name .. "的血量",
-					ru = "Показать здоровье:\n" .. breed_name,
-					fr = "Affiche la santé de " .. breed_name,
-				}
-			else
-				localization[breed_name] = {
-					en = "Show " .. display_name .. " health",
-					de = "Gesundheit von " .. display_name .. " anzeigen",
-					it = "Mostra la salute di " .. display_name,
-					es = "Mostrar la salud de " .. display_name,
-					pl = "Pokaż zdrowie: " .. display_name,
-					["pt-br"] = "Exibir vida de " .. display_name,
-					ja = display_name .. "の体力を表示",
-					ko = display_name .. " 체력 표시",
-					["zh-cn"] = "显示" .. display_name .. "的血量",
-					["zh-tw"] = "顯示" .. display_name .. "的血量",
-					ru = "Показать здоровье:\n" .. display_name,
-					fr = "Affiche la santé de " .. display_name,
-				}
-			end
+			localization[breed_name] = {
+				en = "Show " .. display_name .. " health",
+				de = "Gesundheit von " .. display_name .. " anzeigen",
+				it = "Mostra la salute di " .. display_name,
+				es = "Mostrar la salud de " .. display_name,
+				pl = "Pokaż zdrowie: " .. display_name,
+				["pt-br"] = "Exibir vida de " .. display_name,
+				ja = display_name .. "の体力を表示",
+				ko = display_name .. " 체력 표시",
+				["zh-cn"] = "显示" .. display_name .. "的血量",
+				["zh-tw"] = "顯示" .. display_name .. "的血量",
+				ru = "Показать здоровье:\n" .. display_name,
+				fr = "Affiche la santé de " .. display_name,
+			}
 		end
 	end
 end
