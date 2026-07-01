@@ -23,10 +23,27 @@ local table_remove = table.remove
 local tostring = tostring
 local Color = Color
 local Localize = Localize
+local Managers = Managers
+local GameSession_game_object_field = GameSession.game_object_field
 local ScriptUnit_extension = ScriptUnit.extension
 local ScriptUnit_has_extension = ScriptUnit.has_extension
 local UIRenderer_draw_text = UIRenderer.draw_text
-local BUFF_KEYWORD_ELECTROCUTED = BuffSettings.keywords.electrocuted
+local BUFF_KEYWORDS = BuffSettings.keywords
+local ELECTROCUTED_KEYWORD_GROUP = BuffSettings.group_keywords and BuffSettings.group_keywords.electrocuted
+local ELECTROCUTED_KEYWORD_LOOKUP = BuffSettings.group_to_keywords and ELECTROCUTED_KEYWORD_GROUP and
+	BuffSettings.group_to_keywords[ELECTROCUTED_KEYWORD_GROUP] or {
+		[BUFF_KEYWORDS.electrocuted] = true,
+	}
+local ELECTROCUTED_KEYWORDS = {}
+
+for keyword, _ in pairs(ELECTROCUTED_KEYWORD_LOOKUP) do
+	ELECTROCUTED_KEYWORDS[#ELECTROCUTED_KEYWORDS + 1] = keyword
+end
+
+local WEAPON_MALFUNCTION_KEYWORD = BUFF_KEYWORDS.weapon_malfunction
+local WEAPON_MALFUNCTION_KEYWORDS = WEAPON_MALFUNCTION_KEYWORD and { WEAPON_MALFUNCTION_KEYWORD } or {}
+local WEAPON_MALFUNCTION_KEYWORD_LOOKUP = WEAPON_MALFUNCTION_KEYWORD and
+	{ [WEAPON_MALFUNCTION_KEYWORD] = true } or {}
 
 local template = {}
 
@@ -87,9 +104,13 @@ local armor_type_string_lookup = {
 local DEFAULT_HIT_ZONE_NAME = "center_mass"
 local LABEL_DISPLAY_MODE_ARMOUR_TYPE = "armour_type"
 local LABEL_DISPLAY_MODE_ENEMY_NAME = "enemy_name"
-local DEFAULT_POST_KILL_DISPLAY_DURATION = 3
-local MIN_POST_KILL_DISPLAY_DURATION = 1
+local DEFAULT_POST_KILL_DISPLAY_DURATION = 1
+local MIN_POST_KILL_DISPLAY_DURATION = 0.2
 local MAX_POST_KILL_DISPLAY_DURATION = 10
+
+local function _feature_enabled(setting_id)
+	return mod._psykhanium_full_debug_display == true or mod:get(setting_id) == true
+end
 
 template.fade_settings = {
 	fade_to = 1,
@@ -114,7 +135,7 @@ local function _localize_or_fallback(loc_key, fallback)
 	end
 
 	local localized_text = Localize(loc_key)
-	if localized_text == "" or string_find(localized_text, "<unlocalized") then
+	if not localized_text or localized_text == "" or string_find(localized_text, "<unlocalized") then
 		return fallback or ""
 	end
 
@@ -130,10 +151,14 @@ local function _localized_breed_name(breed)
 end
 
 local function _damage_label_enabled()
-	return mod:get("show_armour_type") == true
+	return _feature_enabled("show_armour_type")
 end
 
 local function _damage_label_display_mode()
+	if mod._psykhanium_full_debug_display then
+		return LABEL_DISPLAY_MODE_ARMOUR_TYPE
+	end
+
 	return mod:get("show_armour_type_display") or LABEL_DISPLAY_MODE_ARMOUR_TYPE
 end
 
@@ -191,6 +216,7 @@ local COLOR_ORANGE = { 255, 255, 165, 0 }
 local COLOR_RED = { 255, 255, 0, 0 }
 local COLOR_MAGENTA = { 255, 255, 0, 255 }
 local DEFAULT_STATUS_TEXT_COLOR = COLOR_YELLOW
+local SHIELD_BAR_HEIGHT = 2
 
 local SLOT_CACHE = {}
 local DEFAULT_SLOT_BASE_Y = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
@@ -232,11 +258,43 @@ local function _debuff_signature(debuffs)
 	for i = 1, #debuffs do
 		local d = debuffs[i]
 		if d then
-			local v = d.stacks or d.percent or ""
-			parts[#parts + 1] = string_format("%s:%s", d.type or "?", tostring(v))
+			parts[#parts + 1] = string_format("%s:%s:%s:%s", d.type or "?", d.template_name or "",
+				tostring(d.stacks or ""), tostring(d.percent or ""))
 		end
 	end
 	return table.concat(parts, "|")
+end
+
+local function get_minion_shield_health(unit)
+	local shield_extension = ScriptUnit_has_extension(unit, "shield_system")
+
+	if not shield_extension then
+		return nil
+	end
+
+	local state_managers = Managers.state
+	local game_session_manager = state_managers and state_managers.game_session
+	local unit_spawner_manager = state_managers and state_managers.unit_spawner
+
+	if not game_session_manager or not unit_spawner_manager then
+		return nil
+	end
+
+	local game_session = game_session_manager:game_session()
+	local game_object_id = unit_spawner_manager:game_object_id(unit)
+
+	if not game_session or not game_object_id then
+		return nil
+	end
+
+	local shield_health = GameSession_game_object_field(game_session, game_object_id, "shield_health")
+	local shield_max_health = GameSession_game_object_field(game_session, game_object_id, "shield_max_health")
+
+	if not shield_health or not shield_max_health or shield_max_health <= 0 then
+		return nil
+	end
+
+	return shield_health, shield_max_health, shield_health / shield_max_health
 end
 
 -- ---------------------------------------------------------------------------
@@ -267,14 +325,14 @@ local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, p
 end
 
 local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
-	if not mod:get("show_damage_numbers") then
+	if not _feature_enabled("show_damage_numbers") then
 		return
 	end
 
 	local settings = template.damage_number_settings
 	local damage_numbers = ui_content.damage_numbers
 	local num = #damage_numbers
-	local show_dps = ui_content.damage_has_started and mod:get("show_dps")
+	local show_dps = ui_content.damage_has_started and _feature_enabled("show_dps")
 	if num == 0 and not show_dps then
 		return
 	end
@@ -392,9 +450,9 @@ local ICON_DEFAULT_COLORS = {
 	COLOR_WHITE,
 }
 
-local DOT_ORDER = { "bleed", "burn", "warpfire", "toxin" }
+local DOT_ORDER = { "bleed", "chordclaw_bleed", "burn", "phosphor_burn", "warpfire", "toxin" }
 local DEBUFF_ORDER = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike",
-	"empyric_shock", "electrocuted" }
+	"empyric_shock", "electrocuted", "weapon_malfunction" }
 
 local DEBUFF_RULES = {
 	brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
@@ -405,12 +463,12 @@ local DEBUFF_RULES = {
 	empyric_shock = { setting = "empyric_shock_display", default = "stacks", center_on = "percent" },
 }
 
-local function _center_small_text(stacks_style)
+local function _center_small_text(stacks_style, text)
 	if not stacks_style then
 		return
 	end
 
-	stacks_style.font_size = 11
+	stacks_style.font_size = text and #text >= 4 and 9 or 11
 	stacks_style.text_horizontal_alignment = "center"
 	stacks_style.text_vertical_alignment = "center"
 end
@@ -553,6 +611,22 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			},
 		},
 		{
+			value = "content/ui/materials/backgrounds/default_square",
+			style_id = "shield_bar",
+			pass_type = "rect",
+			style = {
+				vertical_alignment = "center",
+				offset = {
+					bar_offset[1],
+					bar_offset[2] - (bar_size[2] - SHIELD_BAR_HEIGHT) * 0.5,
+					5,
+				},
+				size = { bar_size[1], SHIELD_BAR_HEIGHT },
+				color = COLOR_WHITE,
+				visible = false,
+			},
+		},
+		{
 			value = "content/ui/materials/bars/simple/end",
 			style_id = "bar_end",
 			pass_type = "texture",
@@ -627,6 +701,7 @@ template.on_enter = function(widget, marker, template)
 	content.damage_taken = 0
 	content.damage_numbers = {}
 	content.has_active_debuff = false
+	content.shield_health = nil
 
 	local bar_settings = template.bar_settings
 	marker.bar_logic = HudHealthBarLogic:new(bar_settings)
@@ -662,9 +737,21 @@ local BRITTLENESS_BUFFS = {
 	{ name = "rending_debuff",                 								per_stack = 2.5,  cap = 16, duration = 5 },
 	{ name = "rending_debuff_medium",          								per_stack = 10.0, cap = 2,  duration = 5 },
 	{ name = "rending_burn_debuff",           								per_stack = 1.0,  cap = 20, duration = 5 },
+	{ name = "phosphor_rending_debuff",       								per_stack = 15.0, cap = 1,  duration = 20 },
 	{ name = "shotgun_special_rending_debuff", 								per_stack = 25.0, cap = 1,  duration = 8 },
 	{ name = "saw_rending_debuff",             								per_stack = 2.5,  cap = 15, duration = 5 },
 	{ name = "hordes_buff_grenade_explosion_applies_rending_debuff_effect", per_stack = 75.0, cap = 6 },
+}
+local BRITTLENESS_PERCENT_PER_EQUIVALENT_STACK = 2.5
+local MAX_BRITTLENESS_STACKS = 40
+local MAX_BRITTLENESS_PERCENT = 100
+
+local CHORDCLAW_BLEED_BUFFS = {
+	{ name = "bleed_long", duration = 9.5 },
+}
+
+local PHOSPHOR_BURN_BUFFS = {
+	{ name = "phosphor_burn", duration = 20 },
 }
 
 -- Skullcrusher / Damage vs staggered debuff
@@ -708,13 +795,16 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- - psyker_discharge_damage_debuff: damage_taken_multiplier = 1.1 (8s)
 -- - veteran_improved_tag_debuff: +0.05 per stack (max 6)
 -- - zealot_bled_enemies_take_more_damage_effect: damage_taken_multiplier = 1.15 (5s)
+-- - cryptic_overload_keystone_increase_damage_taken_debuff: damage_taken_multiplier = 1.15 (8s)
 -- - broker_passive_toxin_infected_enemies_take_increased_damage_debuff: damage_taken_modifier = 0.1 (5s)
 -- - hordes_buff_broker_flash_grenade_increase_damage_taken_effect: damage_taken_modifier = 2.0 (30s, max 6)
+-- - cryptic_servo_skull_debuff: damage_taken_modifier = 0.15 (5s)
 local DAMAGE_TAKEN_MODIFIER_BUFFS = {
 	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.10, cap = 1 }, -- Soften them up
 	{ name = "increase_damage_taken",                                              per_stack = 0.10, cap = 8 }, -- Pickaxe weapon special
 	{ name = "broker_passive_toxin_infected_enemies_take_increased_damage_debuff", per_stack = 0.10, cap = 1 }, -- Virulent Strain
 	{ name = "hordes_buff_broker_flash_grenade_increase_damage_taken_effect",      per_stack = 2.00, cap = 6 }, -- Blinding Weakness
+	{ name = "cryptic_servo_skull_debuff",                                        per_stack = 0.15, cap = 1 }, -- Servo-Skull attack
 }
 
 local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
@@ -722,6 +812,7 @@ local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
 	{ name = "adamant_drone_enemy_debuff",                  multiplier = 1.15 }, -- Nuncio-Aquila
 	{ name = "psyker_discharge_damage_debuff",              multiplier = 1.10 }, -- Warp Rupture
 	{ name = "zealot_bled_enemies_take_more_damage_effect", multiplier = 1.15 }, -- Blinded by Blood
+	{ name = "cryptic_overload_keystone_increase_damage_taken_debuff", multiplier = 1.15 }, -- Critical Power Overload
 }
 
 -- Enfeeble (Psyker): Smite/Charged Smite applies +10% damage taken while actively affected
@@ -732,6 +823,55 @@ local ENFEEBLE_SMITE_TARGET_BUFFS = {
 }
 
 local VETERAN_FOCUS_TARGET_DEBUFF = { name = "veteran_improved_tag_debuff", per_stack = 0.05, cap = 6 }
+
+local function _has_any_keyword(buff_extension, keywords)
+	if not buff_extension or not keywords then
+		return false
+	end
+
+	if buff_extension.has_any_keyword then
+		return buff_extension:has_any_keyword(keywords)
+	end
+
+	if not buff_extension.has_keyword then
+		return false
+	end
+
+	for i = 1, #keywords do
+		if buff_extension:has_keyword(keywords[i]) then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function _active_template_name_for_keywords(buff_extension, keyword_lookup)
+	if not buff_extension or not keyword_lookup then
+		return nil
+	end
+
+	local buffs = buff_extension.buffs and buff_extension:buffs() or buff_extension._buffs
+	if not buffs then
+		return nil
+	end
+
+	for i = 1, #buffs do
+		local buff = buffs[i]
+		local template = buff and buff.template and buff:template()
+		local keywords = template and template.keywords
+
+		if keywords then
+			for j = 1, #keywords do
+				if keyword_lookup[keywords[j]] then
+					return template.name or (buff.template_name and buff:template_name()) or buff._template_name
+				end
+			end
+		end
+	end
+
+	return nil
+end
 
 local function _has_any_named_buff(buff_extension, buff_names)
 	if not buff_extension or not buff_names then
@@ -1011,6 +1151,30 @@ local function _is_brittleness_relevant(content)
 	return armor_type and BRITTLENESS_RELEVANT_ARMOR_TYPES[armor_type] == true or false
 end
 
+local WEAPON_MALFUNCTION_BREEDS = {
+	chaos_ogryn_gunner = true,
+	cultist_assault = true,
+	cultist_flamer = true,
+	cultist_gunner = true,
+	cultist_shocktrooper = true,
+	renegade_assault = true,
+	renegade_flamer = true,
+	renegade_flamer_mutator = true,
+	renegade_gunner = true,
+	renegade_netgunner = true,
+	renegade_plasma_gunner = true,
+	renegade_radio_operator = true,
+	renegade_rifleman = true,
+	renegade_shocktrooper = true,
+	renegade_sniper = true,
+}
+
+local function _is_weapon_malfunction_relevant(content)
+	local breed = content and content.breed
+
+	return breed and WEAPON_MALFUNCTION_BREEDS[breed.name] == true or false
+end
+
 local function _format_percent(value)
 	-- Round to full percent:
 	-- 0.1-0.4 down, 0.5-0.9 up (round half up)
@@ -1027,7 +1191,7 @@ local function _brittleness_color(percent)
 		return 255, 255, 165, 0
 	elseif percent >= 20 then -- 20..29.9 yellow
 		return 255, 255, 255, 0
-	elseif percent >= 2.5 then -- 2.5..19.9 white
+	elseif percent > 0 then -- below 20 white
 		return 255, 255, 255, 255
 	end
 	return 0, 255, 255, 255
@@ -1035,7 +1199,7 @@ end
 
 local function _compute_brittleness_percent(buff_extension)
 	if not buff_extension then
-		return 0
+		return 0, 0
 	end
 
 	local total = 0
@@ -1046,10 +1210,16 @@ local function _compute_brittleness_percent(buff_extension)
 			if stacks > cfg.cap then
 				stacks = cfg.cap
 			end
+
 			total = total + stacks * cfg.per_stack
 		end
 	end
-	return total
+
+	local percent = math_min(total, MAX_BRITTLENESS_PERCENT)
+	local equivalent_stacks = math_min(percent / BRITTLENESS_PERCENT_PER_EQUIVALENT_STACK,
+		MAX_BRITTLENESS_STACKS)
+
+	return percent, equivalent_stacks
 end
 
 -- ---------------------------------------------------------------------------
@@ -1061,25 +1231,98 @@ local DEBUFF_DEFS = {
 		id = "bleed",
 		setting = "bleed",
 		is_dot = true,
+		display_setting = "bleed_display",
+		display_default = "stacks",
 		icon = function() return mod.textures and mod.textures.bleed end,
 		color = function() return mod.colors and mod.colors.bleed end,
 		poll = function(buff_extension)
 			local stacks = buff_extension:current_stacks("bleed") or 0
 			return stacks > 0 and { stacks = stacks } or nil
 		end,
-		text = function(data) return tostring(data.stacks or "") end,
+		text = function(data)
+			return (mod:get("bleed_display") or "stacks") == "icon_only" and "" or tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "chordclaw_bleed",
+		setting = "chordclaw_bleed",
+		is_dot = true,
+		icon = function() return mod.textures and mod.textures.chordclaw_bleed end,
+		color = function() return mod.colors and mod.colors.chordclaw_bleed end,
+		poll = function(buff_extension)
+			local stacks = buff_extension:current_stacks("bleed_long") or 0
+			if stacks <= 0 then
+				return nil
+			end
+
+			local mode = mod:get("chordclaw_bleed_display") or "stacks"
+			local time_left = mode == "time" and
+				_min_remaining_time_for_templates(buff_extension, CHORDCLAW_BLEED_BUFFS) or nil
+
+			return { stacks = stacks, time_left = time_left, template_name = "bleed_long" }
+		end,
+		text = function(data)
+			if (mod:get("chordclaw_bleed_display") or "stacks") == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
+			end
+
+			return tostring(data.stacks or "")
+		end,
 	},
 	{
 		id = "burn",
 		setting = "burn",
 		is_dot = true,
+		display_setting = "burn_display",
+		display_default = "stacks",
 		icon = function() return mod.textures and mod.textures.burn end,
 		color = function() return mod.colors and mod.colors.burn end,
 		poll = function(buff_extension)
 			local stacks = buff_extension:current_stacks("flamer_assault") or 0
 			return stacks > 0 and { stacks = stacks } or nil
 		end,
-		text = function(data) return tostring(data.stacks or "") end,
+		text = function(data)
+			return (mod:get("burn_display") or "stacks") == "icon_only" and "" or tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "phosphor_burn",
+		setting = "phosphor_burn",
+		is_dot = true,
+		always_show_icon = true,
+		display_setting = "phosphor_burn_display",
+		display_default = "icon_only",
+		icon = function() return mod.textures and mod.textures.phosphor_burn end,
+		color = function() return mod.colors and mod.colors.phosphor_burn end,
+		poll = function(buff_extension)
+			local stacks = buff_extension:current_stacks("phosphor_burn") or 0
+			if stacks <= 0 then
+				return nil
+			end
+
+			local mode = mod:get("phosphor_burn_display") or "icon_only"
+			local time_left = mode == "time" and
+				_min_remaining_time_for_templates(buff_extension, PHOSPHOR_BURN_BUFFS) or nil
+
+			return { time_left = time_left, template_name = "phosphor_burn" }
+		end,
+		text = function(data)
+			if (mod:get("phosphor_burn_display") or "icon_only") == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
+			end
+
+			return ""
+		end,
 	},
 	{
 		id = "warpfire",
@@ -1097,6 +1340,8 @@ local DEBUFF_DEFS = {
 		id = "toxin",
 		setting = "toxin",
 		is_dot = true,
+		display_setting = "toxin_display",
+		display_default = "stacks",
 		icon = function() return mod.textures and mod.textures.toxin end,
 		color = function() return mod.colors and mod.colors.toxin end,
 		poll = function(buff_extension)
@@ -1108,7 +1353,9 @@ local DEBUFF_DEFS = {
 
 			return toxin_stacks > 0 and { stacks = toxin_stacks } or nil
 		end,
-		text = function(data) return tostring(data.stacks or "") end,
+		text = function(data)
+			return (mod:get("toxin_display") or "stacks") == "icon_only" and "" or tostring(data.stacks or "")
+		end,
 	},
 	{
 		id = "electrocuted",
@@ -1116,11 +1363,31 @@ local DEBUFF_DEFS = {
 		icon = function() return mod.textures and mod.textures.electrocuted end,
 		color = function() return mod.colors and mod.colors.electrocuted end,
 		poll = function(buff_extension)
-			if BUFF_KEYWORD_ELECTROCUTED and buff_extension.has_keyword and
-				buff_extension:has_keyword(BUFF_KEYWORD_ELECTROCUTED) then
-				return {} -- presence-only
+			if _has_any_keyword(buff_extension, ELECTROCUTED_KEYWORDS) then
+				return {
+					template_name = _active_template_name_for_keywords(buff_extension,
+						ELECTROCUTED_KEYWORD_LOOKUP),
+				} -- presence-only; arc target markers are not necessarily ticking DoTs
 			end
 			return nil
+		end,
+		text = function(_) return "" end,
+	},
+	{
+		id = "weapon_malfunction",
+		setting = "weapon_malfunction",
+		icon = function() return mod.textures and mod.textures.weapon_malfunction end,
+		color = function() return mod.colors and mod.colors.weapon_malfunction end,
+		poll = function(buff_extension, content)
+			if not _is_weapon_malfunction_relevant(content) or
+				not _has_any_keyword(buff_extension, WEAPON_MALFUNCTION_KEYWORDS) then
+				return nil
+			end
+
+			return {
+				template_name = _active_template_name_for_keywords(buff_extension,
+					WEAPON_MALFUNCTION_KEYWORD_LOOKUP),
+			}
 		end,
 		text = function(_) return "" end,
 	},
@@ -1134,14 +1401,14 @@ local DEBUFF_DEFS = {
 			return { a, r, g, b }
 		end,
 		poll = function(buff_extension, content)
-			if not mod:get("brittleness_indicator") then
+			if not _feature_enabled("brittleness_indicator") then
 				return nil
 			end
 			if not _is_brittleness_relevant(content) then
 				return nil
 			end
-			local p = _compute_brittleness_percent(buff_extension)
-			if p < 2.5 then
+			local p, stacks = _compute_brittleness_percent(buff_extension)
+			if p <= 0 then
 				return nil
 			end
 
@@ -1151,11 +1418,13 @@ local DEBUFF_DEFS = {
 				time_left = _min_remaining_time_for_templates(buff_extension, BRITTLENESS_BUFFS)
 			end
 
-			return { percent = p, time_left = time_left }
+			return { stacks = stacks, percent = p, time_left = time_left }
 		end,
 		text = function(data)
 			local mode = mod:get("brittleness_indicator_display") or "icon_text"
-			if mode == "icon_text" then
+			if mode == "stacks" then
+				return string_format("%g", data.stacks or 0)
+			elseif mode == "icon_text" then
 				return _format_percent(data.percent or 0)
 			elseif mode == "time" then
 				if data.time_left == nil then
@@ -1245,7 +1514,7 @@ local DEBUFF_DEFS = {
 		end,
 
 		poll = function(buff_extension)
-			if not mod:get("melee_damage_taken") then
+			if not _feature_enabled("melee_damage_taken") then
 				return nil
 			end
 
@@ -1278,7 +1547,7 @@ local DEBUFF_DEFS = {
 			return _damage_taken_color((data and data.percent) or 0)
 		end,
 		poll = function(buff_extension)
-			if not mod:get("damage_taken") then
+			if not _feature_enabled("damage_taken") then
 				return nil
 			end
 			local percent = _compute_total_damage_taken_percent(buff_extension)
@@ -1301,7 +1570,7 @@ local DEBUFF_DEFS = {
 		icon = function() return mod.textures and mod.textures.empyric_shock end,
 		color = function(data) return _empyric_shock_color_by_stacks((data and data.stacks) or 0) end,
 		poll = function(buff_extension, _content)
-			if not mod:get("empyric_shock") then
+			if not _feature_enabled("empyric_shock") then
 				return nil
 			end
 			local stacks, percent = _compute_empyric_shock(buff_extension)
@@ -1397,7 +1666,7 @@ local function _poll_status_indicators(state, buff_extension)
 
 	for i = 1, #DEBUFF_DEFS do
 		local def = DEBUFF_DEFS[i]
-		local enabled = (def.setting == nil) or mod:get(def.setting)
+		local enabled = (def.setting == nil) or _feature_enabled(def.setting)
 
 		if enabled then
 			local data = def.poll(buff_extension, state.content)
@@ -1409,6 +1678,7 @@ local function _poll_status_indicators(state, buff_extension)
 					stacks = data.stacks,
 					percent = data.percent,
 					time_left = data.time_left,
+					template_name = data.template_name,
 				}
 			end
 		end
@@ -1503,6 +1773,10 @@ local function _apply_boss_indicator_placements(widget, state)
 			local stacks_style = style[stacks_id]
 			local def = debuff.def
 			local is_dot = def and def.is_dot == true
+			local dot_display_mode = is_dot and def.display_setting and
+				(mod:get(def.display_setting) or def.display_default) or nil
+			local force_dot_icon = def.always_show_icon or dot_display_mode == "icon_only"
+			local use_dot_numbers_only = is_dot and dot_numbers_only and not force_dot_icon
 			local debuff_color = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
 				COLOR_WHITE
 			local rule = DEBUFF_RULES[debuff.type]
@@ -1522,14 +1796,14 @@ local function _apply_boss_indicator_placements(widget, state)
 				stacks_style.font_size = status_text_font_size or DEFAULT_DEBUFF_TEXT_FONT_SIZE
 				_set_style_color(stacks_style.text_color, DEFAULT_STATUS_TEXT_COLOR)
 
-				if is_dot and dot_numbers_only then
+				if use_dot_numbers_only then
 					stacks_style.text_horizontal_alignment = "center"
 					stacks_style.text_vertical_alignment = "center"
 					_set_style_color(stacks_style.text_color, debuff_color)
 				end
 			end
 
-			if is_dot and dot_numbers_only then
+			if use_dot_numbers_only then
 				content[icon_id] = nil
 			else
 				content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
@@ -1546,7 +1820,7 @@ local function _apply_boss_indicator_placements(widget, state)
 			end
 
 			if rule and mode == rule.center_on then
-				_center_small_text(stacks_style)
+				_center_small_text(stacks_style, content[stacks_id])
 			end
 
 			if debuff.type == "electrocuted" then
@@ -1557,7 +1831,8 @@ local function _apply_boss_indicator_placements(widget, state)
 end
 
 template.update_vanilla_boss_indicator = function(widget, target, dt)
-	if not widget or not target or not mod:get("show_vanilla_boss_bar_indicators") then
+	if not widget or not target or mod._psykhanium_vanilla_only or
+		not _feature_enabled("show_vanilla_boss_bar_indicators") then
 		_hide_boss_indicator_widget(widget)
 
 		return
@@ -1607,7 +1882,23 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local content = widget.content
 	local style = widget.style
 	local unit = marker.unit
-	local show_damage_numbers = mod:get("show_damage_numbers")
+	local psykhanium_behavior = mod._active_psykhanium_healthbar_behavior
+	local breed_toggles = mod._healthbar_breed_toggles
+	local breed = content.breed
+
+	if mod._psykhanium_vanilla_only or
+		(psykhanium_behavior == "normal" and breed_toggles and breed and breed_toggles[breed.name] ~= true) then
+		local custom_marker_units = mod._custom_marker_units
+		if custom_marker_units then
+			custom_marker_units[unit] = nil
+		end
+
+		marker.remove = true
+
+		return
+	end
+
+	local show_damage_numbers = _feature_enabled("show_damage_numbers")
 	local use_armour_slot_offset = _damage_label_enabled()
 	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
 	local needs_hit_reaction_data = show_damage_numbers
@@ -1618,9 +1909,20 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local health_extension = ScriptUnit_has_extension(unit, "health_system")
 	local is_dead = not health_extension or not health_extension:is_alive()
 	local health_percent = is_dead and 0 or health_extension:current_health_percent()
+	local shield_health, _, shield_fraction = get_minion_shield_health(unit)
 
 	local max_health = Managers.state.difficulty:get_minion_max_health(content.breed.name)
 	local damage_taken
+
+	if shield_health ~= nil then
+		local old_shield_health = content.shield_health
+
+		if old_shield_health ~= nil and shield_health ~= old_shield_health then
+			content.visibility_delay = template.damage_number_settings.visibility_delay
+		end
+
+		content.shield_health = shield_health
+	end
 
 	-- ----------------------------
 	-- Debuffs (polled via registry)
@@ -1636,7 +1938,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 			for i = 1, #DEBUFF_DEFS do
 				local def = DEBUFF_DEFS[i]
-				local enabled = (def.setting == nil) or mod:get(def.setting)
+				local enabled = (def.setting == nil) or _feature_enabled(def.setting)
 				if enabled then
 					local data = def.poll(buff_extension, content)
 					if data then
@@ -1646,6 +1948,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 							stacks = data.stacks,
 							percent = data.percent,
 							time_left = data.time_left,
+							template_name = data.template_name,
 						}
 					end
 				end
@@ -1663,8 +1966,8 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 	-- ----------------------------
 	-- Render DoTs and Debuffs (grid, fixed ordering)
-	-- DoTs: bleed, burn, warpfire, toxin
-	-- Debuffs: electrocuted, brittleness
+	-- DoTs: bleed, Chordclaw bleed, burn, Phosphor burn, warpfire, toxin
+	-- Debuffs include electrocution and aggregate brittleness (including Phosphor rending).
 	-- If any debuff is active: debuffs occupy bottom row (slots 1..GRID_COLS),
 	-- and all DoTs are moved to the next row (slot + GRID_COLS).
 	-- ----------------------------
@@ -1752,6 +2055,10 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			local stacks_style = style[stacks_id]
 			local def = debuff.def
 			local is_dot = def and def.is_dot == true
+			local dot_display_mode = is_dot and def.display_setting and
+				(mod:get(def.display_setting) or def.display_default) or nil
+			local force_dot_icon = def.always_show_icon or dot_display_mode == "icon_only"
+			local use_dot_numbers_only = is_dot and dot_numbers_only and not force_dot_icon
 			local debuff_color = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
 				COLOR_WHITE
 			local rule = DEBUFF_RULES[debuff.type]
@@ -1776,14 +2083,14 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 				stacks_style.font_size = status_text_font_size or DEFAULT_DEBUFF_TEXT_FONT_SIZE
 				_set_style_color(stacks_style.text_color, DEFAULT_STATUS_TEXT_COLOR)
 
-				if is_dot and dot_numbers_only then
+				if use_dot_numbers_only then
 					stacks_style.text_horizontal_alignment = "center"
 					stacks_style.text_vertical_alignment = "center"
 					_set_style_color(stacks_style.text_color, debuff_color)
 				end
 			end
 
-			if is_dot and dot_numbers_only then
+			if use_dot_numbers_only then
 				content[icon_id] = nil
 			else
 				content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
@@ -1804,7 +2111,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			-- text for brittleness, skullcrusher, thunderstrike, melee_damage_taken and damage_taken debuffs
 			if rule then
 				if mode == rule.center_on then
-					_center_small_text(stacks_style)
+					_center_small_text(stacks_style, content[stacks_id])
 				end
 			end
 
@@ -1849,7 +2156,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		content.visibility_delay = dns.visibility_delay
 		content.damage_taken = damage_taken
 
-		if old_damage_taken < damage_taken and mod:get("show_damage_numbers") then
+		if old_damage_taken < damage_taken and show_damage_numbers then
 			local damage_numbers = content.damage_numbers
 			local damage_diff = math_ceil(damage_taken - old_damage_taken)
 			local latest = damage_numbers[#damage_numbers]
@@ -1936,13 +2243,19 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		marker.health_fraction = health_fraction
 	end
 
-	local show_bar = mod:get("show_bar")
+	local show_bar = _feature_enabled("show_bar")
+	local show_shield_bar = show_bar and shield_fraction ~= nil and shield_fraction > 0 or false
+
+	if show_shield_bar then
+		style.shield_bar.size[1] = template.size[1] * math_clamp(shield_fraction, 0, 1)
+	end
 
 	style.bar.visible = show_bar
 	style.ghost_bar.visible = show_bar
 	style.health_max.visible = show_bar
 	style.bar_end.visible = show_bar
 	style.background.visible = show_bar
+	style.shield_bar.visible = show_shield_bar
 
 	-- ----------------------------
 	-- LOS fade + removal timing
