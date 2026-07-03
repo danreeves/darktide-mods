@@ -480,6 +480,11 @@ local function _set_style_color(style_color, src_color)
 	style_color[4] = src_color[4]
 end
 
+-- hook_require definitions remain injected while DMF disables the mod's normal hooks.
+local function _transparent_color(color)
+	return { 0, color[2], color[3], color[4] }
+end
+
 template.create_vanilla_boss_indicator_definition = function(bar_width, center_x)
 	local header_font_setting_name = "nameplates"
 	local header_font_settings = UIFontSettings[header_font_setting_name]
@@ -504,10 +509,10 @@ template.create_vanilla_boss_indicator_definition = function(bar_width, center_x
 				horizontal_alignment = "center",
 				offset = { x, y, BOSS_INDICATOR_Z },
 				size = { ICON_SIZE, ICON_SIZE },
-				color = ICON_DEFAULT_COLORS[i] or COLOR_WHITE,
+				color = _transparent_color(ICON_DEFAULT_COLORS[i] or COLOR_WHITE),
 			},
 			visibility_function = function(content, style)
-				return content[icon_id] ~= nil
+				return content.healthbars_indicator_active == true and content[icon_id] ~= nil
 			end,
 		}
 
@@ -526,12 +531,16 @@ template.create_vanilla_boss_indicator_definition = function(bar_width, center_x
 				font_type = header_font_settings.font_type,
 				font_size = DEFAULT_DOT_TEXT_FONT_SIZE,
 				text_color = {
-					DEFAULT_STATUS_TEXT_COLOR[1],
+					0,
 					DEFAULT_STATUS_TEXT_COLOR[2],
 					DEFAULT_STATUS_TEXT_COLOR[3],
 					DEFAULT_STATUS_TEXT_COLOR[4],
 				},
-			}
+			},
+			visibility_function = function(content, style)
+				return content.healthbars_indicator_active == true and content[stacks_id] ~= nil and
+					content[stacks_id] ~= ""
+			end,
 		}
 	end
 
@@ -1621,12 +1630,24 @@ local function _is_vanilla_boss_indicator_breed(breed)
 	return breed.trigger_boss_health_bar_on_aggro == true or breed.trigger_boss_health_bar_on_damaged == true
 end
 
-local function _clear_boss_indicator_slots(content)
+local function _clear_boss_indicator_slots(content, style)
 	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
 		local slot = BOSS_INDICATOR_SLOT_CACHE[i]
+		local icon_style = style and style[slot.icon_id]
+		local icon_color = icon_style and icon_style.color
+		local stacks_style = style and style[slot.stacks_id]
+		local text_color = stacks_style and stacks_style.text_color
 
 		content[slot.icon_id] = nil
 		content[slot.stacks_id] = ""
+
+		if icon_color then
+			icon_color[1] = 0
+		end
+
+		if text_color then
+			text_color[1] = 0
+		end
 	end
 end
 
@@ -1639,9 +1660,12 @@ local function _hide_boss_indicator_widget(widget)
 
 	local content = widget.content
 	if content then
-		_clear_boss_indicator_slots(content)
+		content.healthbars_indicator_active = false
+		_clear_boss_indicator_slots(content, widget.style)
 	end
 end
+
+template.hide_vanilla_boss_indicator = _hide_boss_indicator_widget
 
 local function _new_boss_indicator_state(breed)
 	return {
@@ -1759,7 +1783,8 @@ local function _apply_boss_indicator_placements(widget, state)
 	local debuff_text_font_size = mod:get("debuff_text_font_size") or DEFAULT_DEBUFF_TEXT_FONT_SIZE
 	local dot_numbers_only = mod:get("dot_numbers_only") == true
 
-	_clear_boss_indicator_slots(content)
+	content.healthbars_indicator_active = true
+	_clear_boss_indicator_slots(content, style)
 
 	for p = 1, #placement_slots do
 		local slot = placement_slots[p]
@@ -1831,8 +1856,8 @@ local function _apply_boss_indicator_placements(widget, state)
 end
 
 template.update_vanilla_boss_indicator = function(widget, target, dt)
-	if not widget or not target or mod._psykhanium_vanilla_only or
-		not _feature_enabled("show_vanilla_boss_bar_indicators") then
+	if not widget or not target or mod._inactive_outside_psykhanium or mod._psykhanium_vanilla_only or
+		mod:get("show_vanilla_boss_bar_indicators") ~= true then
 		_hide_boss_indicator_widget(widget)
 
 		return
@@ -1886,7 +1911,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local breed_toggles = mod._healthbar_breed_toggles
 	local breed = content.breed
 
-	if mod._psykhanium_vanilla_only or
+	if mod._inactive_outside_psykhanium or mod._psykhanium_vanilla_only or
 		(psykhanium_behavior == "normal" and breed_toggles and breed and breed_toggles[breed.name] ~= true) then
 		local custom_marker_units = mod._custom_marker_units
 		if custom_marker_units then

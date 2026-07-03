@@ -125,14 +125,16 @@ end
 
 local function current_psykhanium_behavior()
 	local behavior = nil
+	local in_psykhanium = is_psykhanium()
 
-	if is_psykhanium() then
+	if in_psykhanium then
 		behavior = mod:get("psykhanium_healthbar_behavior") or PSYKHANIUM_BEHAVIOR_NORMAL
 	end
 
 	mod._active_psykhanium_healthbar_behavior = behavior
 	mod._psykhanium_full_debug_display = behavior == PSYKHANIUM_BEHAVIOR_FULL_DEBUG
 	mod._psykhanium_vanilla_only = behavior == PSYKHANIUM_BEHAVIOR_VANILLA_ONLY
+	mod._inactive_outside_psykhanium = not in_psykhanium and mod:get("only_active_in_psykhanium") == true
 
 	return behavior
 end
@@ -159,6 +161,10 @@ local function should_enable_healthbar(unit, psykhanium_behavior)
 	local behavior = psykhanium_behavior
 	if behavior == nil then
 		behavior = current_psykhanium_behavior()
+	end
+
+	if mod._inactive_outside_psykhanium then
+		return false
 	end
 
 	if behavior == PSYKHANIUM_BEHAVIOR_VANILLA_ONLY then
@@ -224,6 +230,34 @@ local function visit_units_from_container(container, seen_units, visitor)
 	return count
 end
 
+local function remove_custom_healthbar_markers(world_markers)
+	local markers_by_type = world_markers and world_markers._markers_by_type
+	local custom_markers = markers_by_type and markers_by_type[MarkerTemplate.name]
+	local event_manager = Managers.event
+
+	if not custom_markers or not event_manager then
+		return 0
+	end
+
+	local custom_marker_units = mod._custom_marker_units
+	local removed = 0
+
+	for i = #custom_markers, 1, -1 do
+		local marker = custom_markers[i]
+
+		if marker then
+			if custom_marker_units then
+				custom_marker_units[marker.unit] = nil
+			end
+
+			event_manager:trigger("remove_world_marker", marker.id)
+			removed = removed + 1
+		end
+	end
+
+	return removed
+end
+
 local function resync_existing_healthbars()
 	local state_manager = Managers.state
 	local extension_manager = state_manager and state_manager.extension
@@ -239,6 +273,10 @@ local function resync_existing_healthbars()
 	local seen_units = {}
 	local behavior = current_psykhanium_behavior()
 	local world_markers = mod._world_markers
+
+	if mod._inactive_outside_psykhanium then
+		return remove_custom_healthbar_markers(world_markers)
+	end
 
 	if not behavior or not world_markers then
 		local added = 0
@@ -337,20 +375,104 @@ local function resync_existing_healthbars()
 	return added
 end
 
+local function hide_existing_boss_indicators()
+	local boss_health = mod._boss_health_element
+	local widget_groups = boss_health and boss_health._widget_groups
+
+	if not widget_groups then
+		return
+	end
+
+	local hide_indicator = MarkerTemplate.hide_vanilla_boss_indicator
+
+	if not hide_indicator then
+		return
+	end
+
+	for i = 1, #widget_groups do
+		local widget_group = widget_groups[i]
+		local widget = widget_group and widget_group.healthbars_indicators
+
+		if widget then
+			hide_indicator(widget)
+		end
+	end
+end
+
+local function register_world_marker_template(world_markers)
+	local marker_templates = world_markers and world_markers._marker_templates
+
+	if not marker_templates then
+		return false
+	end
+
+	marker_templates[MarkerTemplate.name] = MarkerTemplate
+	mod._world_markers = world_markers
+
+	return true
+end
+
+local function current_world_markers()
+	local ui_manager = Managers.ui
+	local hud = ui_manager and ui_manager:get_hud()
+
+	return hud and hud:element("HudElementWorldMarkers")
+end
+
+local function setting_requires_marker_resync(setting_id)
+	if setting_id == "only_active_in_psykhanium" or setting_id == "psykhanium_healthbar_behavior" or
+		show[setting_id] ~= nil then
+		return true
+	end
+
+	for _, mapped_setting_id in pairs(MUTATOR_BREED_SETTING_OVERRIDES) do
+		if mapped_setting_id == setting_id then
+			return true
+		end
+	end
+
+	return false
+end
+
 get_toggles()
 mod._healthbar_breed_toggles = show
 current_psykhanium_behavior()
 
-mod.on_setting_changed = function()
+mod.on_setting_changed = function(setting_id)
 	get_toggles()
 	refresh_colors()
 	current_psykhanium_behavior()
-	resync_existing_healthbars()
+
+	if setting_id == "show_vanilla_boss_bar_indicators" then
+		if mod:get("show_vanilla_boss_bar_indicators") ~= true then
+			hide_existing_boss_indicators()
+		end
+
+		return
+	end
+
+	if setting_id == "only_active_in_psykhanium" and mod._inactive_outside_psykhanium then
+		hide_existing_boss_indicators()
+	end
+
+	if setting_requires_marker_resync(setting_id) then
+		resync_existing_healthbars()
+	end
+end
+
+mod.on_disabled = function()
+	hide_existing_boss_indicators()
+end
+
+mod.on_enabled = function()
+	if register_world_marker_template(current_world_markers()) then
+		current_psykhanium_behavior()
+		resync_existing_healthbars()
+	end
 end
 
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
-	self._marker_templates[MarkerTemplate.name] = MarkerTemplate
-	mod._world_markers = self
+	register_world_marker_template(self)
 	mod._custom_marker_units = new_marker_cache()
 	current_psykhanium_behavior()
 	resync_existing_healthbars()
@@ -371,6 +493,8 @@ mod:hook_require("scripts/ui/hud/elements/boss_health/hud_element_boss_health_de
 end)
 
 mod:hook_safe("HudElementBossHealth", "update", function(self, dt)
+	mod._boss_health_element = self
+
 	local widget_groups = self._widget_groups
 	local active_targets_array = self._active_targets_array
 
@@ -417,6 +541,12 @@ mod:hook_safe(
 )
 
 mod:hook("HudElementWorldMarkers", "event_add_world_marker_unit", function(func, self, marker_type, unit, callback, data)
+	if marker_type == MarkerTemplate.name and not register_world_marker_template(self) then
+		mod._custom_marker_units[unit] = nil
+
+		return
+	end
+
 	if marker_type == "damage_indicator" then
 		local behavior = current_psykhanium_behavior()
 
