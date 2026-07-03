@@ -64,14 +64,14 @@ template.damage_number_settings = {
 	expand_bonus_scale = 30,
 	default_color = "white",
 	has_taken_damage_timer_y_offset = 34,
-	weakspot_color = "orange",
+	weakspot_color = "yellow",
 	fade_delay = 0.35,
 	add_numbers_together_timer = 0.2,
 	shrink_duration = 1,
 	duration = 3,
 	x_offset_between_numbers = 38,
 	expand_duration = 0.2,
-	crit_color = "yellow",
+	crit_color = "orange",
 	hundreds_font_size = 14.4,
 	default_font_size = 17,
 	has_taken_damage_timer_remove_after_time = 5,
@@ -2158,15 +2158,27 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 	if health_extension and (needs_last_hit_zone or needs_hit_reaction_data) then
 		local last_damaging_unit = health_extension:last_damaging_unit()
-		if last_damaging_unit then
+		local replicated_critical_hit = mod._last_hit_was_critical[unit]
+
+		if needs_hit_reaction_data then
+			content.hit_weakspot = false
+			content.was_critical = false
+		end
+
+		if last_damaging_unit or replicated_critical_hit ~= nil then
 			if needs_last_hit_zone then
 				content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
 			end
 
 			if needs_hit_reaction_data then
-				local weakspots = content.weakspots
-				content.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
-				content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
+				if last_damaging_unit then
+					local weakspots = content.weakspots
+					content.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
+					content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
+				else
+					content.hit_weakspot = mod._last_hit_weakspot[unit] == true
+					content.was_critical = replicated_critical_hit
+				end
 			end
 		end
 	end
@@ -2185,7 +2197,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 			local damage_numbers = content.damage_numbers
 			local damage_diff = math_ceil(damage_taken - old_damage_taken)
 			local latest = damage_numbers[#damage_numbers]
-			local was_critical = health_extension and health_extension:was_hit_by_critical_hit_this_render_frame()
+			local was_critical = content.was_critical
 
 			local should_add = true
 			if latest and (t - latest.start_time) < dns.add_numbers_together_timer then
@@ -2202,8 +2214,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 					expand_duration = dns.expand_duration,
 				}
 
-				local weakspots = content.weakspots
-				dn.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
+				dn.hit_weakspot = content.hit_weakspot
 				dn.was_critical = was_critical
 
 				damage_numbers[#damage_numbers + 1] = dn
@@ -2220,14 +2231,16 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 				latest.y_position = nil
 				latest.start_time = t
 
-				local weakspots = content.weakspots
-				latest.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
+				latest.hit_weakspot = content.hit_weakspot
 				latest.was_critical = was_critical
 			end
 		end
 
 		content.damage_has_started = content.damage_has_started or true
 		content.last_damage_taken_time = t
+		mod._last_hit_time[unit] = nil
+		mod._last_hit_weakspot[unit] = nil
+		mod._last_hit_was_critical[unit] = nil
 	end
 
 	-- ----------------------------

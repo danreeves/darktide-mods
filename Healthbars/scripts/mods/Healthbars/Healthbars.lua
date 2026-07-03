@@ -53,6 +53,9 @@ local function is_unit_alive(unit)
 end
 
 mod._custom_marker_units = mod._custom_marker_units or new_marker_cache()
+mod._last_hit_time = mod._last_hit_time or new_marker_cache()
+mod._last_hit_weakspot = mod._last_hit_weakspot or new_marker_cache()
+mod._last_hit_was_critical = mod._last_hit_was_critical or new_marker_cache()
 
 local COLOR_BLEED = { 255, 255, 0, 0 }
 local COLOR_BURN = { 255, 255, 102, 0 }
@@ -474,6 +477,9 @@ end
 mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	register_world_marker_template(self)
 	mod._custom_marker_units = new_marker_cache()
+	mod._last_hit_time = new_marker_cache()
+	mod._last_hit_weakspot = new_marker_cache()
+	mod._last_hit_was_critical = new_marker_cache()
 	current_psykhanium_behavior()
 	resync_existing_healthbars()
 end)
@@ -537,6 +543,23 @@ mod:hook_safe(
 
 		-- Set has a healthbar
 		add_custom_healthbar_marker(unit)
+	end
+)
+
+mod:hook_safe(
+	"AttackReportManager",
+	"add_attack_result",
+	function(_self, _damage_profile, attacked_unit, _attacking_unit, _attack_direction, _hit_world_position,
+			hit_weakspot, damage, _attack_result, _attack_type, _damage_efficiency, is_critical_strike)
+		if attacked_unit and damage > 0 and mod._custom_marker_units[attacked_unit] then
+			local hit_time = Managers.time:time("gameplay")
+			local same_frame = mod._last_hit_time[attacked_unit] == hit_time
+
+			mod._last_hit_time[attacked_unit] = hit_time
+			mod._last_hit_weakspot[attacked_unit] = hit_weakspot == true
+			mod._last_hit_was_critical[attacked_unit] =
+				same_frame and mod._last_hit_was_critical[attacked_unit] == true or is_critical_strike == true
+		end
 	end
 )
 
