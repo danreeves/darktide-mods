@@ -105,7 +105,7 @@ local DEFAULT_HIT_ZONE_NAME = "center_mass"
 local LABEL_DISPLAY_MODE_ARMOUR_TYPE = "armour_type"
 local LABEL_DISPLAY_MODE_ENEMY_NAME = "enemy_name"
 local DEFAULT_POST_KILL_DISPLAY_DURATION = 1
-local MIN_POST_KILL_DISPLAY_DURATION = 0.2
+local MIN_POST_KILL_DISPLAY_DURATION = 0
 local MAX_POST_KILL_DISPLAY_DURATION = 10
 
 local function _feature_enabled(setting_id)
