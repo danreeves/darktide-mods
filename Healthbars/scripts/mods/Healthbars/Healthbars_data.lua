@@ -125,7 +125,7 @@ local widgets = {
 			{
 				setting_id = "post_kill_display_duration",
 				type = "numeric",
-				default_value = 1,
+				default_value = 0,
 				range = { 0, 10 },
 				decimals_number = 1,
 				step_size_value = 0.2,
