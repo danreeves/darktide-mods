@@ -17,8 +17,6 @@ local TAB_DOT_DEBUFFS = mod:localize("tab_dot_debuffs")
 local TAB_ENEMIES = mod:localize("tab_enemies")
 
 local REQUIRED_ICON_PACKAGES = {
-	"packages/ui/views/inventory_view/inventory_view",
-	"packages/ui/views/inventory_weapons_view/inventory_weapons_view",
 	"packages/ui/hud/player_weapon/player_weapon",
 	"packages/ui/views/inventory_background_view/inventory_background_view",
 	"packages/ui/views/character_appearance_view/character_appearance_view",
@@ -34,6 +32,7 @@ local ICON_BURN = "content/ui/materials/icons/presets/preset_20"
 local ICON_PHOSPHOR_BURN = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_rotten_armor"
 local ICON_TOXIN = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_nurgle"
 local ICON_BRITTLENESS = "content/ui/materials/icons/presets/preset_04"
+local ICON_STAGGER = "content/ui/materials/icons/throwables/hud/small/party_psyker"
 local ICON_SKULLCRUSHER = "content/ui/materials/icons/presets/preset_05"
 local ICON_THUNDERSTRIKE = "content/ui/materials/icons/presets/preset_18"
 local ICON_MELEE_DAMAGE_TAKEN = "content/ui/materials/icons/presets/preset_01"
@@ -46,6 +45,7 @@ local ICON_COLOUR_CHORDCLAW_BLEED = { 255, 255, 0, 0 }
 local ICON_COLOUR_BURN = { 255, 255, 102, 0 }
 local ICON_COLOUR_PHOSPHOR_BURN = { 255, 255, 130, 20 }
 local ICON_COLOUR_TOXIN = { 255, 0, 255, 0 }
+local ICON_COLOUR_STAGGER = { 255, 95, 152, 180 }
 local ICON_COLOUR_WARPFIRE_ONE = { 255, 200, 255, 255 }
 local ICON_COLOUR_WARPFIRE_TWO = { 255, 0, 230, 255 }
 local ICON_COLOUR_WARPFIRE_THREE = { 255, 80, 160, 255 }
@@ -336,6 +336,24 @@ local widgets = {
 				setting_id = "weapon_malfunction",
 				type = "checkbox",
 				default_value = true,
+			},
+			{
+				setting_id = "stagger",
+				type = "checkbox",
+				default_value = false,
+				tooltip = "stagger_tooltip",
+
+				sub_widgets = {
+					{
+						setting_id = "stagger_display",
+						type = "dropdown",
+						default_value = "time",
+						options = {
+							dropdown_option("display_icon_only", "icon_only", ICON_STAGGER, ICON_COLOUR_STAGGER),
+							dropdown_option("display_time", "time", ICON_STAGGER, ICON_COLOUR_STAGGER),
+						},
+					},
+				},
 			},
 			{
 				setting_id = "skullcrusher",
