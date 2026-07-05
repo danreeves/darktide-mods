@@ -61,11 +61,23 @@ local function dropdown_option(text, value, icon, icon_colour)
 	}
 end
 
+local function enemy_display_mode_options()
+	return {
+		{ text = "enemy_display_mode_full", value = "full" },
+		{ text = "enemy_display_mode_disabled", value = "disabled" },
+		{ text = "enemy_display_mode_healthbar_only", value = "healthbar_only" },
+		{ text = "enemy_display_mode_healthbar_dots", value = "healthbar_dots" },
+		{ text = "enemy_display_mode_healthbar_debuffs", value = "healthbar_debuffs" },
+	}
+end
+
 local function add(tbl, breed_name, default_value)
 	tbl[#tbl + 1] = {
 		setting_id = breed_name,
-		type = "checkbox",
-		default_value = default_value,
+		type = "dropdown",
+		default_value = default_value and "full" or "disabled",
+		tooltip = "enemy_display_mode_tooltip",
+		options = enemy_display_mode_options(),
 	}
 end
 

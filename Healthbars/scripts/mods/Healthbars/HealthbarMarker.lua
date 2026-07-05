@@ -1820,17 +1820,16 @@ local function _new_boss_indicator_state(breed)
 	}
 end
 
-local function _poll_status_indicators(state, buff_extension, unit)
-	local debuffs = state.debuffs
-
+local function _poll_status_indicators(debuffs, poll_content, buff_extension, unit, show_dots, show_debuffs)
 	table_clear(debuffs)
 
 	for i = 1, #DEBUFF_DEFS do
 		local def = DEBUFF_DEFS[i]
-		local enabled = (def.setting == nil) or _feature_enabled(def.setting)
+		local category_enabled = def.is_dot == true and show_dots or def.is_dot ~= true and show_debuffs
+		local enabled = category_enabled and ((def.setting == nil) or _feature_enabled(def.setting))
 
 		if enabled then
-			local data = def.poll(buff_extension, state.content, unit)
+			local data = def.poll(buff_extension, poll_content, unit)
 
 			if data then
 				debuffs[#debuffs + 1] = {
@@ -2009,6 +2008,18 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 		return
 	end
 
+	local display_modes = mod._healthbar_breed_display_modes
+	local display_mode = display_modes and display_modes[breed.name]
+	local full_debug_display = mod._psykhanium_full_debug_display == true
+	local show_dots = full_debug_display or display_mode == nil or display_mode.show_dots == true
+	local show_debuffs = full_debug_display or display_mode == nil or display_mode.show_debuffs == true
+
+	if not show_dots and not show_debuffs then
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
 	local buff_extension = ScriptUnit_has_extension(unit, "buff_system")
 
 	if not buff_extension then
@@ -2028,7 +2039,7 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 
 	if state.debuff_check_timer >= 0.1 then
 		state.debuff_check_timer = 0
-		_poll_status_indicators(state, buff_extension, unit)
+		_poll_status_indicators(state.debuffs, state.content, buff_extension, unit, show_dots, show_debuffs)
 	end
 
 	_pack_indicator_placements(state)
@@ -2045,11 +2056,13 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local style = widget.style
 	local unit = marker.unit
 	local psykhanium_behavior = mod._active_psykhanium_healthbar_behavior
-	local breed_toggles = mod._healthbar_breed_toggles
+	local display_modes = mod._healthbar_breed_display_modes
 	local breed = content.breed
+	local display_mode = display_modes and breed and display_modes[breed.name]
 
 	if mod._inactive_outside_psykhanium or mod._psykhanium_vanilla_only or
-		(psykhanium_behavior == "normal" and breed_toggles and breed and breed_toggles[breed.name] ~= true) then
+		(psykhanium_behavior == "normal" and
+			(not display_mode or display_mode.show_healthbar ~= true)) then
 		local custom_marker_units = mod._custom_marker_units
 		if custom_marker_units then
 			custom_marker_units[unit] = nil
@@ -2060,6 +2073,9 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		return
 	end
 
+	local full_debug_display = mod._psykhanium_full_debug_display == true
+	local show_dots = full_debug_display or display_mode and display_mode.show_dots == true
+	local show_debuffs = full_debug_display or display_mode and display_mode.show_debuffs == true
 	local show_damage_numbers = _feature_enabled("show_damage_numbers")
 	local use_armour_slot_offset = _damage_label_enabled()
 	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
@@ -2094,35 +2110,22 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	if marker.debuff_check_timer >= 0.1 then
 		marker.debuff_check_timer = 0
 
-		local buff_extension = ScriptUnit_extension(unit, "buff_system")
-		if buff_extension then
-			table_clear(marker.debuffs)
+		if show_dots or show_debuffs then
+			local buff_extension = ScriptUnit_extension(unit, "buff_system")
 
-			for i = 1, #DEBUFF_DEFS do
-				local def = DEBUFF_DEFS[i]
-				local enabled = (def.setting == nil) or _feature_enabled(def.setting)
-				if enabled then
-					local data = def.poll(buff_extension, content, unit)
-					if data then
-						marker.debuffs[#marker.debuffs + 1] = {
-							type = def.id,
-							def = def,
-							stacks = data.stacks,
-							percent = data.percent,
-							time_left = data.time_left,
-							template_name = data.template_name,
-						}
-					end
+			if buff_extension then
+				_poll_status_indicators(marker.debuffs, content, buff_extension, unit, show_dots, show_debuffs)
+
+				-- Detect debuff changes (for “show when applied” even without damage)
+				local sig = _debuff_signature(marker.debuffs)
+				if sig ~= marker._debuff_sig then
+					marker._debuff_sig = sig
+					-- “Applied/changed”: force visibility window (like damage does)
+					content.visibility_delay = template.damage_number_settings.visibility_delay
 				end
 			end
-
-			-- Detect debuff changes (for “show when applied” even without damage)
-			local sig = _debuff_signature(marker.debuffs)
-			if sig ~= marker._debuff_sig then
-				marker._debuff_sig = sig
-				-- “Applied/changed”: force visibility window (like damage does)
-				content.visibility_delay = template.damage_number_settings.visibility_delay
-			end
+		else
+			table_clear(marker.debuffs)
 		end
 	end
 

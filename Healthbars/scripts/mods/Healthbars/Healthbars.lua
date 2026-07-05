@@ -307,7 +307,7 @@ function mod.on_all_mods_loaded()
 	end
 end
 
-local show = {}
+local display_modes_by_breed = {}
 local MUTATOR_BREED_SETTING_OVERRIDES = {
 	chaos_mutator_ritualist = "cultist_ritualist",
 }
@@ -315,16 +315,59 @@ local PSYKHANIUM_BEHAVIOR_NORMAL = "normal"
 local PSYKHANIUM_BEHAVIOR_VANILLA_ONLY = "vanilla_only"
 local PSYKHANIUM_BEHAVIOR_FULL_DEBUG = "full_debug"
 
-local function get_toggles()
+local DISPLAY_MODE_FULL = {
+	show_healthbar = true,
+	show_dots = true,
+	show_debuffs = true,
+}
+local DISPLAY_MODES = {
+	full = DISPLAY_MODE_FULL,
+	disabled = {
+		show_healthbar = false,
+		show_dots = false,
+		show_debuffs = false,
+	},
+	healthbar_only = {
+		show_healthbar = true,
+		show_dots = false,
+		show_debuffs = false,
+	},
+	healthbar_dots = {
+		show_healthbar = true,
+		show_dots = true,
+		show_debuffs = false,
+	},
+	healthbar_debuffs = {
+		show_healthbar = true,
+		show_dots = false,
+		show_debuffs = true,
+	},
+}
+
+local function get_display_mode(setting_id)
+	local value = mod:get(setting_id)
+
+	if value == true then
+		value = "full"
+		mod:set(setting_id, value, false)
+	elseif value == false then
+		value = "disabled"
+		mod:set(setting_id, value, false)
+	end
+
+	return DISPLAY_MODES[value]
+end
+
+local function cache_display_modes()
 	for breed_name in pairs(Breeds) do
 		local setting_id = MUTATOR_BREED_SETTING_OVERRIDES[breed_name]
 
 		if setting_id then
-			show[breed_name] = mod:get(setting_id)
+			display_modes_by_breed[breed_name] = get_display_mode(setting_id)
 		elseif string_match(breed_name, "mutator") then
-			show[breed_name] = mod:get((breed_name):gsub("_mutator", ""))
+			display_modes_by_breed[breed_name] = get_display_mode((breed_name):gsub("_mutator", ""))
 		else
-			show[breed_name] = mod:get(breed_name)
+			display_modes_by_breed[breed_name] = get_display_mode(breed_name)
 		end
 	end
 end
@@ -383,10 +426,12 @@ local function should_enable_healthbar(unit, psykhanium_behavior)
 	end
 
 	if behavior == PSYKHANIUM_BEHAVIOR_FULL_DEBUG then
-		return show[breed.name] ~= nil
+		return display_modes_by_breed[breed.name] ~= nil
 	end
 
-	return show[breed.name] == true
+	local display_mode = display_modes_by_breed[breed.name]
+
+	return display_mode and display_mode.show_healthbar == true or false
 end
 
 local function add_custom_healthbar_marker(unit)
@@ -529,7 +574,7 @@ local function resync_existing_healthbars()
 
 	local function reconcile_unit(unit)
 		local breed = healthbar_breed(unit)
-		if not breed or show[breed.name] == nil then
+		if not breed or display_modes_by_breed[breed.name] == nil then
 			return false
 		end
 
@@ -632,7 +677,7 @@ end
 
 local function setting_requires_marker_resync(setting_id)
 	if setting_id == "only_active_in_psykhanium" or setting_id == "psykhanium_healthbar_behavior" or
-		show[setting_id] ~= nil then
+		display_modes_by_breed[setting_id] ~= nil then
 		return true
 	end
 
@@ -645,8 +690,8 @@ local function setting_requires_marker_resync(setting_id)
 	return false
 end
 
-get_toggles()
-mod._healthbar_breed_toggles = show
+cache_display_modes()
+mod._healthbar_breed_display_modes = display_modes_by_breed
 current_psykhanium_behavior()
 
 mod.on_setting_changed = function(setting_id)
@@ -666,7 +711,7 @@ mod.on_setting_changed = function(setting_id)
 		end
 	end
 
-	get_toggles()
+	cache_display_modes()
 	refresh_colors()
 	current_psykhanium_behavior()
 
