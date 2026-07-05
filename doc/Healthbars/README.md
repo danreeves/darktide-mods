@@ -4,6 +4,8 @@
 
 ### What it includes
 - **Enemy healthbars** for selected enemy types in regular game modes
+- **Vanguard enemy support**
+- **Shield healthbars** for enemies with shield health
 - **Damage numbers** when tracked enemies take damage
 - **DPS report** for tracked targets after the damage window ends
 - **Configurable post-kill display duration** for the healthbar, info label, and DPS report
@@ -23,6 +25,7 @@
   - **Brittleness indicator** (combined enemy-side rending, shown as equivalent stacks, total %, time, or icon-only)
   - **Electrocuted** (presence indicator covering the complete electrocution keyword group)
   - **Weapon Malfunction** (breed-gated presence indicator)
+  - **Stagger** (authoritative icon or remaining time where available, with optional icon-only estimates for public non-host games)
   - **Skullcrusher** (damage vs staggered, stacks / % / time)
   - **Thunderstrike** (impact modifier, stacks / % / time)
   - **Melee damage taken** (from multiple sources, icon-only or %)
@@ -41,11 +44,12 @@ The standard DMF page organizes settings into groups for general features, damag
 If **Alf's DMF Mod Settings Extensions** is installed, the same settings are presented in localized tabs:
 - **General** - general feature toggles and damage-number settings
 - **DoT & Debuffs** - status indicators, display modes, text sizing, and Warpfire color
-- **Enemies** - per-enemy healthbar toggles
+- **Enemies** - per-enemy healthbar and indicator display modes
 
 The extension is optional. Healthbars retains the same settings and functionality with standard DMF.
 
 ### Toggles (on/off)
+- Only active in Psykhanium
 - Show health bar
 - Show DoT/debuff markers on vanilla boss health bars
 - Show damage numbers
@@ -60,6 +64,7 @@ The extension is optional. Healthbars retains the same settings and functionalit
 - Show brittleness indicator
 - Show electrocution debuff
 - Show Weapon Malfunction debuff
+- Show Stagger
 - Show Skullcrusher debuff
 - Show Thunderstrike debuff
 - Show Melee damage taken debuff
@@ -67,26 +72,69 @@ The extension is optional. Healthbars retains the same settings and functionalit
 - Show Empyric Shock debuff
 
 ### Enemy selection
-Healthbars can be enabled or disabled per enemy within these groups:
+Each enemy has an independent display-mode dropdown within these groups:
 - **Horde/Roamer**
 - **Elite**
 - **Special**
 - **Monster/Captain**
 - **Ritualist**
 
-This lets you keep the display focused on the enemies that matter most to you.
+The Horde/Roamer group includes the Cultist and Renegade Vanguard enemies.
+
+The available modes are:
+- **Full display** - healthbar, DoTs, and debuffs
+- **Disabled** - no Healthbars marker
+- **Healthbar only** - healthbar without status indicators
+- **Healthbar + DoTs** - healthbar and DoT indicators, without debuffs
+- **Healthbar + Debuffs** - healthbar and debuff indicators, without DoTs
+
+Existing boolean settings are migrated automatically. Previously enabled enemies use **Full display**, while previously disabled enemies remain **Disabled**. Changing a mode updates enemies already present in the world; they do not need to be respawned. Indicator categories hidden by the selected mode are not polled for that enemy.
+
+### Psykhanium behavior
+
+**Psykhanium Healthbar Behavior** controls which healthbars are used inside the Psykhanium:
+- **Use normal breed settings** - applies each enemy's configured display mode
+- **Vanilla Healthbars only** - uses Darktide's standard Psykhanium healthbars without custom Healthbars markers
+- **Full Healthbars debug display** - displays custom Healthbars markers for every supported enemy and enables all supported Healthbars features, DoTs, and debuffs
+
+Full debug mode still respects **Show DoT/debuff markers on vanilla boss health bars**. Other existing Psykhanium settings continue to apply normally.
+
+When **Only active in Psykhanium** is enabled, custom Healthbars markers and Healthbars indicators on vanilla boss bars are hidden outside the Psykhanium.
 
 ### Color selection
 - **Warpfire**: `Warp-Core` / `Soulblaze Cyan` / `Sanctified Cerulean` (default) / `Ethereal Blue` / `Peril Purple`
 
+### Damage-number colors
+- **Normal hit**: white
+- **Critical hit**: orange
+- **Weakspot hit**: yellow
+
+These colors apply in both regular missions and the Psykhanium.
+
+### Shield healthbars
+
+Enemies with shield health display a thin white shield layer over the main healthbar. Its width follows the remaining shield percentage. Shield damage triggers the same temporary marker-visibility window as health damage.
+
 ### Display duration
-- **Post-kill display duration**: controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. Range: `0.2-10` seconds, default: `1`, adjustable in `0.2` second steps.
+- **Post-kill display duration**: controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. Range: `0-10` seconds, default: `0`, adjustable in `0.2` second steps. Set it to `0` to let the healthbar disappear immediately after death.
 - This duration only applies while the enemy unit still exists in the world. Healthbars are anchored to the enemy unit's head node, so when the game removes the body, the marker loses its world anchor and cannot continue rendering in the current implementation.
 
 ### Readability options
 - **DOT stack number size**: adjusts the font size for Bleed, Chordclaw Bleed, Burn, Phosphor Burn, Warpfire / Soulblaze, and Toxin status text. Range: `10-24`, default: `14`.
 - **Debuff stack/time text size**: adjusts the font size for debuff `Stacks` and `Time (s)` display modes. Range: `10-24`, default: `14`.
 - **DOT numbers only**: hides eligible DOT icons and shows only their number, tinted with the DOT effect color. Effects explicitly configured as `Icon only`, and Phosphor Burn, retain their icon.
+
+### Stagger indicator
+
+The optional **Show Stagger** setting is disabled by default. It indicates when an enemy is currently staggered and offers two display modes:
+- **Icon only**
+- **Time (s)**
+
+In the Psykhanium, solo play, and games where the player is the host, Healthbars uses the authoritative stagger state and can show the remaining stagger time.
+
+Public non-host clients do not receive the authoritative stagger timer. If the optional **Animation Events** mod is installed, Healthbars can instead show an estimated stagger indicator in public non-host games. Estimates are always icon-only, even when **Time (s)** is selected, so the mod never presents a speculative countdown. The estimate clears when the enemy's animation state changes, when `stagger_finished` is received, or after the five-second safety timeout.
+
+Animation Events is optional; authoritative local tracking works without it. The stagger icon uses the fixed blue color `{95, 152, 180}`, matching the weapon inspection UI.
 
 ### Vanilla boss health bar indicators
 
@@ -101,6 +149,7 @@ The vanilla boss indicators reuse the existing status settings:
 - Debuff stack/time text size
 - DOT numbers only
 - Warpfire color
+- The boss enemy's per-enemy DoT/debuff display mode
 
 ### Display modes (per effect)
 Some effects have a display dropdown:
@@ -111,6 +160,7 @@ Some effects have a display dropdown:
 - **Phosphor Burn**: `Icon only` / `Time (s)` (defaults to `Icon only`)
 - **Toxin**: `Stacks` / `Icon only`
 - **Brittleness**: `Stacks` / `Icon + text %` / `Icon only` / `Time (s)`
+- **Stagger**: `Icon only` / `Time (s)` (defaults to `Time (s)`; the feature itself is disabled by default)
 - **Skullcrusher**: `Stacks` / `Percent %` / `Icon only` / `Time (s)`
 - **Thunderstrike**: `Stacks` / `Percent %` / `Icon only` / `Time (s)`
 - **Melee damage taken**: `Icon + text %` / `Icon only`
@@ -148,25 +198,24 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 
 ### Ordering
 - DoTs: `Bleed` -> `Chordclaw Bleed` -> `Burn` -> `Phosphor Burn` -> `Warpfire` -> `Toxin`
-- Debuffs: `Brittleness` -> `Damage Taken` -> `Melee Damage Taken` -> `Skullcrusher` -> `Thunderstrike` -> `Empyric Shock` -> `Electrocuted` -> `Weapon Malfunction`
+- Debuffs: `Stagger` -> `Brittleness` -> `Damage Taken` -> `Melee Damage Taken` -> `Skullcrusher` -> `Thunderstrike` -> `Empyric Shock` -> `Electrocuted` -> `Weapon Malfunction`
 
 ---
 
 ## Status reference table (icons + color/state progression)
 
-> **New icon placeholders:** `icons/chordclaw_bleed.png`, `icons/phosphor_burn.png`, and `icons/weapon_malfunction.png` are intentionally referenced before the image files exist. Add the finished images at those paths later.
-
 | Status | Icon | What it detects / measures | Text display options | Color/state progression |
 |---|---:|---|---|---|
 | **Bleed** | <img src="icons/bleed.png" width="50"> | Regular DoT stacks from `bleed` | `Stacks` / `Icon only` | Fixed color, blood red tint. |
-| **Chordclaw Bleed** | <img src="icons/chordclaw_bleed.png" width="50" alt="Chordclaw Bleed icon placeholder"> | Skitarii Chordclaw `bleed_long`: **9.5s** duration, **18** maximum stacks | `Stacks` / `Time (s)` | Fixed color, blood red tint. Tracked separately from regular Bleed. |
+| **Chordclaw Bleed** | <img src="icons/chordclaw_bleed.png" width="50" alt="Chordclaw Bleed icon"> | Skitarii Chordclaw `bleed_long`: **9.5s** duration, **18** maximum stacks | `Stacks` / `Time (s)` | Fixed color, blood red tint. Tracked separately from regular Bleed. |
 | **Burn** | <img src="icons/burn.png" width="50"> | Regular burn stacks from `flamer_assault`, including compatible companion-applied burn | `Stacks` / `Icon only` | Fixed color, orange flame tint. |
-| **Phosphor Burn** | <img src="icons/phosphor_burn.png" width="50" alt="Phosphor Burn icon placeholder"> | Phosphor Blast Pistol `phosphor_burn`: **20s** duration, maximum **1** stack | `Icon only` / `Time (s)` | Fixed Phosphor-orange tint. Tracked separately from regular Burn and defaults to icon-only. |
+| **Phosphor Burn** | <img src="icons/phosphor_burn.png" width="50" alt="Phosphor Burn icon"> | Phosphor Blast Pistol `phosphor_burn`: **20s** duration, maximum **1** stack | `Icon only` / `Time (s)` | Fixed Phosphor-orange tint. Tracked separately from regular Burn and defaults to icon-only. |
 | **Warpfire (Soulblaze)** | <img src="icons/warpfire_color_option_three.png" width="50"> | DoT stacks from `warp_fire` | Stacks | <img src="icons/warpfire_color_option_one.png" width="25"> **Warp-Core**<br/><img src="icons/warpfire_color_option_two.png" width="25"> **Soulblaze Cyan**<br/><img src="icons/warpfire_color_option_three.png" width="25"> **Sanctified Cerulean** (default)<br/><img src="icons/warpfire_color_option_four.png" width="25"> **Ethereal Blue**<br/><img src="icons/warpfire_color_option_five.png" width="25"> **Peril Purple** |
 | **Toxin** | <img src="icons/toxin.png" width="50"> | Combined DoT stacks from the tracked neurotoxin and exploding toxin interval buffs | `Stacks` / `Icon only` | Fixed color, toxic green tint. |
+| **Stagger** | <img src="icons/stagger.png" width="50" alt="Stagger icon"> | Authoritative active stagger state and remaining time in the Psykhanium, solo play, and host games; optional Animation Events estimate for public non-host clients | `Icon only` / `Time (s)` | Fixed weapon-inspection blue `{95, 152, 180}`. Public non-host estimates are always icon-only. |
 | **Brittleness** | <img src="icons/brittleness_white.png" width="50"> | Combined enemy-side rending from `rending_debuff`, `rending_debuff_medium`, `rending_burn_debuff`, `phosphor_rending_debuff`, `shotgun_special_rending_debuff`, `saw_rending_debuff`, and the supported Horde grenade rending effect. Percentage is converted to equivalent **2.5% stacks**, with caps of **40 stacks** and **100%** total. **Only shown for armor types:** Flak, Carapace, Maniac, Unyielding. | `Stacks` / `Icon + %` / `Icon only` / `Time (s)` | <img src="icons/brittleness_white.png" width="25"> **Below 20%**<br/><img src="icons/brittleness_yellow.png" width="25"> **20-29.9%**<br/><img src="icons/brittleness_orange.png" width="25"> **30-39.9%**<br/><img src="icons/brittleness_red.png" width="25"> **40-59.9%**<br/><img src="icons/brittleness_magenta.png" width="25"> **>=60%** |
 | **Electrocuted** | <img src="icons/electrocuted.png" width="50"> | Presence of any keyword in Darktide's electrocution group, including regular electrocution, chain lightning, Arc, Arc Ability, Arc Grenade, and Shock Mine variants | No text | Fixed color, pale electrocuted tint. Presence-only because some arc buffs mark targeting state rather than a ticking DoT. |
-| **Weapon Malfunction** | <img src="icons/weapon_malfunction.png" width="50" alt="Weapon Malfunction icon placeholder"> | Presence of the `weapon_malfunction` keyword on an enemy breed whose behavior is actually affected: supported shotgunners, stalkers, flamers, gunners, Reaper, Scab Shooter, Radio Operator, Sniper, and Trapper variants | No text | Fixed pale yellow-green tint. Breed-gated to avoid displaying a behavior debuff on enemies where it has no effect. |
+| **Weapon Malfunction** | <img src="icons/weapon_malfunction.png" width="50" alt="Weapon Malfunction icon"> | Presence of the `weapon_malfunction` keyword on an enemy breed whose behavior is actually affected: supported shotgunners, stalkers, flamers, gunners, Reaper, Scab Shooter, Radio Operator, Sniper, and Trapper variants | No text | Fixed pale yellow-green tint. Breed-gated to avoid displaying a behavior debuff on enemies where it has no effect. |
 | **Skullcrusher** | <img src="icons/skullcrusher_white.png" width="50"> | Stagger damage taken debuff: `increase_damage_received_while_staggered` with fallback `damage_vs_staggered`. **10% per stack**, cap **8**. | `Stacks` / `Percent %` / `Icon only` / `Time (s)` | <img src="icons/skullcrusher_white.png" width="25"> **1-2** / 10-20%<br/><img src="icons/skullcrusher_yellow.png" width="25"> **3-4** / 30-40%<br/><img src="icons/skullcrusher_orange.png" width="25"> **5-6** / 50-60%<br/><img src="icons/skullcrusher_red.png" width="25"> **7-8** / 70-80% |
 | **Thunderstrike** | <img src="icons/thunderstrike_white.png" width="50"> | Impact modifier debuff: `increase_impact_received_while_staggered` with fallback `impact_modifier`. **10% per stack**, cap **8**. | `Stacks` / `Percent %` / `Icon only` / `Time (s)` | <img src="icons/thunderstrike_white.png" width="25"> **1-2** / 10-20%<br/><img src="icons/thunderstrike_yellow.png" width="25"> **3-4** / 30-40%<br/><img src="icons/thunderstrike_orange.png" width="25"> **5-6** / 50-60%<br/><img src="icons/thunderstrike_red.png" width="25"> **7-8** / 70-80% |
 | **Melee damage taken** | <img src="icons/melee_damage_taken_white.png" width="50"> | Counts active sources: `ogryn_staggering_damage_taken_increase` and `adamant_staggering_enemies_take_more_damage`. Each source adds **+15%** additively. | `Icon + %` / `Icon only` | <img src="icons/melee_damage_taken_white.png" width="25"> **1 source (15%)**<br/><img src="icons/melee_damage_taken_red.png" width="25"> **2 sources (30%)** |
@@ -180,7 +229,7 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 - Debuff changes trigger the same visibility window as damage, so indicators can appear when a debuff is applied even if the enemy has not taken direct damage yet.
 - Debuff-only visibility also supports the **info label**, so armour type or enemy name can appear when a debuff is applied without direct damage.
 - The **Post-kill display duration** extends the marker lifetime after damage has started, but it intentionally does not detach healthbars from enemy units. The current implementation relies on Fatshark's world marker anchoring to the enemy unit and its head node; once the game despawns that unit/body, there is no valid source transform for the healthbar to follow. Keeping a marker alive past that point would require a different fallback marker system, so Healthbars lets the marker disappear with the body instead of inventing a disconnected position.
-- The mod supports **per-enemy healthbar toggles**, grouped by Horde/Roamer, Elite, Special, Monster/Captain, and Ritualist.
+- The mod supports **per-enemy display modes**, grouped by Horde/Roamer, Elite, Special, Monster/Captain, and Ritualist.
 - **Damage numbers**, **DPS**, and the **info label** are handled independently, so the label can still work when damage numbers are disabled.
 - **Enemy name** mode uses the game's localized `breed.display_name`.
 - If localization data is missing or broken, the mod hides the label instead of showing internal names or `<unlocalized ...>` placeholders.
@@ -191,6 +240,7 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 - **Chordclaw Bleed** and **Phosphor Burn** are independent from their regular Bleed and Burn indicators.
 - **Electrocuted** uses Darktide's full electrocution keyword group and is **presence-only**.
 - **Weapon Malfunction** is **presence-only** and restricted to enemy breeds whose behavior can be changed by the debuff.
+- **Stagger** uses authoritative game state where available. Public non-host estimates are deliberately icon-only and require the optional Animation Events mod.
 - Companion-applied effects are read from the target's active buffs, so Servo-Skull burn and damage-taken debuffs do not require a normal player weapon source.
 - **Warpfire** uses a player-selectable icon tint, with **Sanctified Cerulean** as the default option.
 - **Increased damage taken (total)** is a **combined value**, so it can jump between color tiers quickly depending on team debuffs.
@@ -203,13 +253,18 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 - Very dense fights can produce a lot of simultaneous information if many status toggles are enabled at once.
 
 ## Recent additions
+- Added an optional **Stagger** indicator with `Icon only` and `Time (s)` modes, authoritative local tracking, and optional Animation Events estimates for public non-host games.
+- Added configurable **Psykhanium Healthbar Behavior** and **Only active in Psykhanium** settings.
+- Replaced per-enemy toggles with **Full display**, **Disabled**, **Healthbar only**, **Healthbar + DoTs**, and **Healthbar + Debuffs** modes, including automatic migration of existing settings.
+- Added **Vanguard enemies** and **shield healthbars**.
+- Corrected live-mission damage-number colors: critical hits are orange and weakspot hits are yellow.
 - Added Darktide 1.12 Skitarii/Cryptic support for **Chordclaw Bleed**, **Phosphor Burn**, grouped **Electrocution**, **Servo-Skull damage taken**, and **Weapon Malfunction**.
 - Added independent settings and display modes for **Chordclaw Bleed** and **Phosphor Burn**.
 - Added `Stacks` / `Icon only` display choices for regular **Bleed**, **Burn**, and **Toxin**.
 - Combined Phosphor and other separately stacking enemy-side rending debuffs into the existing **Brittleness** indicator, using **2.5% per equivalent stack** with **40 stack / 100%** caps.
 - Added explicit package coverage for the new status icons used both in Mod Options and during gameplay.
 - Added optional support for **Alf's DMF Mod Settings Extensions**, including localized tabs and colored DoT/debuff dropdown icons.
-- Reduced the minimum **Post-kill display duration** to `0.2` seconds, changed the default to `1` second, and added `0.2` second adjustment steps.
+- Reduced the minimum **Post-kill display duration** to `0`, changed the default to `0`, and added `0.2` second adjustment steps.
 - Added optional DoT/debuff indicators for vanilla boss health bars, independent from the custom overhead healthbar.
 - Added **Post-kill display duration** to keep the healthbar, info label, and DPS report visible for longer after an enemy dies.
 - Improved info-label visibility so armour type or enemy name can appear from debuff-only marker visibility, even before direct damage is dealt.
