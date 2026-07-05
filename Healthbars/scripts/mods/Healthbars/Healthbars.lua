@@ -3,8 +3,10 @@
 -- Author: raindish
 local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
+local BreedActions = require("scripts/settings/breed/breed_actions")
 require("scripts/extension_systems/health/health_extension_base")
 local HealthExtension = require("scripts/extension_systems/health/health_extension")
+require("scripts/extension_systems/behavior/nodes/actions/bt_stagger_action")
 local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarMarker")
 
 mod.textures = {
@@ -17,6 +19,7 @@ mod.textures = {
 	electrocuted = "content/ui/materials/icons/presets/preset_11",
 	weapon_malfunction = "content/ui/materials/icons/circumstances/darkness_01",
 	brittleness = "content/ui/materials/icons/presets/preset_04",
+	stagger = "content/ui/materials/icons/throwables/hud/small/party_psyker",
 	skullcrusher = "content/ui/materials/icons/presets/preset_05",
 	thunderstrike = "content/ui/materials/icons/presets/preset_18",
 	melee_damage_taken = "content/ui/materials/icons/presets/preset_01",
@@ -36,6 +39,7 @@ local Managers = Managers
 local pairs = pairs
 local math_min = math.min
 local setmetatable = setmetatable
+local table_remove = table.remove
 local type = type
 local string_match = string.match
 
@@ -56,6 +60,206 @@ mod._custom_marker_units = mod._custom_marker_units or new_marker_cache()
 mod._last_hit_time = mod._last_hit_time or new_marker_cache()
 mod._last_hit_weakspot = mod._last_hit_weakspot or new_marker_cache()
 mod._last_hit_was_critical = mod._last_hit_was_critical or new_marker_cache()
+mod._stagger_end_times = mod._stagger_end_times or new_marker_cache()
+mod._estimated_stagger_start_times = mod._estimated_stagger_start_times or new_marker_cache()
+mod._estimated_stagger_states = mod._estimated_stagger_states or new_marker_cache()
+mod._animation_events_available = false
+
+local function stagger_feature_enabled()
+	return mod:get("stagger") == true
+end
+
+local STAGGER_ANIMATION_EVENT_PACK = "healthbars_stagger"
+local stagger_animation_events = {}
+local stagger_animation_event_lookup = {}
+
+local function collect_stagger_animation_events(value)
+	local value_type = type(value)
+
+	if value_type == "string" then
+		if not stagger_animation_event_lookup[value] then
+			stagger_animation_event_lookup[value] = true
+			stagger_animation_events[#stagger_animation_events + 1] = value
+		end
+	elseif value_type == "table" then
+		for _, child in pairs(value) do
+			collect_stagger_animation_events(child)
+		end
+	end
+end
+
+for _, breed_actions in pairs(BreedActions) do
+	for _, action_data in pairs(breed_actions) do
+		if type(action_data) == "table" then
+			collect_stagger_animation_events(action_data.stagger_anims)
+			collect_stagger_animation_events(action_data.running_stagger_anim_left)
+			collect_stagger_animation_events(action_data.running_stagger_anim_right)
+		end
+	end
+end
+
+local function clear_estimated_stagger(unit)
+	mod._estimated_stagger_start_times[unit] = nil
+	mod._estimated_stagger_states[unit] = nil
+end
+
+local function on_stagger_animation_started(_event_name, _event_index, unit, _first_person, context)
+	if context == "minion" and unit and stagger_feature_enabled() then
+		local time_manager = Managers.time
+
+		mod._estimated_stagger_start_times[unit] = time_manager and time_manager:time("gameplay") or true
+		mod._estimated_stagger_states[unit] = nil
+	end
+end
+
+local function on_stagger_animation_finished(_event_name, _event_index, unit, _first_person, context)
+	if context == "minion" and unit then
+		mod._stagger_end_times[unit] = nil
+		clear_estimated_stagger(unit)
+	end
+end
+
+local animation_events_pack_definition = {
+	[STAGGER_ANIMATION_EVENT_PACK] = stagger_animation_events,
+}
+local animation_events_callback_definition = {
+	[STAGGER_ANIMATION_EVENT_PACK] = on_stagger_animation_started,
+	stagger_finished = on_stagger_animation_finished,
+}
+
+local function publish_animation_events_definitions(enabled)
+	mod.animation_events_add_packs = enabled and animation_events_pack_definition or nil
+	mod.animation_events_add_callbacks = enabled and animation_events_callback_definition or nil
+end
+
+local function contains_reference(array, wanted)
+	if array then
+		for i = 1, #array do
+			if array[i] == wanted then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+local function remove_reference(array, wanted)
+	if array then
+		for i = #array, 1, -1 do
+			if array[i] == wanted then
+				table_remove(array, i)
+			end
+		end
+	end
+end
+
+local function animation_event_still_registered(animation_events, wanted)
+	for _, pack_definition in pairs(animation_events.packs) do
+		for _, event_names in pairs(pack_definition) do
+			for i = 1, #event_names do
+				if event_names[i] == wanted then
+					return true
+				end
+			end
+		end
+	end
+
+	for _, callback_definition in pairs(animation_events.events) do
+		if callback_definition[wanted] then
+			return true
+		end
+	end
+
+	for i = 1, #animation_events.callbacks do
+		if animation_events.callbacks[i].event_name == wanted then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function register_animation_events_definitions(animation_events)
+	publish_animation_events_definitions(true)
+
+	if not contains_reference(animation_events.packs, animation_events_pack_definition) then
+		animation_events.packs[#animation_events.packs + 1] = animation_events_pack_definition
+
+		for i = 1, #stagger_animation_events do
+			animation_events.all_events[stagger_animation_events[i]] = true
+		end
+	end
+
+	if not contains_reference(animation_events.events, animation_events_callback_definition) then
+		animation_events.events[#animation_events.events + 1] = animation_events_callback_definition
+
+		for event_name, callback in pairs(animation_events_callback_definition) do
+			animation_events.all_events[event_name] = true
+			animation_events:register_callback(event_name, callback)
+		end
+	end
+
+	if type(animation_events.clear_indices) == "function" then
+		animation_events:clear_indices()
+	end
+end
+
+local function unregister_animation_events_definitions(animation_events)
+	publish_animation_events_definitions(false)
+
+	if not animation_events then
+		return
+	end
+
+	remove_reference(animation_events.packs, animation_events_pack_definition)
+	remove_reference(animation_events.events, animation_events_callback_definition)
+
+	local callbacks = animation_events.callbacks
+
+	for i = #callbacks, 1, -1 do
+		local callback = callbacks[i].callback
+
+		if callback == on_stagger_animation_started or callback == on_stagger_animation_finished then
+			table_remove(callbacks, i)
+		end
+	end
+
+	for event_name in pairs(stagger_animation_event_lookup) do
+		if not animation_event_still_registered(animation_events, event_name) then
+			animation_events.all_events[event_name] = nil
+		end
+	end
+
+	for event_name in pairs(animation_events_callback_definition) do
+		if not animation_event_still_registered(animation_events, event_name) then
+			animation_events.all_events[event_name] = nil
+		end
+	end
+
+	if type(animation_events.clear_indices) == "function" then
+		animation_events:clear_indices()
+	end
+end
+
+local function refresh_animation_events_availability()
+	local animation_events = get_mod("animation_events")
+	local available = animation_events and type(animation_events.minion_handle_event) == "function" and
+		type(animation_events.handle_callbacks) == "function" and type(animation_events.register_callback) == "function" and
+		type(animation_events.packs) == "table" and type(animation_events.events) == "table" and
+		type(animation_events.callbacks) == "table" and type(animation_events.all_events) == "table"
+
+	mod._animation_events_available = available == true
+
+	if not available then
+		mod._estimated_stagger_start_times = new_marker_cache()
+		mod._estimated_stagger_states = new_marker_cache()
+	end
+
+	return available == true
+end
+
+publish_animation_events_definitions(mod:get("stagger") == true)
 
 local COLOR_BLEED = { 255, 255, 0, 0 }
 local COLOR_BURN = { 255, 255, 102, 0 }
@@ -83,6 +287,10 @@ end
 refresh_colors()
 
 function mod.on_all_mods_loaded()
+	if not refresh_animation_events_availability() then
+		publish_animation_events_definitions(false)
+	end
+
 	-- Preload icon packages
 	local function load_package(package_name)
 		if not Managers.package:has_loaded(package_name) then
@@ -442,6 +650,22 @@ mod._healthbar_breed_toggles = show
 current_psykhanium_behavior()
 
 mod.on_setting_changed = function(setting_id)
+	if setting_id == "stagger" then
+		mod._stagger_end_times = new_marker_cache()
+		mod._estimated_stagger_start_times = new_marker_cache()
+		mod._estimated_stagger_states = new_marker_cache()
+
+		if stagger_feature_enabled() then
+			if refresh_animation_events_availability() then
+				register_animation_events_definitions(get_mod("animation_events"))
+			else
+				publish_animation_events_definitions(false)
+			end
+		else
+			unregister_animation_events_definitions(get_mod("animation_events"))
+		end
+	end
+
 	get_toggles()
 	refresh_colors()
 	current_psykhanium_behavior()
@@ -464,10 +688,22 @@ mod.on_setting_changed = function(setting_id)
 end
 
 mod.on_disabled = function()
+	mod._stagger_end_times = new_marker_cache()
+	mod._estimated_stagger_start_times = new_marker_cache()
+	mod._estimated_stagger_states = new_marker_cache()
+	unregister_animation_events_definitions(get_mod("animation_events"))
 	hide_existing_boss_indicators()
 end
 
 mod.on_enabled = function()
+	if stagger_feature_enabled() then
+		if refresh_animation_events_availability() then
+			register_animation_events_definitions(get_mod("animation_events"))
+		else
+			publish_animation_events_definitions(false)
+		end
+	end
+
 	if register_world_marker_template(current_world_markers()) then
 		current_psykhanium_behavior()
 		resync_existing_healthbars()
@@ -480,6 +716,9 @@ mod:hook_safe("HudElementWorldMarkers", "init", function(self)
 	mod._last_hit_time = new_marker_cache()
 	mod._last_hit_weakspot = new_marker_cache()
 	mod._last_hit_was_critical = new_marker_cache()
+	mod._stagger_end_times = new_marker_cache()
+	mod._estimated_stagger_start_times = new_marker_cache()
+	mod._estimated_stagger_states = new_marker_cache()
 	current_psykhanium_behavior()
 	resync_existing_healthbars()
 end)
@@ -521,6 +760,29 @@ mod:hook_safe("HudElementBossHealth", "update", function(self, dt)
 		end
 	end
 end)
+
+mod:hook_safe(
+	"BtStaggerAction",
+	"enter",
+	function(_self, unit, _breed, _blackboard, scratchpad)
+		local stagger_time = scratchpad and scratchpad.stagger_time
+
+		if unit and stagger_feature_enabled() and type(stagger_time) == "number" then
+			mod._stagger_end_times[unit] = stagger_time
+		end
+	end
+)
+
+mod:hook_safe(
+	"BtStaggerAction",
+	"leave",
+	function(_self, unit)
+		if unit then
+			mod._stagger_end_times[unit] = nil
+			clear_estimated_stagger(unit)
+		end
+	end
+)
 
 mod:hook_safe(
 	"HealthExtension",

@@ -21,6 +21,8 @@ local table_clear = table.clear
 local table_clone = table.clone
 local table_remove = table.remove
 local tostring = tostring
+local rawget = rawget
+local type = type
 local Color = Color
 local Localize = Localize
 local Managers = Managers
@@ -215,6 +217,7 @@ local COLOR_YELLOW = { 255, 255, 255, 0 }
 local COLOR_ORANGE = { 255, 255, 165, 0 }
 local COLOR_RED = { 255, 255, 0, 0 }
 local COLOR_MAGENTA = { 255, 255, 0, 255 }
+local COLOR_STAGGER = { 255, 95, 152, 180 }
 local DEFAULT_STATUS_TEXT_COLOR = COLOR_YELLOW
 local SHIELD_BAR_HEIGHT = 2
 
@@ -451,10 +454,11 @@ local ICON_DEFAULT_COLORS = {
 }
 
 local DOT_ORDER = { "bleed", "chordclaw_bleed", "burn", "phosphor_burn", "warpfire", "toxin" }
-local DEBUFF_ORDER = { "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike",
+local DEBUFF_ORDER = { "stagger", "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike",
 	"empyric_shock", "electrocuted", "weapon_malfunction" }
 
 local DEBUFF_RULES = {
+	stagger = { setting = "stagger_display", default = "time" },
 	brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
 	skullcrusher = { setting = "skullcrusher_display", default = "stacks", center_on = "percent" },
 	thunderstrike = { setting = "thunderstrike_display", default = "stacks", center_on = "percent" },
@@ -1231,11 +1235,144 @@ local function _compute_brittleness_percent(buff_extension)
 	return percent, equivalent_stacks
 end
 
+local function _stagger_color()
+	return COLOR_STAGGER
+end
+
+local ESTIMATED_STAGGER_CAPTURE_DELAY = 0.05
+local ESTIMATED_STAGGER_MAX_DURATION = 5
+
+local function _clear_estimated_stagger(unit)
+	local start_times = mod._estimated_stagger_start_times
+
+	if start_times then
+		start_times[unit] = nil
+	end
+
+	local states = mod._estimated_stagger_states
+
+	if states then
+		states[unit] = nil
+	end
+end
+
+local function _estimated_stagger_status(unit, t)
+	if mod._animation_events_available ~= true then
+		return nil
+	end
+
+	local start_times = mod._estimated_stagger_start_times
+	local started_at = start_times and start_times[unit]
+
+	if not started_at then
+		return nil
+	end
+
+	if type(started_at) ~= "number" or not t then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	local elapsed = t - started_at
+
+	if elapsed >= ESTIMATED_STAGGER_MAX_DURATION then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	elseif elapsed < ESTIMATED_STAGGER_CAPTURE_DELAY then
+		return {}
+	end
+
+	if not Unit.has_animation_state_machine(unit) then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	local animation_states, num_layers = Unit.animation_get_state(unit)
+	local current_state = num_layers and num_layers > 0 and animation_states[1]
+
+	if current_state == nil then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	local estimated_states = mod._estimated_stagger_states
+	local initial_state = estimated_states and estimated_states[unit]
+
+	if initial_state == nil then
+		estimated_states[unit] = current_state
+
+		return {}
+	elseif initial_state ~= current_state then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	return {}
+end
+
+local function _stagger_status(unit)
+	if not unit or mod:get("stagger") ~= true then
+		return nil
+	end
+
+	local stagger_end_times = mod._stagger_end_times
+	local stagger_end_time = stagger_end_times and stagger_end_times[unit]
+	local time_manager = Managers.time
+	local t = time_manager and time_manager:time("gameplay")
+
+	if stagger_end_time then
+		if t and stagger_end_time > t then
+			local mode = mod:get("stagger_display") or "time"
+			local time_left = mode == "time" and stagger_end_time - t or nil
+
+			return { time_left = time_left }
+		elseif t then
+			stagger_end_times[unit] = nil
+			_clear_estimated_stagger(unit)
+		end
+	end
+
+	local blackboards = rawget(_G, "BLACKBOARDS")
+	local blackboard = blackboards and blackboards[unit]
+	local stagger_component = blackboard and blackboard.stagger
+	local num_triggered_staggers = stagger_component and stagger_component.num_triggered_staggers
+
+	if num_triggered_staggers and num_triggered_staggers > 0 then
+		return {}
+	end
+
+	-- Public clients do not receive authoritative stagger state. Animation Events
+	-- provides the start; a base-layer state change or a short cap ends the estimate.
+	return _estimated_stagger_status(unit, t)
+end
+
 -- ---------------------------------------------------------------------------
 -- Debuff definitions
 -- ---------------------------------------------------------------------------
 
 local DEBUFF_DEFS = {
+	{
+		id = "stagger",
+		setting = "stagger",
+		icon = function() return mod.textures and mod.textures.stagger end,
+		color = _stagger_color,
+		poll = function(_buff_extension, _content, unit)
+			return _stagger_status(unit)
+		end,
+		text = function(data)
+			if (mod:get("stagger_display") or "time") ~= "time" or data.time_left == nil then
+				return ""
+			end
+
+			local secs = math_ceil(data.time_left)
+			return secs > 0 and tostring(secs) or "0"
+		end,
+	},
 	{
 		id = "bleed",
 		setting = "bleed",
@@ -1683,7 +1820,7 @@ local function _new_boss_indicator_state(breed)
 	}
 end
 
-local function _poll_status_indicators(state, buff_extension)
+local function _poll_status_indicators(state, buff_extension, unit)
 	local debuffs = state.debuffs
 
 	table_clear(debuffs)
@@ -1693,7 +1830,7 @@ local function _poll_status_indicators(state, buff_extension)
 		local enabled = (def.setting == nil) or _feature_enabled(def.setting)
 
 		if enabled then
-			local data = def.poll(buff_extension, state.content)
+			local data = def.poll(buff_extension, state.content, unit)
 
 			if data then
 				debuffs[#debuffs + 1] = {
@@ -1891,7 +2028,7 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 
 	if state.debuff_check_timer >= 0.1 then
 		state.debuff_check_timer = 0
-		_poll_status_indicators(state, buff_extension)
+		_poll_status_indicators(state, buff_extension, unit)
 	end
 
 	_pack_indicator_placements(state)
@@ -1965,7 +2102,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 				local def = DEBUFF_DEFS[i]
 				local enabled = (def.setting == nil) or _feature_enabled(def.setting)
 				if enabled then
-					local data = def.poll(buff_extension, content)
+					local data = def.poll(buff_extension, content, unit)
 					if data then
 						marker.debuffs[#marker.debuffs + 1] = {
 							type = def.id,
