@@ -10,7 +10,7 @@ return {
 	end,
 
  load_after = {
- "dmf"
+ "dmf",
  "ErrorTracker",
  },
 	packages = {},
