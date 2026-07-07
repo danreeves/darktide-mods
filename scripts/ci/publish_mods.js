@@ -30,6 +30,7 @@ const API_BASE = (
 ).replace(/\/$/, "");
 const GAME_DOMAIN = process.env.NEXUSMODS_GAME_DOMAIN || "warhammer40kdarktide";
 const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MiB
+const DEBUG = process.env.PUBLISH_DEBUG === "1" || process.env.DEBUG === "1";
 
 function execCmd(args) {
   const result = spawnSync(args[0], args.slice(1), { encoding: "utf8" });
@@ -51,6 +52,15 @@ async function apiRequest(method, urlPath, apiKey, body) {
 
   const resp = await fetch(url, init);
   const text = await resp.text();
+  if (DEBUG) {
+    try {
+      console.log(`  HTTP ${resp.status} ${method} ${url}`);
+      console.log("  Response headers:", Object.fromEntries(resp.headers.entries()));
+      console.log("  Response body:", text);
+    } catch (e) {
+      // ignore debug logging errors
+    }
+  }
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status} from ${method} ${url}: ${text}`);
   }
@@ -169,11 +179,29 @@ function zipMod(modName) {
 }
 
 async function putToPresignedUrl(url, data) {
+  if (DEBUG) {
+    try {
+      const u = new URL(url);
+      console.log(`  Presigned URL host: ${u.host}`);
+      console.log(`  Presigned signed headers: ${u.searchParams.get("X-Amz-SignedHeaders") || u.searchParams.get("x-amz-signedheaders")}`);
+    } catch (e) {}
+    console.log(`  Uploading ${data.byteLength ?? data.length} bytes to presigned URL`);
+    console.log("  Upload request headers:", {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": String(data.byteLength ?? data.length),
+      "Content-Disposition": "",
+    });
+  }
+
   const resp = await fetch(url, {
     method: "PUT",
     headers: {
       "Content-Type": "application/octet-stream",
       "Content-Length": String(data.byteLength ?? data.length),
+      // Some presigned URLs (Cloudflare R2 / S3) include `content-disposition` in
+      // the signed headers. Ensure we include it (empty string is accepted when
+      // the signer used an empty value) so the request signature matches.
+      "Content-Disposition": "",
     },
     body: data,
   });
@@ -212,6 +240,12 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
     });
     uploadId = uploadInfo.id;
     const presignedUrl = uploadInfo.presigned_url;
+    if (DEBUG) {
+      try {
+        const u = new URL(presignedUrl);
+        console.log("  Presigned URL params:", Object.fromEntries(u.searchParams.entries()));
+      } catch (e) {}
+    }
     console.log(`  Upload ID: ${uploadId}`);
 
     console.log("  Uploading file...");
@@ -229,6 +263,15 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
     const partUrls = uploadInfo.parts_presigned_url;
     const partSize = uploadInfo.parts_size;
     const completeUrl = uploadInfo.complete_presigned_url;
+    if (DEBUG) {
+      try {
+        console.log(`  Multipart parts: ${partUrls.length}`);
+        const u = new URL(partUrls[0]);
+        console.log("  First part params:", Object.fromEntries(u.searchParams.entries()));
+        const cu = new URL(completeUrl);
+        console.log("  Complete URL params:", Object.fromEntries(cu.searchParams.entries()));
+      } catch (e) {}
+    }
     console.log(
       `  Upload ID: ${uploadId} (${partUrls.length} part(s) of ${partSize} bytes each)`,
     );
