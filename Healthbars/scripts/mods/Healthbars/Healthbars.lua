@@ -435,6 +435,10 @@ local function should_enable_healthbar(unit, psykhanium_behavior)
 end
 
 local function add_custom_healthbar_marker(unit)
+	if not mod:is_enabled() then
+		return false
+	end
+
 	if not should_enable_healthbar(unit) then
 		return false
 	end
@@ -515,6 +519,10 @@ local function remove_custom_healthbar_markers(world_markers)
 end
 
 local function resync_existing_healthbars()
+	if not mod:is_enabled() then
+		return 0
+	end
+
 	local state_manager = Managers.state
 	local extension_manager = state_manager and state_manager.extension
 	if not extension_manager then
@@ -695,6 +703,14 @@ mod._healthbar_breed_display_modes = display_modes_by_breed
 current_psykhanium_behavior()
 
 mod.on_setting_changed = function(setting_id)
+	cache_display_modes()
+	refresh_colors()
+	current_psykhanium_behavior()
+
+	if not mod:is_enabled() then
+		return
+	end
+
 	if setting_id == "stagger" then
 		mod._stagger_end_times = new_marker_cache()
 		mod._estimated_stagger_start_times = new_marker_cache()
@@ -710,10 +726,6 @@ mod.on_setting_changed = function(setting_id)
 			unregister_animation_events_definitions(get_mod("animation_events"))
 		end
 	end
-
-	cache_display_modes()
-	refresh_colors()
-	current_psykhanium_behavior()
 
 	if setting_id == "show_vanilla_boss_bar_indicators" then
 		if mod:get("show_vanilla_boss_bar_indicators") ~= true then
@@ -733,6 +745,9 @@ mod.on_setting_changed = function(setting_id)
 end
 
 mod.on_disabled = function()
+	remove_custom_healthbar_markers(current_world_markers() or mod._world_markers)
+	mod._world_markers = nil
+	mod._custom_marker_units = new_marker_cache()
 	mod._stagger_end_times = new_marker_cache()
 	mod._estimated_stagger_start_times = new_marker_cache()
 	mod._estimated_stagger_states = new_marker_cache()
