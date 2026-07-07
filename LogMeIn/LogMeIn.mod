@@ -8,12 +8,11 @@ return {
 			mod_localization = "LogMeIn/scripts/mods/LogMeIn/LogMeIn_localization",
 		})
 	end,
-
- load_after = {
- "dmf",
- "ErrorTracker",
- },
+ 	load_after = {
+ 		"dmf",
+ 		"ErrorTracker",
+ 	},
 	packages = {},
-	version = "26.04.12",
+	version = "26.06.08",
 	mod_id = "15",
 }
