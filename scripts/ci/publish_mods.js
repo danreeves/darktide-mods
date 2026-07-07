@@ -92,23 +92,17 @@ async function resolveFileGroupId(modId, apiKey) {
       `Unexpected response from API: no 'id' field for mod ${modId}`,
     );
   }
+  const filesInfo = await apiRequest("GET", `/mods/${modUuid}/files`, apiKey);
+  const files = filesInfo.mod_files || [];
 
-  const groupsInfo = await apiRequest(
-    "GET",
-    `/mods/${modUuid}/file-update-groups`,
-    apiKey,
-  );
-  const groups = groupsInfo.groups || [];
-
-  if (groups.length === 0) {
+  if (files.length === 0) {
     throw new Error(
-      `No file update groups found for mod ${modId}. ` +
-        "Create a file update group on Nexus Mods first.",
+      `No mod files found for mod ${modId}. Create a mod file (update group) on Nexus Mods first.`,
     );
   }
 
-  const activeGroups = groups.filter((g) => g.is_active);
-  const candidates = activeGroups.length > 0 ? activeGroups : groups;
+  const activeFiles = files.filter((f) => f.is_active);
+  const candidates = activeFiles.length > 0 ? activeFiles : files;
 
   candidates.sort((a, b) => {
     const aTime = a.last_file_uploaded_at
@@ -122,17 +116,17 @@ async function resolveFileGroupId(modId, apiKey) {
 
   if (candidates.length > 1) {
     console.log(
-      `  Multiple file update groups for mod ${modId}, using most recently updated: ${candidates[0].id} (${candidates[0].name || "?"})`,
+      `  Multiple mod files for mod ${modId}, using most recently updated: ${candidates[0].id} (${candidates[0].name || "?"})`,
     );
   }
 
-  const groupId = candidates[0].id;
-  if (!groupId) {
+  const fileId = candidates[0].id;
+  if (!fileId) {
     throw new Error(
-      `Unexpected response from API: no 'id' in file update group for mod ${modId}`,
+      `Unexpected response from API: no 'id' in mod file for mod ${modId}`,
     );
   }
-  return groupId;
+  return fileId;
 }
 
 function getPrevVersion(filePath, before) {
@@ -285,7 +279,7 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
   console.log(`  Creating new version in file group ${fileGroupId}...`);
   const result = await apiRequest(
     "POST",
-    `/mod-file-update-groups/${fileGroupId}/versions`,
+    `/mod-files/${fileGroupId}/versions`,
     apiKey,
     {
       upload_id: uploadId,
