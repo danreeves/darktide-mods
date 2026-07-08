@@ -3,7 +3,7 @@ local WeaponTemplate = require("scripts/utilities/weapon/weapon_template")
 
 mod.input_blocked = false
 
-function input_get_hook(func, self, action_name)
+local function input_get_hook(func, self, action_name)
 	-- Don't impact the non gameplay input services
 	if self.type == "Ingame" and action_name ~= "voip_push_to_talk" then
 		-- When checking if action_two_hold is held

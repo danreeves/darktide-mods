@@ -7,6 +7,8 @@ end_of_line = CRLF
 [*.lua]
 indent_style = tab
 indent_size = 4
+call_arg_parentheses = always
+continuation_indent = 4
 
 [*.yml]
 indent_style = space

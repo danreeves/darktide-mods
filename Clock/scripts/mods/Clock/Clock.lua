@@ -14,7 +14,7 @@ local hud_element = {
 
 mod:add_require_path(hud_element.filename)
 
-function add_hud_element(elements)
+local function add_hud_element(elements)
 	local i, t = table.find_by_key(elements, "class_name", hud_element.class_name)
 	if not i or not t then
 		table.insert(elements, hud_element)

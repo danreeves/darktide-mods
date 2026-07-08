@@ -1,5 +1,32 @@
 local mod = get_mod("KillfeedImprovements")
 
+local filter_teammate_kills = false
+local merge_kills = true
+local alignment = "left"
+local cached_is_in_psykanium = nil
+local cached_local_player = nil
+
+local function cache_settings()
+	filter_teammate_kills = mod:get("filter_teammate_kills")
+	merge_kills = mod:get("merge_kills")
+	alignment = mod:get("alignment")
+end
+
+mod.on_all_mods_loaded = cache_settings
+mod.on_setting_changed = cache_settings
+
+mod.on_game_state_changed = function(status, state)
+	if state == "GameplayStateRun" then
+		if status == "enter" then
+			cached_is_in_psykanium = Managers.state.game_mode:game_mode_name() == "shooting_range"
+			cached_local_player = Managers.player:local_player(1)
+		elseif status == "exit" then
+			cached_is_in_psykanium = nil
+			cached_local_player = nil
+		end
+	end
+end
+
 local kill_message_localization_key = "loc_hud_combat_feed_kill_message"
 local temp_kill_message_localization_params = {
 	killer = "n/a",
@@ -7,6 +34,17 @@ local temp_kill_message_localization_params = {
 }
 
 mod:hook("HudElementCombatFeed", "event_combat_feed_kill", function(func, self, attacking_unit, attacked_unit)
+	if filter_teammate_kills and attacking_unit and type(attacking_unit) ~= "string" then
+		local local_unit = cached_local_player and cached_local_player.player_unit
+		if attacking_unit ~= local_unit then
+			for _, player in pairs(Managers.player:players()) do
+				if player.player_unit == attacking_unit then
+					return
+				end
+			end
+		end
+	end
+
 	func(self, attacking_unit, attacked_unit)
 
 	if type(attacked_unit) == "string" then
@@ -14,7 +52,7 @@ mod:hook("HudElementCombatFeed", "event_combat_feed_kill", function(func, self, 
 		return
 	end
 
-	if mod:get("merge_kills") then
+	if merge_kills then
 		local notifications = self._notifications
 		local new_notification = notifications[1]
 		local unit_data_extension = ScriptUnit.has_extension(attacked_unit, "unit_data_system")
@@ -56,11 +94,8 @@ mod:hook("HudElementCombatFeed", "event_combat_feed_kill", function(func, self, 
 end)
 
 mod:hook("HudElementCombatFeed", "_create_widget", function(func, self, name, widget_definition)
-	local offset = 50
-	local alignment = mod:get("alignment")
 	widget_definition.style.text.text_horizontal_alignment = alignment
 	widget_definition.style.text.horizontal_alignment = alignment
-	widget_definition.style.text.offset[1] = alignment == "left" and offset or alignment == "right" and -offset or 0
 
 	return func(self, name, widget_definition)
 end)
@@ -82,18 +117,8 @@ mod:hook_require("scripts/ui/hud/hud_elements_player_onboarding", function(insta
 end)
 
 mod:hook("HudElementCombatFeed", "_enabled", function(func, ...)
-	local game_mode_name = Managers.state.game_mode:game_mode_name()
-	local is_in_psykanium = game_mode_name == "shooting_range"
-
-	if is_in_psykanium then
+	if cached_is_in_psykanium then
 		return mod:get("enable_in_psykanium")
 	end
 	return func(...)
-end)
-
-mod:hook_require("scripts/ui/hud/elements/combat_feed/hud_element_combat_feed_definitions", function(instance)
-	instance.scenegraph_definition.background.size = {
-		1920,
-		1080,
-	}
 end)

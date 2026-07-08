@@ -5,23 +5,60 @@ local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local UIRenderer = require("scripts/managers/ui/ui_renderer")
 local UIWidget = require("scripts/managers/ui/ui_widget")
+local BuffSettings = require("scripts/settings/buff/buff_settings")
+
+local math_abs = math.abs
+local math_ceil = math.ceil
+local math_clamp = math.clamp
+local math_floor = math.floor
+local math_huge = math.huge
+local math_max = math.max
+local math_min = math.min
+local math_pow = math.pow
+local string_find = string.find
+local string_format = string.format
+local table_clear = table.clear
+local table_clone = table.clone
+local table_remove = table.remove
+local tostring = tostring
+local rawget = rawget
+local type = type
+local Color = Color
+local Localize = Localize
+local Managers = Managers
+local GameSession_game_object_field = GameSession.game_object_field
+local ScriptUnit_extension = ScriptUnit.extension
+local ScriptUnit_has_extension = ScriptUnit.has_extension
+local UIRenderer_draw_text = UIRenderer.draw_text
+local BUFF_KEYWORDS = BuffSettings.keywords
+local ELECTROCUTED_KEYWORD_GROUP = BuffSettings.group_keywords and BuffSettings.group_keywords.electrocuted
+local ELECTROCUTED_KEYWORD_LOOKUP = BuffSettings.group_to_keywords and ELECTROCUTED_KEYWORD_GROUP and
+	BuffSettings.group_to_keywords[ELECTROCUTED_KEYWORD_GROUP] or {
+		[BUFF_KEYWORDS.electrocuted] = true,
+	}
+local ELECTROCUTED_KEYWORDS = {}
+
+for keyword, _ in pairs(ELECTROCUTED_KEYWORD_LOOKUP) do
+	ELECTROCUTED_KEYWORDS[#ELECTROCUTED_KEYWORDS + 1] = keyword
+end
+
+local WEAPON_MALFUNCTION_KEYWORD = BUFF_KEYWORDS.weapon_malfunction
+local WEAPON_MALFUNCTION_KEYWORDS = WEAPON_MALFUNCTION_KEYWORD and { WEAPON_MALFUNCTION_KEYWORD } or {}
+local WEAPON_MALFUNCTION_KEYWORD_LOOKUP = WEAPON_MALFUNCTION_KEYWORD and
+	{ [WEAPON_MALFUNCTION_KEYWORD] = true } or {}
+
 local template = {}
-local size = {
-	120,
-	6,
-}
+
+local size = { 120, 6 }
 template.size = size
 template.name = "custom_healthbar"
-template.unit_node = "root_point"
-template.position_offset = {
-	0,
-	0,
-	0,
-}
+template.unit_node = "j_head"
+template.position_offset = { 0, 0, 0.4 }
 template.check_line_of_sight = true
 template.max_distance = 25
 template.screen_clamp = false
 template.remove_on_death_duration = 0.5
+
 template.damage_number_settings = {
 	first_hit_size_scale = 1.2,
 	crit_hit_size_scale = 1.5,
@@ -29,14 +66,14 @@ template.damage_number_settings = {
 	expand_bonus_scale = 30,
 	default_color = "white",
 	has_taken_damage_timer_y_offset = 34,
-	weakspot_color = "orange",
+	weakspot_color = "yellow",
 	fade_delay = 0.35,
 	add_numbers_together_timer = 0.2,
 	shrink_duration = 1,
 	duration = 3,
 	x_offset_between_numbers = 38,
 	expand_duration = 0.2,
-	crit_color = "yellow",
+	crit_color = "orange",
 	hundreds_font_size = 14.4,
 	default_font_size = 17,
 	has_taken_damage_timer_remove_after_time = 5,
@@ -46,6 +83,7 @@ template.damage_number_settings = {
 	dps_y_offset = -24,
 	y_offset = 15,
 }
+
 template.bar_settings = {
 	animate_on_health_increase = true,
 	bar_spacing = 2,
@@ -56,6 +94,7 @@ template.bar_settings = {
 	alpha_fade_min_value = 50,
 	alpha_fade_duration = 0.4,
 }
+
 local armor_type_string_lookup = {
 	disgustingly_resilient = "loc_weapon_stats_display_disgustingly_resilient",
 	super_armor = "loc_weapon_stats_display_super_armor",
@@ -64,6 +103,17 @@ local armor_type_string_lookup = {
 	berserker = "loc_weapon_stats_display_berzerker",
 	unarmored = "loc_weapon_stats_display_unarmored",
 }
+local DEFAULT_HIT_ZONE_NAME = "center_mass"
+local LABEL_DISPLAY_MODE_ARMOUR_TYPE = "armour_type"
+local LABEL_DISPLAY_MODE_ENEMY_NAME = "enemy_name"
+local DEFAULT_POST_KILL_DISPLAY_DURATION = 1
+local MIN_POST_KILL_DISPLAY_DURATION = 0
+local MAX_POST_KILL_DISPLAY_DURATION = 10
+
+local function _feature_enabled(setting_id)
+	return mod._psykhanium_full_debug_display == true or mod:get(setting_id) == true
+end
+
 template.fade_settings = {
 	fade_to = 1,
 	fade_from = 0.1,
@@ -73,178 +123,448 @@ template.fade_settings = {
 	easing_function = math.ease_out_quad,
 }
 
+-- ---------------------------------------------------------------------------
+-- UI helpers
+-- ---------------------------------------------------------------------------
+
+local function _set_rgb(dst, src)
+	dst[2], dst[3], dst[4] = src[2], src[3], src[4]
+end
+
+local function _localize_or_fallback(loc_key, fallback)
+	if not loc_key or loc_key == "" then
+		return fallback or ""
+	end
+
+	local localized_text = Localize(loc_key)
+	if not localized_text or localized_text == "" or string_find(localized_text, "<unlocalized") then
+		return fallback or ""
+	end
+
+	return localized_text
+end
+
+local function _localized_breed_name(breed)
+	if not breed then
+		return ""
+	end
+
+	return _localize_or_fallback(breed.display_name, "")
+end
+
+local function _damage_label_enabled()
+	return _feature_enabled("show_armour_type")
+end
+
+local function _damage_label_display_mode()
+	if mod._psykhanium_full_debug_display then
+		return LABEL_DISPLAY_MODE_ARMOUR_TYPE
+	end
+
+	return mod:get("show_armour_type_display") or LABEL_DISPLAY_MODE_ARMOUR_TYPE
+end
+
+local function _damage_label_uses_hit_zone()
+	return _damage_label_enabled() and _damage_label_display_mode() == LABEL_DISPLAY_MODE_ARMOUR_TYPE
+end
+
+local function _damage_label_visible(ui_content)
+	return ui_content.damage_has_started or ui_content.has_active_debuff or ui_content.visibility_delay or ui_content.fade_delay
+end
+
+local function _post_kill_display_duration()
+	local duration = mod:get("post_kill_display_duration") or DEFAULT_POST_KILL_DISPLAY_DURATION
+
+	return math_clamp(duration, MIN_POST_KILL_DISPLAY_DURATION, MAX_POST_KILL_DISPLAY_DURATION)
+end
+
+local function _damage_label_text(ui_content)
+	local display_mode = _damage_label_display_mode()
+
+	if display_mode == LABEL_DISPLAY_MODE_ENEMY_NAME then
+		return ui_content.enemy_name_text or _localized_breed_name(ui_content.breed)
+	end
+
+	local hit_zone_name = ui_content.last_hit_zone_name or DEFAULT_HIT_ZONE_NAME
+
+	local breed = ui_content.breed
+	local armor_type = breed and breed.armor_type
+
+	if breed and breed.hitzone_armor_override and breed.hitzone_armor_override[hit_zone_name] then
+		armor_type = breed.hitzone_armor_override[hit_zone_name]
+	end
+
+	local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
+
+	return _localize_or_fallback(armor_type_loc_string, "")
+end
+
+-- ---------------------------------------------------------------------------
+-- Debuff layout
+-- ---------------------------------------------------------------------------
+
+local MAX_DEBUFF_SLOTS_ALLOC = 16 -- maximum number of slots
+
+local ICON_SIZE = 25
+local DEFAULT_DOT_TEXT_FONT_SIZE = 14
+local DEFAULT_DEBUFF_TEXT_FONT_SIZE = 14
+local GRID_COLS = 8
+local GRID_GAP_X = 4
+local GRID_GAP_Y = 4
+local BAR_TO_DEBUFF_MARGIN_Y = 5
+local COLOR_WHITE = { 255, 255, 255, 255 }
+local COLOR_YELLOW = { 255, 255, 255, 0 }
+local COLOR_ORANGE = { 255, 255, 165, 0 }
+local COLOR_RED = { 255, 255, 0, 0 }
+local COLOR_MAGENTA = { 255, 255, 0, 255 }
+local COLOR_STAGGER = { 255, 95, 152, 180 }
+local DEFAULT_STATUS_TEXT_COLOR = COLOR_YELLOW
+local SHIELD_BAR_HEIGHT = 2
+
+local SLOT_CACHE = {}
+local DEFAULT_SLOT_BASE_Y = -((template.size[2] * 0.5) + BAR_TO_DEBUFF_MARGIN_Y + (ICON_SIZE * 0.5))
+local ARMOUR_TYPE_SLOT_BASE_Y = DEFAULT_SLOT_BASE_Y - 20
+local BOSS_INDICATOR_BASE_Y = -61
+local BOSS_INDICATOR_Z = 100
+local BOSS_INDICATOR_SLOT_CACHE = {}
+
+for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+	local col = (i - 1) % GRID_COLS
+	local row = math_floor((i - 1) / GRID_COLS)
+	local x = -(template.size[1] * 0.5) + (ICON_SIZE * 0.5) + col * (ICON_SIZE + GRID_GAP_X)
+	local row_y_offset = row * (ICON_SIZE + GRID_GAP_Y)
+
+	SLOT_CACHE[i] = {
+		icon_id = "status_icon_" .. i,
+		stacks_id = "status_stacks_" .. i,
+		x = x,
+		y = DEFAULT_SLOT_BASE_Y - row_y_offset,
+		y_armour = ARMOUR_TYPE_SLOT_BASE_Y - row_y_offset,
+	}
+
+	BOSS_INDICATOR_SLOT_CACHE[i] = {
+		icon_id = "boss_status_icon_" .. i,
+		stacks_id = "boss_status_stacks_" .. i,
+		row = row,
+		col = col,
+	}
+end
+
+local function _slot_pos(slot_index, use_armour_offset)
+	local slot = SLOT_CACHE[slot_index]
+
+	return slot.x, use_armour_offset and slot.y_armour or slot.y
+end
+
+local function _debuff_signature(debuffs)
+	local parts = {}
+	for i = 1, #debuffs do
+		local d = debuffs[i]
+		if d then
+			parts[#parts + 1] = string_format("%s:%s:%s:%s", d.type or "?", d.template_name or "",
+				tostring(d.stacks or ""), tostring(d.percent or ""))
+		end
+	end
+	return table.concat(parts, "|")
+end
+
+local function get_minion_shield_health(unit)
+	local shield_extension = ScriptUnit_has_extension(unit, "shield_system")
+
+	if not shield_extension then
+		return nil
+	end
+
+	local state_managers = Managers.state
+	local game_session_manager = state_managers and state_managers.game_session
+	local unit_spawner_manager = state_managers and state_managers.unit_spawner
+
+	if not game_session_manager or not unit_spawner_manager then
+		return nil
+	end
+
+	local game_session = game_session_manager:game_session()
+	local game_object_id = unit_spawner_manager:game_object_id(unit)
+
+	if not game_session or not game_object_id then
+		return nil
+	end
+
+	local shield_health = GameSession_game_object_field(game_session, game_object_id, "shield_health")
+	local shield_max_health = GameSession_game_object_field(game_session, game_object_id, "shield_max_health")
+
+	if not shield_health or not shield_max_health or shield_max_health <= 0 then
+		return nil
+	end
+
+	return shield_health, shield_max_health, shield_health / shield_max_health
+end
+
+-- ---------------------------------------------------------------------------
+-- Damage number rendering (logic pass)
+-- ---------------------------------------------------------------------------
+
+local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
+	if not _damage_label_enabled() or not _damage_label_visible(ui_content) then
+		return
+	end
+
+	local settings = template.damage_number_settings
+	local scale = RESOLUTION_LOOKUP.scale
+	local font_type = ui_style.font_type
+	local font_size = settings.dps_font_size * scale
+	local label_text = _damage_label_text(ui_content)
+
+	if label_text == "" then
+		return
+	end
+
+	local z0 = position[3]
+	local x0 = position[1] + settings.x_offset
+	local y0 = position[2] + settings.y_offset
+	local label_pos = Vector3(x0, y0 - settings.has_taken_damage_timer_y_offset, z0)
+
+	UIRenderer_draw_text(ui_renderer, label_text, font_size, font_type, label_pos, ui_style.size, ui_style.text_color, {})
+end
+
+local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
+	if not _feature_enabled("show_damage_numbers") then
+		return
+	end
+
+	local settings = template.damage_number_settings
+	local damage_numbers = ui_content.damage_numbers
+	local num = #damage_numbers
+	local show_dps = ui_content.damage_has_started and _feature_enabled("show_dps")
+	if num == 0 and not show_dps then
+		return
+	end
+
+	local dt = ui_renderer.dt
+	local scale = RESOLUTION_LOOKUP.scale
+
+	local default_font_size = settings.default_font_size * scale
+	local dps_font_size = settings.dps_font_size * scale
+	local font_type = ui_style.font_type
+
+	local original_x = position[1]
+	local original_y = position[2]
+	local original_z = position[3]
+	local z0 = original_z
+	local x0 = original_x + settings.x_offset
+	local y0 = original_y + settings.y_offset
+
+	if num > 0 then
+		local hundreds_font_size = settings.hundreds_font_size * scale
+		local default_color = Color[settings.default_color](255, true)
+		local crit_color = Color[settings.crit_color](255, true)
+		local weakspot_color = Color[settings.weakspot_color](255, true)
+		local text_color = table_clone(default_color)
+
+		for i = num, 1, -1 do
+			local dn = damage_numbers[i]
+			local progress = math_clamp(dn.time / dn.duration, 0, 1)
+
+			if progress >= 1 then
+				table_remove(damage_numbers, i)
+			else
+				dn.time = dn.time + dt
+			end
+
+			if dn.was_critical then
+				_set_rgb(text_color, crit_color)
+				dn.expand_duration = settings.expand_duration
+			elseif dn.hit_weakspot then
+				_set_rgb(text_color, weakspot_color)
+			else
+				_set_rgb(text_color, default_color)
+			end
+
+			local value = dn.value
+			local font_size = (value <= 99) and default_font_size or hundreds_font_size
+
+			-- Expand then shrink behavior (same timing logic as original)
+			if dn.expand_duration then
+				local expand_progress = math_clamp(dn.expand_time / dn.expand_duration, 0, 1)
+				local anim_progress = 1 - expand_progress
+				font_size = font_size + settings.expand_bonus_scale * anim_progress
+
+				if expand_progress >= 1 then
+					dn.expand_duration = nil
+					dn.shrink_start_t = dn.duration - settings.shrink_duration
+				else
+					dn.expand_time = dn.expand_time + dt
+				end
+			elseif dn.shrink_start_t and dn.shrink_start_t < dn.time then
+				local diff = dn.time - dn.shrink_start_t
+				local percentage = diff / settings.shrink_duration
+				local s = 1 - percentage
+				font_size = font_size * s
+				text_color[1] = text_color[1] * s
+			end
+
+			local current_order = num - i
+			if current_order == 0 then
+				local scale_size = dn.was_critical and settings.crit_hit_size_scale or settings.first_hit_size_scale
+				font_size = font_size * scale_size
+			end
+
+			position[3] = z0 + current_order
+			position[2] = y0
+			position[1] = x0 + current_order * settings.x_offset_between_numbers
+
+			UIRenderer_draw_text(ui_renderer, value, font_size, font_type, position, ui_style.size, text_color, {})
+		end
+	end
+
+	-- DPS (only drawn when dead in the original logic)
+	if show_dps then
+		if not ui_content.damage_has_started_timer then
+			ui_content.damage_has_started_timer = dt
+		elseif not ui_content.dead then
+			ui_content.damage_has_started_timer = ui_content.damage_has_started_timer + dt
+		end
+
+		if ui_content.dead then
+			local dps_pos = Vector3(x0, y0 - settings.dps_y_offset, z0)
+			local elapsed = ui_content.damage_has_started_timer
+			local dps = (elapsed and elapsed > 1) and (ui_content.damage_taken / elapsed) or ui_content.damage_taken
+			local text = string_format("%d DPS", dps)
+
+			UIRenderer_draw_text(ui_renderer, text, dps_font_size, font_type, dps_pos, ui_style.size, ui_style
+				.text_color, {})
+		end
+	end
+
+	-- restore values for any later pass that might use them
+	ui_style.font_size = default_font_size
+	position[3], position[2], position[1] = original_z, original_y, original_x
+end
+
+-- ---------------------------------------------------------------------------
+-- Widget definition
+-- ---------------------------------------------------------------------------
+
+local ICON_DEFAULT_COLORS = {
+	{ 255, 255, 0,   0 },
+	{ 255, 255, 102, 0 },
+	{ 255, 0,   255, 0 },
+	{ 255, 120, 210, 255 },
+	COLOR_WHITE,
+}
+
+local DOT_ORDER = { "bleed", "chordclaw_bleed", "burn", "phosphor_burn", "warpfire", "toxin" }
+local DEBUFF_ORDER = { "stagger", "brittleness", "damage_taken", "melee_damage_taken", "skullcrusher", "thunderstrike",
+	"empyric_shock", "electrocuted", "weapon_malfunction" }
+
+local DEBUFF_RULES = {
+	stagger = { setting = "stagger_display", default = "time" },
+	brittleness = { setting = "brittleness_indicator_display", default = "icon_text", center_on = "icon_text" },
+	skullcrusher = { setting = "skullcrusher_display", default = "stacks", center_on = "percent" },
+	thunderstrike = { setting = "thunderstrike_display", default = "stacks", center_on = "percent" },
+	melee_damage_taken = { setting = "melee_damage_taken_display", default = "icon_only", center_on = "icon_text" },
+	damage_taken = { setting = "damage_taken_display", default = "icon_text", center_on = "icon_text" },
+	empyric_shock = { setting = "empyric_shock_display", default = "stacks", center_on = "percent" },
+}
+
+local function _center_small_text(stacks_style, text)
+	if not stacks_style then
+		return
+	end
+
+	stacks_style.font_size = text and #text >= 4 and 9 or 11
+	stacks_style.text_horizontal_alignment = "center"
+	stacks_style.text_vertical_alignment = "center"
+end
+
+local function _set_style_color(style_color, src_color)
+	style_color[1] = src_color[1]
+	style_color[2] = src_color[2]
+	style_color[3] = src_color[3]
+	style_color[4] = src_color[4]
+end
+
+-- hook_require definitions remain injected while DMF disables the mod's normal hooks.
+local function _transparent_color(color)
+	return { 0, color[2], color[3], color[4] }
+end
+
+template.create_vanilla_boss_indicator_definition = function(bar_width, center_x)
+	local header_font_setting_name = "nameplates"
+	local header_font_settings = UIFontSettings[header_font_setting_name]
+	local passes = {}
+	local row_stride_y = ICON_SIZE + GRID_GAP_Y
+	local col_stride_x = ICON_SIZE + GRID_GAP_X
+	local left_x = center_x - bar_width * 0.5 + ICON_SIZE * 0.5
+
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local slot = BOSS_INDICATOR_SLOT_CACHE[i]
+		local icon_id = slot.icon_id
+		local stacks_id = slot.stacks_id
+		local x = left_x + slot.col * col_stride_x
+		local y = BOSS_INDICATOR_BASE_Y + slot.row * row_stride_y
+
+		passes[#passes + 1] = {
+			pass_type = "texture",
+			style_id = icon_id,
+			value_id = icon_id,
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "center",
+				offset = { x, y, BOSS_INDICATOR_Z },
+				size = { ICON_SIZE, ICON_SIZE },
+				color = _transparent_color(ICON_DEFAULT_COLORS[i] or COLOR_WHITE),
+			},
+			visibility_function = function(content, style)
+				return content.healthbars_indicator_active == true and content[icon_id] ~= nil
+			end,
+		}
+
+		passes[#passes + 1] = {
+			pass_type = "text",
+			style_id = stacks_id,
+			value_id = stacks_id,
+			value = "",
+			style = {
+				vertical_alignment = "center",
+				horizontal_alignment = "center",
+				text_vertical_alignment = "bottom",
+				text_horizontal_alignment = "right",
+				offset = { x, y, BOSS_INDICATOR_Z + 1 },
+				size = { ICON_SIZE, ICON_SIZE },
+				font_type = header_font_settings.font_type,
+				font_size = DEFAULT_DOT_TEXT_FONT_SIZE,
+				text_color = {
+					0,
+					DEFAULT_STATUS_TEXT_COLOR[2],
+					DEFAULT_STATUS_TEXT_COLOR[3],
+					DEFAULT_STATUS_TEXT_COLOR[4],
+				},
+			},
+			visibility_function = function(content, style)
+				return content.healthbars_indicator_active == true and content[stacks_id] ~= nil and
+					content[stacks_id] ~= ""
+			end,
+		}
+	end
+
+	return UIWidget.create_definition(passes, "health_bar")
+end
+
 template.create_widget_defintion = function(template, scenegraph_id)
-	local size = template.size
 	local header_font_setting_name = "nameplates"
 	local header_font_settings = UIFontSettings[header_font_setting_name]
 	local header_font_color = header_font_settings.text_color
-	local bar_size = {
-		size[1],
-		size[2],
-	}
-	local bar_offset = {
-		-size[1] * 0.5,
-		0,
-		0,
-	}
 
-	return UIWidget.create_definition({
+	local bar_size = { template.size[1], template.size[2] }
+	local bar_offset = { -template.size[1] * 0.5, 0, 0 }
+
+	local passes = {
 		{
 			pass_type = "logic",
 			value = function(pass, ui_renderer, ui_style, ui_content, position, size)
-				local damage_numbers = ui_content.damage_numbers
-				local damage_number_settings = template.damage_number_settings
-				local z_position = position[3]
-				local y_position = position[2] + damage_number_settings.y_offset
-				local x_position = position[1] + damage_number_settings.x_offset
-				local scale = RESOLUTION_LOOKUP.scale
-				local default_font_size = damage_number_settings.default_font_size * scale
-				local dps_font_size = damage_number_settings.dps_font_size * scale
-				local hundreds_font_size = damage_number_settings.hundreds_font_size * scale
-				local font_type = ui_style.font_type
-				local default_color = Color[damage_number_settings.default_color](255, true)
-				local crit_color = Color[damage_number_settings.crit_color](255, true)
-				local weakspot_color = Color[damage_number_settings.weakspot_color](255, true)
-				local text_color = table.clone(default_color)
-				local num_damage_numbers = #damage_numbers
-
-				for i = num_damage_numbers, 1, -1 do
-					local damage_number = damage_numbers[i]
-					local duration = damage_number.duration
-					local time = damage_number.time
-					local progress = math.clamp(time / duration, 0, 1)
-
-					if progress >= 1 then
-						table.remove(damage_numbers, i)
-					else
-						damage_number.time = damage_number.time + ui_renderer.dt
-					end
-
-					if damage_number.was_critical then
-						text_color[2] = crit_color[2]
-						text_color[3] = crit_color[3]
-						text_color[4] = crit_color[4]
-						damage_number.expand_duration = damage_number_settings.expand_duration
-					elseif damage_number.hit_weakspot then
-						text_color[2] = weakspot_color[2]
-						text_color[3] = weakspot_color[3]
-						text_color[4] = weakspot_color[4]
-					else
-						text_color[2] = default_color[2]
-						text_color[3] = default_color[3]
-						text_color[4] = default_color[4]
-					end
-
-					local value = damage_number.value
-					local font_size = value <= 99 and default_font_size or hundreds_font_size
-					local expand_duration = damage_number.expand_duration
-
-					if expand_duration then
-						local expand_time = damage_number.expand_time
-						local expand_progress = math.clamp(expand_time / expand_duration, 0, 1)
-						local anim_progress = 1 - expand_progress
-						font_size = font_size + damage_number_settings.expand_bonus_scale * anim_progress
-
-						if expand_progress >= 1 then
-							damage_number.expand_duration = nil
-							damage_number.shrink_start_t = duration - damage_number_settings.shrink_duration
-						else
-							damage_number.expand_time = expand_time + ui_renderer.dt
-						end
-					elseif damage_number.shrink_start_t and damage_number.shrink_start_t < time then
-						local diff = time - damage_number.shrink_start_t
-						local percentage = diff / damage_number_settings.shrink_duration
-						local scale = 1 - percentage
-						font_size = font_size * scale
-						text_color[1] = text_color[1] * scale
-					end
-
-					local text = value
-					local size = ui_style.size
-					local current_order = num_damage_numbers - i
-
-					if current_order == 0 then
-						local scale_size = damage_number.was_critical and damage_number_settings.crit_hit_size_scale
-							or damage_number_settings.first_hit_size_scale
-						font_size = font_size * scale_size
-					end
-
-					position[3] = z_position + current_order
-					position[2] = y_position
-					position[1] = x_position + current_order * damage_number_settings.x_offset_between_numbers
-
-					if mod:get("show_damage_numbers") then
-						UIRenderer.draw_text(ui_renderer, text, font_size, font_type, position, size, text_color, {})
-					end
-				end
-
-				local damage_has_started = ui_content.damage_has_started
-
-				if damage_has_started then
-					if not ui_content.damage_has_started_timer then
-						ui_content.damage_has_started_timer = ui_renderer.dt
-					elseif not ui_content.dead then
-						ui_content.damage_has_started_timer = ui_content.damage_has_started_timer + ui_renderer.dt
-					end
-
-					if ui_content.dead then
-						local damage_has_started_position =
-							Vector3(x_position, y_position - damage_number_settings.dps_y_offset, z_position)
-						local dps = ui_content.damage_has_started_timer > 1
-								and ui_content.damage_taken / ui_content.damage_has_started_timer
-							or ui_content.damage_taken
-						local text = string.format("%d DPS", dps)
-
-						if mod:get("show_dps") then
-							UIRenderer.draw_text(
-								ui_renderer,
-								text,
-								dps_font_size,
-								font_type,
-								damage_has_started_position,
-								size,
-								ui_style.text_color,
-								{}
-							)
-						end
-					end
-
-					if ui_content.last_hit_zone_name then
-						local hit_zone_name = ui_content.last_hit_zone_name
-						local breed = ui_content.breed
-						local armor_type = breed.armor_type
-
-						if breed.hitzone_armor_override and breed.hitzone_armor_override[hit_zone_name] then
-							armor_type = breed.hitzone_armor_override[hit_zone_name]
-						end
-
-						local armor_type_loc_string = armor_type and armor_type_string_lookup[armor_type] or ""
-						local armor_type_text = Localize(armor_type_loc_string)
-						local armor_type_position = Vector3(
-							x_position,
-							y_position - damage_number_settings.has_taken_damage_timer_y_offset,
-							z_position
-						)
-
-						if mod:get("show_armour_type") then
-							UIRenderer.draw_text(
-								ui_renderer,
-								armor_type_text,
-								dps_font_size,
-								font_type,
-								armor_type_position,
-								size,
-								ui_style.text_color,
-								{}
-							)
-						end
-					end
-				end
-
-				ui_style.font_size = default_font_size
-				position[3] = z_position
-				position[2] = y_position
-				position[1] = x_position
+				_draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
+				_draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
 			end,
 			style = {
 				horizontal_alignment = "left",
@@ -252,17 +572,10 @@ template.create_widget_defintion = function(template, scenegraph_id)
 				text_vertical_alignment = "bottom",
 				text_horizontal_alignment = "left",
 				vertical_alignment = "center",
-				offset = {
-					-size[1] * 0.5,
-					-size[2],
-					2,
-				},
+				offset = { -template.size[1] * 0.5, -template.size[2], 2 },
 				font_type = header_font_settings.font_type,
 				text_color = header_font_color,
-				size = {
-					600,
-					size[2],
-				},
+				size = { 600, template.size[2] },
 			},
 		},
 		{
@@ -282,18 +595,9 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			pass_type = "rect",
 			style = {
 				vertical_alignment = "center",
-				offset = {
-					bar_offset[1],
-					bar_offset[2],
-					2,
-				},
+				offset = { bar_offset[1], bar_offset[2], 2 },
 				size = bar_size,
-				color = {
-					255,
-					220,
-					100,
-					100,
-				},
+				color = { 255, 220, 100, 100 },
 			},
 		},
 		{
@@ -303,18 +607,9 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			style = {
 				vertical_alignment = "center",
 				horizontal_alignment = "center",
-				offset = {
-					bar_offset[1],
-					bar_offset[2],
-					1,
-				},
+				offset = { bar_offset[1], bar_offset[2], 1 },
 				size = bar_size,
-				color = {
-					200,
-					255,
-					255,
-					255,
-				},
+				color = { 200, 255, 255, 255 },
 			},
 		},
 		{
@@ -323,18 +618,25 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			pass_type = "rect",
 			style = {
 				vertical_alignment = "center",
+				offset = { bar_offset[1], bar_offset[2], 3 },
+				size = bar_size,
+				color = { 255, 220, 20, 20 },
+			},
+		},
+		{
+			value = "content/ui/materials/backgrounds/default_square",
+			style_id = "shield_bar",
+			pass_type = "rect",
+			style = {
+				vertical_alignment = "center",
 				offset = {
 					bar_offset[1],
-					bar_offset[2],
-					3,
+					bar_offset[2] - (bar_size[2] - SHIELD_BAR_HEIGHT) * 0.5,
+					5,
 				},
-				size = bar_size,
-				color = {
-					255,
-					220,
-					20,
-					20,
-				},
+				size = { bar_size[1], SHIELD_BAR_HEIGHT },
+				color = COLOR_WHITE,
+				visible = false,
 			},
 		},
 		{
@@ -344,420 +646,1740 @@ template.create_widget_defintion = function(template, scenegraph_id)
 			style = {
 				vertical_alignment = "center",
 				horizontal_alignment = "right",
-				offset = {
-					bar_offset[1],
-					bar_offset[2],
-					4,
-				},
-				size = {
-					12,
-					bar_size[2] + 12,
-				},
-				color = {
-					255,
-					255,
-					255,
-					255,
-				},
+				offset = { bar_offset[1], bar_offset[2], 4 },
+				size = { 12, bar_size[2] + 12 },
+				color = COLOR_WHITE,
 			},
 		},
+	}
 
-		{
+	-- Debuff slots (1..MAX_DEBUFF_SLOTS_ALLOC) in a centered grid (max 8 per row)
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local slot = SLOT_CACHE[i]
+		local icon_id = slot.icon_id
+		local stacks_id = slot.stacks_id
+		local x, y = _slot_pos(i, _damage_label_enabled())
+
+		passes[#passes + 1] = {
 			pass_type = "texture",
-			style_id = "status_icon_1",
-			value_id = "status_icon_1",
+			style_id = icon_id,
+			value_id = icon_id,
 			style = {
 				vertical_alignment = "center",
-				horizontal_alignment = "right",
-				position = { 0, 0, 0 },
-				offset = {
-					-(template.size[1] / 2) + 20,
-					-40,
-					10,
-				},
-				size = {
-					25,
-					25,
-				},
-				color = {
-					255,
-					255,
-					0,
-					0,
-				},
+				horizontal_alignment = "center",
+				offset = { x, y, 10 },
+				size = { ICON_SIZE, ICON_SIZE },
+				color = ICON_DEFAULT_COLORS[i] or COLOR_WHITE,
 			},
 			visibility_function = function(content, style)
-				return content.status_icon_1 ~= nil
+				return content[icon_id] ~= nil
 			end,
-		},
-		{
+		}
+
+		passes[#passes + 1] = {
 			pass_type = "text",
-			style_id = "status_stacks_1",
-			value_id = "status_stacks_1",
+			style_id = stacks_id,
+			value_id = stacks_id,
 			value = "",
 			style = {
 				vertical_alignment = "center",
-				horizontal_alignment = "right",
-				text_vertical_alignment = "center",
+				horizontal_alignment = "center",
+				text_vertical_alignment = "bottom",
 				text_horizontal_alignment = "right",
-				position = { 0, 0, 0 },
-				offset = {
-					-(template.size[1] / 2) + 20 + 10,
-					-40,
-					10,
-				},
-				size = {
-					25,
-					25,
-				},
-				font_type = header_font_settings.font_type,
-				font_size = 14,
-				text_color = {
-					255,
-					255,
-					255,
-					0,
-				},
-			},
-		},
+				offset = { x, y, 11 },
+				size = { ICON_SIZE, ICON_SIZE },
 
-		{
-			pass_type = "texture",
-			style_id = "status_icon_2",
-			value_id = "status_icon_2",
-			style = {
-				vertical_alignment = "center",
-				horizontal_alignment = "right",
-				position = { 0, 0, 0 },
-				offset = {
-					-(template.size[1] / 2) + 20 + 10 + 20 + 10,
-					-40,
-					10,
-				},
-				size = {
-					25,
-					25,
-				},
-				color = {
-					255,
-					255,
-					102,
-					0,
-				},
-			},
-			visibility_function = function(content, style)
-				return content.status_icon_2 ~= nil
-			end,
-		},
-		{
-			pass_type = "text",
-			style_id = "status_stacks_2",
-			value_id = "status_stacks_2",
-			value = "",
-			style = {
-				vertical_alignment = "center",
-				horizontal_alignment = "right",
-				text_vertical_alignment = "center",
-				text_horizontal_alignment = "right",
-				position = { 0, 0, 0 },
-				offset = {
-					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10,
-					-40,
-					10,
-				},
-				size = {
-					25,
-					25,
-				},
 				font_type = header_font_settings.font_type,
-				font_size = 14,
+				font_size = DEFAULT_DOT_TEXT_FONT_SIZE,
 				text_color = {
-					255,
-					255,
-					255,
-					0,
+					DEFAULT_STATUS_TEXT_COLOR[1],
+					DEFAULT_STATUS_TEXT_COLOR[2],
+					DEFAULT_STATUS_TEXT_COLOR[3],
+					DEFAULT_STATUS_TEXT_COLOR[4],
 				},
-			},
-		},
+			}
+		}
+	end
 
-		{
-			pass_type = "texture",
-			style_id = "status_icon_3",
-			value_id = "status_icon_3",
-			style = {
-				vertical_alignment = "center",
-				horizontal_alignment = "right",
-				position = { 0, 0, 0 },
-				offset = {
-					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10,
-					-40,
-					10,
-				},
-				size = {
-					25,
-					25,
-				},
-				color = {
-					255,
-					0,
-					255,
-					0,
-				},
-			},
-			visibility_function = function(content, style)
-				return content.status_icon_3 ~= nil
-			end,
-		},
-		{
-			pass_type = "text",
-			style_id = "status_stacks_3",
-			value_id = "status_stacks_3",
-			value = "",
-			style = {
-				vertical_alignment = "center",
-				horizontal_alignment = "right",
-				text_vertical_alignment = "center",
-				text_horizontal_alignment = "right",
-				position = { 0, 0, 0 },
-				offset = {
-					-(template.size[1] / 2) + 20 + 10 + 20 + 10 + 10 + 20 + 10 + 10,
-					-40,
-					10,
-				},
-				size = {
-					25,
-					25,
-				},
-				font_type = header_font_settings.font_type,
-				font_size = 14,
-				text_color = {
-					255,
-					255,
-					255,
-					0,
-				},
-			},
-		},
-	}, scenegraph_id)
+	return UIWidget.create_definition(passes, scenegraph_id)
 end
+
+-- ---------------------------------------------------------------------------
+-- Marker lifecycle
+-- ---------------------------------------------------------------------------
 
 template.on_enter = function(widget, marker, template)
 	local content = widget.content
 	content.spawn_progress_timer = 0
 	content.damage_taken = 0
 	content.damage_numbers = {}
+	content.has_active_debuff = false
+	content.shield_health = nil
+
 	local bar_settings = template.bar_settings
 	marker.bar_logic = HudHealthBarLogic:new(bar_settings)
+
 	local unit = marker.unit
-	local unit_data_extension = ScriptUnit.extension(unit, "unit_data_system")
+	local unit_data_extension = ScriptUnit_extension(unit, "unit_data_system")
 	local breed = unit_data_extension:breed()
+
 	content.header_text = breed.name
 	content.breed = breed
-	marker.head_offset = 0
+	content.enemy_name_text = _localized_breed_name(breed)
+	content.weakspots = breed.hit_zone_weakspot_types
+
 	marker.debuff_check_timer = 0
 	marker.debuffs = {}
+	marker.brittleness_percent = 0
+
+	content.brittleness_show_icon = false
+	content.brittleness_show_text = false
+	content.brittleness_icon = nil
+	content.brittleness_text = ""
+
+	marker._debuff_sig = ""
+	marker._had_active_debuff = false
+	marker._active_by_type = {}
+	marker._active_debuffs = {}
+	marker._active_dots = {}
+	marker._placements = {}
 end
 
-local HEAD_NODE = "j_head"
+-- Brittleness (enemy-side) is implemented via rending_multiplier statbuffs on the enemy.
+local BRITTLENESS_BUFFS = {
+	{ name = "rending_debuff",                 								per_stack = 2.5,  cap = 16, duration = 5 },
+	{ name = "rending_debuff_medium",          								per_stack = 10.0, cap = 2,  duration = 5 },
+	{ name = "rending_burn_debuff",           								per_stack = 1.0,  cap = 20, duration = 5 },
+	{ name = "phosphor_rending_debuff",       								per_stack = 15.0, cap = 1,  duration = 20 },
+	{ name = "shotgun_special_rending_debuff", 								per_stack = 25.0, cap = 1,  duration = 8 },
+	{ name = "saw_rending_debuff",             								per_stack = 2.5,  cap = 15, duration = 5 },
+	{ name = "hordes_buff_grenade_explosion_applies_rending_debuff_effect", per_stack = 75.0, cap = 6 },
+}
+local BRITTLENESS_PERCENT_PER_EQUIVALENT_STACK = 2.5
+local MAX_BRITTLENESS_STACKS = 40
+local MAX_BRITTLENESS_PERCENT = 100
 
-template.update_function = function(parent, ui_renderer, widget, marker, template, dt, t)
-	local content = widget.content
-	local style = widget.style
-	local unit = marker.unit
-	local health_extension = ScriptUnit.has_extension(unit, "health_system")
-	local is_dead = not health_extension or not health_extension:is_alive()
-	local health_percent = is_dead and 0 or health_extension:current_health_percent()
-	local max_health = Managers.state.difficulty:get_minion_max_health(content.breed.name)
-	local damage_taken = nil
+local CHORDCLAW_BLEED_BUFFS = {
+	{ name = "bleed_long", duration = 9.5 },
+}
 
-	marker.debuff_check_timer = marker.debuff_check_timer + dt
-	
-	if marker.debuff_check_timer >= 0.1 then
-		marker.debuff_check_timer = 0
-		local buff_extension = ScriptUnit.extension(unit, "buff_system")
+local PHOSPHOR_BURN_BUFFS = {
+	{ name = "phosphor_burn", duration = 20 },
+}
 
-		if buff_extension then
-			table.clear(marker.debuffs)
-			
-			if mod:get("bleed") then
-				local bleed_stacks = buff_extension:current_stacks("bleed")
-				if bleed_stacks and bleed_stacks > 0 then
-					marker.debuffs[#marker.debuffs + 1] = { type = "bleed", stacks = bleed_stacks }
-				end
-			end
+-- Skullcrusher / Damage vs staggered debuff
+-- Template: increase_damage_received_while_staggered (duration 5s, max_stacks 8, 10% per stack)
+local SKULLCRUSHER_BUFFS = {
+	{ name = "increase_damage_received_while_staggered", per_stack = 10.0, cap = 8, duration = 5 },
+	-- Fallback in case the buff is exposed under the stat-buff name (rare, but harmless)
+	{ name = "damage_vs_staggered",                      per_stack = 10.0, cap = 8, duration = 5 },
+}
 
-			if mod:get("burn") then
-				local burn_stacks = buff_extension:current_stacks("flamer_assault") + buff_extension:current_stacks("warp_fire")
-				if burn_stacks and burn_stacks > 0 then
-					marker.debuffs[#marker.debuffs + 1] = { type = "burn", stacks = burn_stacks }
-				end
-			end
+-- Thunderstrike / Impact modifier debuff
+-- Template: increase_impact_received_while_staggered (duration 5s, max_stacks 8, 10% per stack)
+local THUNDERSTRIKE_BUFFS = {
+	{ name = "increase_impact_received_while_staggered", per_stack = 10.0, cap = 8, duration = 5 },
+	-- Fallback in case the buff is exposed under the stat-buff name
+	{ name = "impact_modifier",                          per_stack = 10.0, cap = 8, duration = 5 },
+}
 
-			if mod:get("toxin") then
-				local toxin_stacks = buff_extension:current_stacks("neurotoxin_interval_buff")
-					+ buff_extension:current_stacks("neurotoxin_interval_buff2")
-					+ buff_extension:current_stacks("neurotoxin_interval_buff3")
-					+ buff_extension:current_stacks("exploding_toxin_interval_buff")
-				if toxin_stacks and toxin_stacks > 0 then
-					marker.debuffs[#marker.debuffs + 1] = { type = "toxin", stacks = toxin_stacks }
+-- Empyric Shock (Psyker): warp_damage_taken_multiplier
+-- Buff template: psyker_force_staff_quick_attack_debuff
+-- +6% warp damage taken per stack, stacks up to 5, lasts 10s
+local EMPYRIC_SHOCK_DEBUFF = {
+	{ name = "psyker_force_staff_quick_attack_debuff", per_stack = 0.06, cap = 5, duration = 10 }
+}
+
+-- Melee damage taken debuff (Hard Knocks + Target the Weak)
+-- Each source applies once (max_stacks=1) and they add additively (+15% each)
+local MELEE_DAMAGE_TAKEN_BUFFS = {
+	"ogryn_staggering_damage_taken_increase",
+	"adamant_staggering_enemies_take_more_damage",
+}
+
+-- ---------------------------------------------------------------------------
+-- Total damage taken debuff (various talents/blessings)
+-- ---------------------------------------------------------------------------
+-- Values taken from the game templates (see provided Darktide source):
+-- - ogryn_recieve_damage_taken_increase_debuff: damage_taken_modifier = 0.1 (5s)
+-- - ogryn_taunt_increased_damage_taken_buff: damage_taken_multiplier = 1.2 (15s)
+-- - increase_damage_taken (weapon special debuff): damage_taken_modifier = 0.1 per stack (5s, max 8)
+-- - adamant_drone_enemy_debuff: damage_taken_multiplier = 1.15
+-- - psyker_discharge_damage_debuff: damage_taken_multiplier = 1.1 (8s)
+-- - veteran_improved_tag_debuff: +0.05 per stack (max 6)
+-- - zealot_bled_enemies_take_more_damage_effect: damage_taken_multiplier = 1.15 (5s)
+-- - cryptic_overload_keystone_increase_damage_taken_debuff: damage_taken_multiplier = 1.15 (8s)
+-- - broker_passive_toxin_infected_enemies_take_increased_damage_debuff: damage_taken_modifier = 0.1 (5s)
+-- - hordes_buff_broker_flash_grenade_increase_damage_taken_effect: damage_taken_modifier = 2.0 (30s, max 6)
+-- - cryptic_servo_skull_debuff: damage_taken_modifier = 0.15 (5s)
+local DAMAGE_TAKEN_MODIFIER_BUFFS = {
+	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.10, cap = 1 }, -- Soften them up
+	{ name = "increase_damage_taken",                                              per_stack = 0.10, cap = 8 }, -- Pickaxe weapon special
+	{ name = "broker_passive_toxin_infected_enemies_take_increased_damage_debuff", per_stack = 0.10, cap = 1 }, -- Virulent Strain
+	{ name = "hordes_buff_broker_flash_grenade_increase_damage_taken_effect",      per_stack = 2.00, cap = 6 }, -- Blinding Weakness
+	{ name = "cryptic_servo_skull_debuff",                                        per_stack = 0.15, cap = 1 }, -- Servo-Skull attack
+}
+
+local DAMAGE_TAKEN_MULTIPLIER_BUFFS = {
+	{ name = "ogryn_taunt_increased_damage_taken_buff",     multiplier = 1.20 }, -- Valuable Distraction
+	{ name = "adamant_drone_enemy_debuff",                  multiplier = 1.15 }, -- Nuncio-Aquila
+	{ name = "psyker_discharge_damage_debuff",              multiplier = 1.10 }, -- Warp Rupture
+	{ name = "zealot_bled_enemies_take_more_damage_effect", multiplier = 1.15 }, -- Blinded by Blood
+	{ name = "cryptic_overload_keystone_increase_damage_taken_debuff", multiplier = 1.15 }, -- Critical Power Overload
+}
+
+-- Enfeeble (Psyker): Smite/Charged Smite applies +10% damage taken while actively affected
+local ENFEEBLE_SMITE_TARGET_BUFFS = {
+	"psyker_protectorate_spread_chain_lightning_interval_improved",
+	"psyker_protectorate_spread_charged_chain_lightning_interval_improved",
+	"psyker_heavy_swings_shock_improved",
+}
+
+local VETERAN_FOCUS_TARGET_DEBUFF = { name = "veteran_improved_tag_debuff", per_stack = 0.05, cap = 6 }
+
+local function _has_any_keyword(buff_extension, keywords)
+	if not buff_extension or not keywords then
+		return false
+	end
+
+	if buff_extension.has_any_keyword then
+		return buff_extension:has_any_keyword(keywords)
+	end
+
+	if not buff_extension.has_keyword then
+		return false
+	end
+
+	for i = 1, #keywords do
+		if buff_extension:has_keyword(keywords[i]) then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function _active_template_name_for_keywords(buff_extension, keyword_lookup)
+	if not buff_extension or not keyword_lookup then
+		return nil
+	end
+
+	local buffs = buff_extension.buffs and buff_extension:buffs() or buff_extension._buffs
+	if not buffs then
+		return nil
+	end
+
+	for i = 1, #buffs do
+		local buff = buffs[i]
+		local template = buff and buff.template and buff:template()
+		local keywords = template and template.keywords
+
+		if keywords then
+			for j = 1, #keywords do
+				if keyword_lookup[keywords[j]] then
+					return template.name or (buff.template_name and buff:template_name()) or buff._template_name
 				end
 			end
 		end
 	end
 
-	if marker.debuffs[1] then
-		content.status_icon_1 = mod.textures[marker.debuffs[1].type]
-		style.status_icon_1.color = mod.colors[marker.debuffs[1].type]
-		content.status_stacks_1 = marker.debuffs[1].stacks
+	return nil
+end
+
+local function _has_any_named_buff(buff_extension, buff_names)
+	if not buff_extension or not buff_names then
+		return false
+	end
+
+	local buffs = buff_extension._buffs
+	if not buffs then
+		return false
+	end
+
+	for i = 1, #buff_names do
+		local wanted = buff_names[i]
+		for j = 1, #buffs do
+			local buff = buffs[j]
+			if buff then
+				local template_name = buff.template_name and buff:template_name() or buff._template_name
+				if template_name == wanted then
+					return true
+				end
+			end
+		end
+	end
+
+	return false
+end
+
+local function _compute_total_damage_taken_percent(buff_extension)
+	if not buff_extension then
+		return 0
+	end
+
+	local additive_modifier = 0
+	for i = 1, #DAMAGE_TAKEN_MODIFIER_BUFFS do
+		local cfg = DAMAGE_TAKEN_MODIFIER_BUFFS[i]
+		local stacks = buff_extension:current_stacks(cfg.name) or 0
+		if stacks > 0 then
+			if cfg.cap and stacks > cfg.cap then
+				stacks = cfg.cap
+			end
+			additive_modifier = additive_modifier + stacks * (cfg.per_stack or 0)
+		end
+	end
+
+	local total_multiplier = 1 + additive_modifier
+
+	for i = 1, #DAMAGE_TAKEN_MULTIPLIER_BUFFS do
+		local cfg = DAMAGE_TAKEN_MULTIPLIER_BUFFS[i]
+		local stacks = buff_extension:current_stacks(cfg.name) or 0
+		if stacks and stacks > 0 then
+			total_multiplier = total_multiplier * (cfg.multiplier or 1)
+		end
+	end
+
+	local tag_stacks = buff_extension:current_stacks(VETERAN_FOCUS_TARGET_DEBUFF.name) or 0
+	if tag_stacks > 0 then
+		if VETERAN_FOCUS_TARGET_DEBUFF.cap and tag_stacks > VETERAN_FOCUS_TARGET_DEBUFF.cap then
+			tag_stacks = VETERAN_FOCUS_TARGET_DEBUFF.cap
+		end
+
+		local per = VETERAN_FOCUS_TARGET_DEBUFF.per_stack or 0
+		total_multiplier = total_multiplier * math_pow(1 + per, tag_stacks)
+	end
+
+	-- Enfeeble: +10% damage taken while electrocuted by you (improved chain lightning target debuff)
+	if _has_any_named_buff(buff_extension, ENFEEBLE_SMITE_TARGET_BUFFS) then
+		total_multiplier = total_multiplier * 1.10 -- enfeeble electrocuted damage taken multiplier
+	end
+
+	local percent = (total_multiplier - 1) * 100
+	if percent < 0.01 then
+		return 0
+	end
+
+	return percent
+end
+
+local function _damage_taken_color(percent)
+	-- Suggested model:
+	-- 0..14.9 white, 15..29.9 yellow, 30..44.9 orange, 45..59.9 red, >=60 magenta
+	percent = percent or 0
+	if percent >= 60 then
+		return COLOR_MAGENTA -- magenta
+	elseif percent >= 45 then
+		return COLOR_RED -- red
+	elseif percent >= 30 then
+		return COLOR_ORANGE -- orange
+	elseif percent >= 15 then
+		return COLOR_YELLOW -- yellow
+	end
+	return COLOR_WHITE -- white
+end
+
+local function _staggered_color_by_stacks(stacks)
+	-- 1-2 white, 3-4 yellow, 5-6 orange, 7-8 red
+	stacks = stacks or 0
+	if stacks <= 2 then
+		return COLOR_WHITE -- white
+	elseif stacks <= 4 then
+		return COLOR_YELLOW -- yellow
+	elseif stacks <= 6 then
+		return COLOR_ORANGE -- orange
 	else
-		content.status_icon_1 = nil
-		content.status_stacks_1 = ""
+		return COLOR_RED -- red
+	end
+end
+
+local function _compute_staggered_debuff(buff_extension, BUFFS)
+	if not buff_extension then
+		return 0, 0
 	end
 
-	if marker.debuffs[2] then
-		content.status_icon_2 = mod.textures[marker.debuffs[2].type]
-		style.status_icon_2.color = mod.colors[marker.debuffs[2].type]
-		content.status_stacks_2 = marker.debuffs[2].stacks
+	local stacks_best = 0
+	local per_stack = 10.0
+
+	for i = 1, #BUFFS do
+		local cfg = BUFFS[i]
+		local stacks = buff_extension:current_stacks(cfg.name) or 0
+
+		if stacks > 0 then
+			if cfg.cap and stacks > cfg.cap then
+				stacks = cfg.cap
+			end
+			if stacks > stacks_best then
+				stacks_best = stacks
+				per_stack = cfg.per_stack or per_stack
+			end
+		end
+	end
+
+	return stacks_best, stacks_best * per_stack
+end
+
+local function _count_named_buffs(buff_extension, buff_names)
+	if not buff_extension or not buff_names then
+		return 0
+	end
+
+	local buffs = buff_extension._buffs
+	if not buffs then
+		return 0
+	end
+
+	local count = 0
+	for i = 1, #buff_names do
+		local name = buff_names[i]
+		for j = 1, #buffs do
+			local buff = buffs[j]
+			if buff then
+				local template_name = nil
+				-- Prefer method if available
+				if buff.template_name then
+					template_name = buff:template_name()
+				else
+					template_name = buff._template_name
+				end
+				if template_name == name then
+					count = count + 1
+					break
+				end
+			end
+		end
+	end
+
+	return count
+end
+
+-- Returns the remaining time of the FIRST matching debuff template to expire.
+local function _min_remaining_time_for_templates(buff_extension, debuff_template)
+	if not buff_extension or not debuff_template then
+		return 0
+	end
+
+	local best = math_huge
+	local saw_active_stack = false
+
+	for i = 1, #debuff_template do
+		local cfg = debuff_template[i]
+
+		if cfg and cfg.name and cfg.duration then
+			local stacks = buff_extension:current_stacks(cfg.name) or 0
+
+			if stacks > 0 then
+				saw_active_stack = true
+
+				local progress = buff_extension:buff_duration_progress(cfg.name)
+				if type(progress) == "number" and progress > 0 then
+					local left = cfg.duration * progress
+					if left > 0 and left < best then
+						best = left
+					end
+				end
+			end
+		end
+	end
+
+	if best ~= math_huge then
+		return best
+	end
+
+	if saw_active_stack then
+		return nil
+	end
+
+	return 0
+end
+
+local function _melee_damage_taken_color(sources)
+	if sources >= 2 then
+		return COLOR_RED -- red
+	elseif sources == 1 then
+		return COLOR_WHITE -- white
+	end
+	return COLOR_WHITE
+end
+
+
+
+local function _empyric_shock_color_by_stacks(stacks)
+	stacks = stacks or 0
+
+	if stacks <= 0 then
+		return COLOR_WHITE -- fallback white
+	elseif stacks <= 2 then
+		return COLOR_WHITE -- 1-2: white
+	elseif stacks == 3 then
+		return COLOR_YELLOW -- 3: yellow
+	elseif stacks == 4 then
+		return COLOR_ORANGE -- 4: orange
 	else
-		content.status_icon_2 = nil
-		content.status_stacks_2 = ""
+		return COLOR_RED -- 5: red
+	end
+end
+
+local function _compute_thunderstrike(buff_extension)
+	return _compute_staggered_debuff(buff_extension, THUNDERSTRIKE_BUFFS)
+end
+
+local function _compute_skullcrusher(buff_extension)
+	return _compute_staggered_debuff(buff_extension, SKULLCRUSHER_BUFFS)
+end
+
+local function _compute_empyric_shock(buff_extension)
+	if not buff_extension then
+		return 0, 0
 	end
 
-	if marker.debuffs[3] then
-		content.status_icon_3 = mod.textures[marker.debuffs[3].type]
-		style.status_icon_3.color = mod.colors[marker.debuffs[3].type]
-		content.status_stacks_3 = marker.debuffs[3].stacks
+	local stacks = buff_extension:current_stacks(EMPYRIC_SHOCK_DEBUFF[1].name) or 0
+	if stacks <= 0 then
+		return 0, 0
+	end
+
+	if EMPYRIC_SHOCK_DEBUFF[1].cap and stacks > EMPYRIC_SHOCK_DEBUFF[1].cap then
+		stacks = EMPYRIC_SHOCK_DEBUFF[1].cap
+	end
+
+	local mult = math_pow(1 + (EMPYRIC_SHOCK_DEBUFF[1].per_stack or 0), stacks)
+	local percent = (mult - 1) * 100
+
+	return stacks, percent
+end
+
+local BRITTLENESS_RELEVANT_ARMOR_TYPES = {
+	armored = true,  -- Flak
+	super_armor = true, -- Carapace
+	berserker = true, -- Maniac
+	resistant = true, -- Unyielding
+}
+
+local function _is_brittleness_relevant(content)
+	local breed = content and content.breed
+	if not breed then
+		return false
+	end
+
+	local armor_type = breed.armor_type
+	return armor_type and BRITTLENESS_RELEVANT_ARMOR_TYPES[armor_type] == true or false
+end
+
+local WEAPON_MALFUNCTION_BREEDS = {
+	chaos_ogryn_gunner = true,
+	cultist_assault = true,
+	cultist_flamer = true,
+	cultist_gunner = true,
+	cultist_shocktrooper = true,
+	renegade_assault = true,
+	renegade_flamer = true,
+	renegade_flamer_mutator = true,
+	renegade_gunner = true,
+	renegade_netgunner = true,
+	renegade_plasma_gunner = true,
+	renegade_radio_operator = true,
+	renegade_rifleman = true,
+	renegade_shocktrooper = true,
+	renegade_sniper = true,
+}
+
+local function _is_weapon_malfunction_relevant(content)
+	local breed = content and content.breed
+
+	return breed and WEAPON_MALFUNCTION_BREEDS[breed.name] == true or false
+end
+
+local function _format_percent(value)
+	-- Round to full percent:
+	-- 0.1-0.4 down, 0.5-0.9 up (round half up)
+	local rounded = math_floor((value or 0) + 0.5)
+	return string_format("%d%%", rounded)
+end
+
+local function _brittleness_color(percent)
+	if percent >= 60 then
+		return 255, 255, 0, 255 -- >=60 magenta
+	elseif percent >= 40 then -- >=40 red
+		return 255, 255, 0, 0
+	elseif percent >= 30 then -- 30..39.9 orange
+		return 255, 255, 165, 0
+	elseif percent >= 20 then -- 20..29.9 yellow
+		return 255, 255, 255, 0
+	elseif percent > 0 then -- below 20 white
+		return 255, 255, 255, 255
+	end
+	return 0, 255, 255, 255
+end
+
+local function _compute_brittleness_percent(buff_extension)
+	if not buff_extension then
+		return 0, 0
+	end
+
+	local total = 0
+	for i = 1, #BRITTLENESS_BUFFS do
+		local cfg = BRITTLENESS_BUFFS[i]
+		local stacks = buff_extension:current_stacks(cfg.name) or 0
+		if stacks > 0 then
+			if stacks > cfg.cap then
+				stacks = cfg.cap
+			end
+
+			total = total + stacks * cfg.per_stack
+		end
+	end
+
+	local percent = math_min(total, MAX_BRITTLENESS_PERCENT)
+	local equivalent_stacks = math_min(percent / BRITTLENESS_PERCENT_PER_EQUIVALENT_STACK,
+		MAX_BRITTLENESS_STACKS)
+
+	return percent, equivalent_stacks
+end
+
+local function _stagger_color()
+	return COLOR_STAGGER
+end
+
+local ESTIMATED_STAGGER_CAPTURE_DELAY = 0.05
+local ESTIMATED_STAGGER_MAX_DURATION = 5
+
+local function _clear_estimated_stagger(unit)
+	local start_times = mod._estimated_stagger_start_times
+
+	if start_times then
+		start_times[unit] = nil
+	end
+
+	local states = mod._estimated_stagger_states
+
+	if states then
+		states[unit] = nil
+	end
+end
+
+local function _estimated_stagger_status(unit, t)
+	if mod._animation_events_available ~= true then
+		return nil
+	end
+
+	local start_times = mod._estimated_stagger_start_times
+	local started_at = start_times and start_times[unit]
+
+	if not started_at then
+		return nil
+	end
+
+	if type(started_at) ~= "number" or not t then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	local elapsed = t - started_at
+
+	if elapsed >= ESTIMATED_STAGGER_MAX_DURATION then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	elseif elapsed < ESTIMATED_STAGGER_CAPTURE_DELAY then
+		return {}
+	end
+
+	if not Unit.has_animation_state_machine(unit) then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	local animation_states, num_layers = Unit.animation_get_state(unit)
+	local current_state = num_layers and num_layers > 0 and animation_states[1]
+
+	if current_state == nil then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	local estimated_states = mod._estimated_stagger_states
+	local initial_state = estimated_states and estimated_states[unit]
+
+	if initial_state == nil then
+		estimated_states[unit] = current_state
+
+		return {}
+	elseif initial_state ~= current_state then
+		_clear_estimated_stagger(unit)
+
+		return nil
+	end
+
+	return {}
+end
+
+local function _stagger_status(unit)
+	if not unit or mod:get("stagger") ~= true then
+		return nil
+	end
+
+	local stagger_end_times = mod._stagger_end_times
+	local stagger_end_time = stagger_end_times and stagger_end_times[unit]
+	local time_manager = Managers.time
+	local t = time_manager and time_manager:time("gameplay")
+
+	if stagger_end_time then
+		if t and stagger_end_time > t then
+			local mode = mod:get("stagger_display") or "time"
+			local time_left = mode == "time" and stagger_end_time - t or nil
+
+			return { time_left = time_left }
+		elseif t then
+			stagger_end_times[unit] = nil
+			_clear_estimated_stagger(unit)
+		end
+	end
+
+	local blackboards = rawget(_G, "BLACKBOARDS")
+	local blackboard = blackboards and blackboards[unit]
+	local stagger_component = blackboard and blackboard.stagger
+	local num_triggered_staggers = stagger_component and stagger_component.num_triggered_staggers
+
+	if num_triggered_staggers and num_triggered_staggers > 0 then
+		return {}
+	end
+
+	-- Public clients do not receive authoritative stagger state. Animation Events
+	-- provides the start; a base-layer state change or a short cap ends the estimate.
+	return _estimated_stagger_status(unit, t)
+end
+
+-- ---------------------------------------------------------------------------
+-- Debuff definitions
+-- ---------------------------------------------------------------------------
+
+local DEBUFF_DEFS = {
+	{
+		id = "stagger",
+		setting = "stagger",
+		icon = function() return mod.textures and mod.textures.stagger end,
+		color = _stagger_color,
+		poll = function(_buff_extension, _content, unit)
+			return _stagger_status(unit)
+		end,
+		text = function(data)
+			if (mod:get("stagger_display") or "time") ~= "time" or data.time_left == nil then
+				return ""
+			end
+
+			local secs = math_ceil(data.time_left)
+			return secs > 0 and tostring(secs) or "0"
+		end,
+	},
+	{
+		id = "bleed",
+		setting = "bleed",
+		is_dot = true,
+		display_setting = "bleed_display",
+		display_default = "stacks",
+		icon = function() return mod.textures and mod.textures.bleed end,
+		color = function() return mod.colors and mod.colors.bleed end,
+		poll = function(buff_extension)
+			local stacks = buff_extension:current_stacks("bleed") or 0
+			return stacks > 0 and { stacks = stacks } or nil
+		end,
+		text = function(data)
+			return (mod:get("bleed_display") or "stacks") == "icon_only" and "" or tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "chordclaw_bleed",
+		setting = "chordclaw_bleed",
+		is_dot = true,
+		icon = function() return mod.textures and mod.textures.chordclaw_bleed end,
+		color = function() return mod.colors and mod.colors.chordclaw_bleed end,
+		poll = function(buff_extension)
+			local stacks = buff_extension:current_stacks("bleed_long") or 0
+			if stacks <= 0 then
+				return nil
+			end
+
+			local mode = mod:get("chordclaw_bleed_display") or "stacks"
+			local time_left = mode == "time" and
+				_min_remaining_time_for_templates(buff_extension, CHORDCLAW_BLEED_BUFFS) or nil
+
+			return { stacks = stacks, time_left = time_left, template_name = "bleed_long" }
+		end,
+		text = function(data)
+			if (mod:get("chordclaw_bleed_display") or "stacks") == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
+			end
+
+			return tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "burn",
+		setting = "burn",
+		is_dot = true,
+		display_setting = "burn_display",
+		display_default = "stacks",
+		icon = function() return mod.textures and mod.textures.burn end,
+		color = function() return mod.colors and mod.colors.burn end,
+		poll = function(buff_extension)
+			local stacks = buff_extension:current_stacks("flamer_assault") or 0
+			return stacks > 0 and { stacks = stacks } or nil
+		end,
+		text = function(data)
+			return (mod:get("burn_display") or "stacks") == "icon_only" and "" or tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "phosphor_burn",
+		setting = "phosphor_burn",
+		is_dot = true,
+		always_show_icon = true,
+		display_setting = "phosphor_burn_display",
+		display_default = "icon_only",
+		icon = function() return mod.textures and mod.textures.phosphor_burn end,
+		color = function() return mod.colors and mod.colors.phosphor_burn end,
+		poll = function(buff_extension)
+			local stacks = buff_extension:current_stacks("phosphor_burn") or 0
+			if stacks <= 0 then
+				return nil
+			end
+
+			local mode = mod:get("phosphor_burn_display") or "icon_only"
+			local time_left = mode == "time" and
+				_min_remaining_time_for_templates(buff_extension, PHOSPHOR_BURN_BUFFS) or nil
+
+			return { time_left = time_left, template_name = "phosphor_burn" }
+		end,
+		text = function(data)
+			if (mod:get("phosphor_burn_display") or "icon_only") == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
+			end
+
+			return ""
+		end,
+	},
+	{
+		id = "warpfire",
+		setting = "warpfire",
+		is_dot = true,
+		icon = function() return mod.textures and mod.textures.warpfire end,
+		color = function() return mod.colors and mod.colors.warpfire end,
+		poll = function(buff_extension)
+			local stacks = buff_extension:current_stacks("warp_fire") or 0
+			return stacks > 0 and { stacks = stacks } or nil
+		end,
+		text = function(data) return tostring(data.stacks or "") end,
+	},
+	{
+		id = "toxin",
+		setting = "toxin",
+		is_dot = true,
+		display_setting = "toxin_display",
+		display_default = "stacks",
+		icon = function() return mod.textures and mod.textures.toxin end,
+		color = function() return mod.colors and mod.colors.toxin end,
+		poll = function(buff_extension)
+			local toxin_stacks =
+				(buff_extension:current_stacks("neurotoxin_interval_buff") or 0) +
+				(buff_extension:current_stacks("neurotoxin_interval_buff2") or 0) +
+				(buff_extension:current_stacks("neurotoxin_interval_buff3") or 0) +
+				(buff_extension:current_stacks("exploding_toxin_interval_buff") or 0)
+
+			return toxin_stacks > 0 and { stacks = toxin_stacks } or nil
+		end,
+		text = function(data)
+			return (mod:get("toxin_display") or "stacks") == "icon_only" and "" or tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "electrocuted",
+		setting = "electrocuted",
+		icon = function() return mod.textures and mod.textures.electrocuted end,
+		color = function() return mod.colors and mod.colors.electrocuted end,
+		poll = function(buff_extension)
+			if _has_any_keyword(buff_extension, ELECTROCUTED_KEYWORDS) then
+				return {
+					template_name = _active_template_name_for_keywords(buff_extension,
+						ELECTROCUTED_KEYWORD_LOOKUP),
+				} -- presence-only; arc target markers are not necessarily ticking DoTs
+			end
+			return nil
+		end,
+		text = function(_) return "" end,
+	},
+	{
+		id = "weapon_malfunction",
+		setting = "weapon_malfunction",
+		icon = function() return mod.textures and mod.textures.weapon_malfunction end,
+		color = function() return mod.colors and mod.colors.weapon_malfunction end,
+		poll = function(buff_extension, content)
+			if not _is_weapon_malfunction_relevant(content) or
+				not _has_any_keyword(buff_extension, WEAPON_MALFUNCTION_KEYWORDS) then
+				return nil
+			end
+
+			return {
+				template_name = _active_template_name_for_keywords(buff_extension,
+					WEAPON_MALFUNCTION_KEYWORD_LOOKUP),
+			}
+		end,
+		text = function(_) return "" end,
+	},
+	{
+		id = "brittleness",
+		setting = "brittleness_indicator",
+		icon = function() return mod.textures and mod.textures.brittleness end,
+		color = function(data)
+			-- color by percent
+			local a, r, g, b = _brittleness_color(data.percent or 0)
+			return { a, r, g, b }
+		end,
+		poll = function(buff_extension, content)
+			if not _feature_enabled("brittleness_indicator") then
+				return nil
+			end
+			if not _is_brittleness_relevant(content) then
+				return nil
+			end
+			local p, stacks = _compute_brittleness_percent(buff_extension)
+			if p <= 0 then
+				return nil
+			end
+
+			local mode = mod:get("brittleness_indicator_display") or "icon_text"
+			local time_left = nil
+			if mode == "time" then
+				time_left = _min_remaining_time_for_templates(buff_extension, BRITTLENESS_BUFFS)
+			end
+
+			return { stacks = stacks, percent = p, time_left = time_left }
+		end,
+		text = function(data)
+			local mode = mod:get("brittleness_indicator_display") or "icon_text"
+			if mode == "stacks" then
+				return string_format("%g", data.stacks or 0)
+			elseif mode == "icon_text" then
+				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
+			end
+			return ""
+		end,
+	},
+	{
+		id = "skullcrusher",
+		setting = "skullcrusher",
+		icon = function() return mod.textures and mod.textures.skullcrusher end,
+		color = function(data)
+			return _staggered_color_by_stacks((data and data.stacks) or 0)
+		end,
+		poll = function(buff_extension)
+			local stacks, percent = _compute_skullcrusher(buff_extension)
+			local mode = mod:get("skullcrusher_display") or "stacks"
+			local time_left = nil
+			if mode == "time" then
+				time_left = _min_remaining_time_for_templates(buff_extension, SKULLCRUSHER_BUFFS)
+			end
+			return stacks > 0 and { stacks = stacks, percent = percent, time_left = time_left } or nil
+		end,
+		text = function(data)
+			local mode = mod:get("skullcrusher_display") or "stacks"
+
+			if mode == "icon_only" then
+				return ""
+			elseif mode == "percent" then
+				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
+			end
+
+			return tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "thunderstrike",
+		setting = "thunderstrike",
+		icon = function() return mod.textures and mod.textures.thunderstrike end,
+		color = function(data)
+			return _staggered_color_by_stacks((data and data.stacks) or 0)
+		end,
+		poll = function(buff_extension)
+			local stacks, percent = _compute_thunderstrike(buff_extension)
+			local mode = mod:get("thunderstrike_display") or "stacks"
+			local time_left = nil
+			if mode == "time" then
+				time_left = _min_remaining_time_for_templates(buff_extension, THUNDERSTRIKE_BUFFS)
+			end
+			return stacks > 0 and { stacks = stacks, percent = percent, time_left = time_left } or nil
+		end,
+		text = function(data)
+			local mode = mod:get("thunderstrike_display") or "stacks"
+			if mode == "icon_only" then
+				return ""
+			elseif mode == "percent" then
+				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil(data.time_left or 0)
+				return secs > 0 and tostring(secs) or "0"
+			end
+			return tostring(data.stacks or "")
+		end,
+	},
+	{
+		id = "melee_damage_taken",
+		setting = "melee_damage_taken",
+		icon = function() return mod.textures and mod.textures.melee_damage_taken end,
+		color = function(data)
+			return _melee_damage_taken_color((data and data.stacks) or 0)
+		end,
+
+		poll = function(buff_extension)
+			if not _feature_enabled("melee_damage_taken") then
+				return nil
+			end
+
+			local sources = _count_named_buffs(buff_extension, MELEE_DAMAGE_TAKEN_BUFFS)
+			if sources <= 0 then
+				return nil
+			end
+
+			-- store sources into stacks so it survives update() packing
+			return {
+				stacks = sources,
+				percent = sources * 15.0 -- melee damage per source
+			}
+		end,
+
+		-- only "icon_text" (percent) or "icon_only", like brittleness
+		text = function(data)
+			local mode = mod:get("melee_damage_taken_display") or "icon_text"
+			if mode == "icon_text" then
+				return _format_percent(data.percent or 0)
+			end
+			return ""
+		end,
+	},
+	{
+		id = "damage_taken",
+		setting = "damage_taken",
+		icon = function() return mod.textures and mod.textures.damage_taken end,
+		color = function(data)
+			return _damage_taken_color((data and data.percent) or 0)
+		end,
+		poll = function(buff_extension)
+			if not _feature_enabled("damage_taken") then
+				return nil
+			end
+			local percent = _compute_total_damage_taken_percent(buff_extension)
+			if percent <= 0 then
+				return nil
+			end
+			return { percent = percent }
+		end,
+		text = function(data)
+			local mode = mod:get("damage_taken_display") or "icon_text"
+			if mode == "icon_text" then
+				return _format_percent(data.percent or 0)
+			end
+			return ""
+		end,
+	},
+	{
+		id = "empyric_shock",
+		setting = "empyric_shock",
+		icon = function() return mod.textures and mod.textures.empyric_shock end,
+		color = function(data) return _empyric_shock_color_by_stacks((data and data.stacks) or 0) end,
+		poll = function(buff_extension, _content)
+			if not _feature_enabled("empyric_shock") then
+				return nil
+			end
+			local stacks, percent = _compute_empyric_shock(buff_extension)
+			if stacks <= 0 then
+				return nil
+			end
+
+			local mode = mod:get("empyric_shock_display") or "stacks"
+			local time_left = nil
+			if mode == "time" then
+				time_left = _min_remaining_time_for_templates(buff_extension, EMPYRIC_SHOCK_DEBUFF)
+			end
+
+			return { stacks = stacks, percent = percent, time_left = time_left }
+		end,
+		text = function(data)
+			local mode = mod:get("empyric_shock_display") or "stacks"
+			if mode == "percent" then
+				return _format_percent(data.percent or 0)
+			elseif mode == "time" then
+				if data.time_left == nil then
+					return ""
+				end
+
+				local secs = math_ceil((data.time_left or 0))
+				return secs > 0 and tostring(secs) or "0"
+			end
+			return tostring(data.stacks or "")
+		end,
+	},
+}
+
+-- ---------------------------------------------------------------------------
+-- Vanilla boss health bar indicator support
+-- ---------------------------------------------------------------------------
+
+local function _is_vanilla_boss_indicator_breed(breed)
+	if not breed then
+		return false
+	end
+
+	local tags = breed.tags
+
+	if tags and (tags.monster or tags.captain or tags.cultist_captain or tags.ritualist) then
+		return true
+	end
+
+	return breed.trigger_boss_health_bar_on_aggro == true or breed.trigger_boss_health_bar_on_damaged == true
+end
+
+local function _clear_boss_indicator_slots(content, style)
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local slot = BOSS_INDICATOR_SLOT_CACHE[i]
+		local icon_style = style and style[slot.icon_id]
+		local icon_color = icon_style and icon_style.color
+		local stacks_style = style and style[slot.stacks_id]
+		local text_color = stacks_style and stacks_style.text_color
+
+		content[slot.icon_id] = nil
+		content[slot.stacks_id] = ""
+
+		if icon_color then
+			icon_color[1] = 0
+		end
+
+		if text_color then
+			text_color[1] = 0
+		end
+	end
+end
+
+local function _hide_boss_indicator_widget(widget)
+	if not widget then
+		return
+	end
+
+	widget.visible = false
+
+	local content = widget.content
+	if content then
+		content.healthbars_indicator_active = false
+		_clear_boss_indicator_slots(content, widget.style)
+	end
+end
+
+template.hide_vanilla_boss_indicator = _hide_boss_indicator_widget
+
+local function _new_boss_indicator_state(breed)
+	return {
+		breed = breed,
+		content = {
+			breed = breed,
+		},
+		debuff_check_timer = 0.1,
+		debuffs = {},
+		_active_by_type = {},
+		_active_debuffs = {},
+		_active_dots = {},
+		_placement_slots = {},
+		_placement_debuffs = {},
+	}
+end
+
+local function _poll_status_indicators(debuffs, poll_content, buff_extension, unit, show_dots, show_debuffs)
+	table_clear(debuffs)
+
+	for i = 1, #DEBUFF_DEFS do
+		local def = DEBUFF_DEFS[i]
+		local category_enabled = def.is_dot == true and show_dots or def.is_dot ~= true and show_debuffs
+		local enabled = category_enabled and ((def.setting == nil) or _feature_enabled(def.setting))
+
+		if enabled then
+			local data = def.poll(buff_extension, poll_content, unit)
+
+			if data then
+				debuffs[#debuffs + 1] = {
+					type = def.id,
+					def = def,
+					stacks = data.stacks,
+					percent = data.percent,
+					time_left = data.time_left,
+					template_name = data.template_name,
+				}
+			end
+		end
+	end
+end
+
+local function _pack_indicator_placements(state)
+	local active_by_type = state._active_by_type
+	local active_debuffs = state._active_debuffs
+	local active_dots = state._active_dots
+	local placement_slots = state._placement_slots
+	local placement_debuffs = state._placement_debuffs
+
+	table_clear(active_by_type)
+	table_clear(active_debuffs)
+	table_clear(active_dots)
+	table_clear(placement_slots)
+	table_clear(placement_debuffs)
+
+	local debuffs = state.debuffs
+
+	for i = 1, #debuffs do
+		local debuff = debuffs[i]
+
+		if debuff then
+			active_by_type[debuff.type] = debuff
+		end
+	end
+
+	for i = 1, #DEBUFF_ORDER do
+		local debuff = active_by_type[DEBUFF_ORDER[i]]
+
+		if debuff then
+			active_debuffs[#active_debuffs + 1] = debuff
+		end
+	end
+
+	for i = 1, #DOT_ORDER do
+		local debuff = active_by_type[DOT_ORDER[i]]
+
+		if debuff then
+			active_dots[#active_dots + 1] = debuff
+		end
+	end
+
+	-- Vanilla boss bars keep rows type-stable when both are present:
+	-- DoTs above, debuffs below. With no debuffs, DoTs use the lower row.
+	local dot_slot_offset = #active_debuffs > 0 and 0 or GRID_COLS
+
+	for i = 1, #active_dots do
+		if i > GRID_COLS then
+			break
+		end
+
+		placement_slots[#placement_slots + 1] = dot_slot_offset + i
+		placement_debuffs[#placement_debuffs + 1] = active_dots[i]
+	end
+
+	if #active_debuffs > 0 then
+		for i = 1, #active_debuffs do
+			if i > GRID_COLS then
+				break
+			end
+
+			placement_slots[#placement_slots + 1] = GRID_COLS + i
+			placement_debuffs[#placement_debuffs + 1] = active_debuffs[i]
+		end
+	end
+end
+
+local function _apply_boss_indicator_placements(widget, state)
+	local content = widget.content
+	local style = widget.style
+	local placement_slots = state._placement_slots
+	local placement_debuffs = state._placement_debuffs
+	local max_slots_used = math_min(GRID_COLS * 2, MAX_DEBUFF_SLOTS_ALLOC)
+	local dot_text_font_size = mod:get("dot_text_font_size") or DEFAULT_DOT_TEXT_FONT_SIZE
+	local debuff_text_font_size = mod:get("debuff_text_font_size") or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+	local dot_numbers_only = mod:get("dot_numbers_only") == true
+
+	content.healthbars_indicator_active = true
+	_clear_boss_indicator_slots(content, style)
+
+	for p = 1, #placement_slots do
+		local slot = placement_slots[p]
+		local debuff = placement_debuffs[p]
+
+		if slot <= max_slots_used and debuff then
+			local slot_data = BOSS_INDICATOR_SLOT_CACHE[slot]
+			local icon_id = slot_data.icon_id
+			local stacks_id = slot_data.stacks_id
+			local icon_style = style[icon_id]
+			local stacks_style = style[stacks_id]
+			local def = debuff.def
+			local is_dot = def and def.is_dot == true
+			local dot_display_mode = is_dot and def.display_setting and
+				(mod:get(def.display_setting) or def.display_default) or nil
+			local force_dot_icon = def.always_show_icon or dot_display_mode == "icon_only"
+			local use_dot_numbers_only = is_dot and dot_numbers_only and not force_dot_icon
+			local debuff_color = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
+				COLOR_WHITE
+			local rule = DEBUFF_RULES[debuff.type]
+			local mode = rule and (mod:get(rule.setting) or rule.default) or nil
+			local status_text_font_size = nil
+
+			if is_dot then
+				status_text_font_size = dot_text_font_size
+			elseif mode == "stacks" or mode == "time" then
+				status_text_font_size = debuff_text_font_size
+			end
+
+			if stacks_style then
+				stacks_style.size[1], stacks_style.size[2] = ICON_SIZE, ICON_SIZE
+				stacks_style.text_horizontal_alignment = "right"
+				stacks_style.text_vertical_alignment = "bottom"
+				stacks_style.font_size = status_text_font_size or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+				_set_style_color(stacks_style.text_color, DEFAULT_STATUS_TEXT_COLOR)
+
+				if use_dot_numbers_only then
+					stacks_style.text_horizontal_alignment = "center"
+					stacks_style.text_vertical_alignment = "center"
+					_set_style_color(stacks_style.text_color, debuff_color)
+				end
+			end
+
+			if use_dot_numbers_only then
+				content[icon_id] = nil
+			else
+				content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
+			end
+
+			if icon_style then
+				_set_style_color(icon_style.color, debuff_color)
+			end
+
+			if def and def.text then
+				content[stacks_id] = def.text(debuff) or ""
+			else
+				content[stacks_id] = tostring(debuff.stacks or "")
+			end
+
+			if rule and mode == rule.center_on then
+				_center_small_text(stacks_style, content[stacks_id])
+			end
+
+			if debuff.type == "electrocuted" then
+				content[stacks_id] = ""
+			end
+		end
+	end
+end
+
+template.update_vanilla_boss_indicator = function(widget, target, dt)
+	if not widget or not target or mod._inactive_outside_psykhanium or mod._psykhanium_vanilla_only or
+		mod:get("show_vanilla_boss_bar_indicators") ~= true then
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
+	local unit = target.unit
+	local breed = target.breed
+
+	if not unit or not ALIVE[unit] or not _is_vanilla_boss_indicator_breed(breed) then
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
+	local buff_extension = ScriptUnit_has_extension(unit, "buff_system")
+
+	if not buff_extension then
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
+	local state = target.healthbars_vanilla_boss_indicator_state
+
+	if not state then
+		state = _new_boss_indicator_state(breed)
+		target.healthbars_vanilla_boss_indicator_state = state
+	end
+
+	state.debuff_check_timer = state.debuff_check_timer + dt
+
+	if state.debuff_check_timer >= 0.1 then
+		state.debuff_check_timer = 0
+
+		-- Vanilla boss indicators ignore the Boss enemy display mode; only this
+        -- setting and the individual DoT/debuff toggles gate what appears here.
+		_poll_status_indicators(state.debuffs, state.content, buff_extension, unit, true, true)
+	end
+
+	_pack_indicator_placements(state)
+	_apply_boss_indicator_placements(widget, state)
+
+	widget.visible = #state._placement_slots > 0
+end
+
+-- ---------------------------------------------------------------------------
+-- Update
+-- ---------------------------------------------------------------------------
+template.update_function = function(parent, ui_renderer, widget, marker, template, dt, t)
+	local content = widget.content
+	local style = widget.style
+	local unit = marker.unit
+	local psykhanium_behavior = mod._active_psykhanium_healthbar_behavior
+	local display_modes = mod._healthbar_breed_display_modes
+	local breed = content.breed
+	local display_mode = display_modes and breed and display_modes[breed.name]
+
+	if mod._inactive_outside_psykhanium or mod._psykhanium_vanilla_only or
+		(psykhanium_behavior == "normal" and
+			(not display_mode or display_mode.show_healthbar ~= true)) then
+		local custom_marker_units = mod._custom_marker_units
+		if custom_marker_units then
+			custom_marker_units[unit] = nil
+		end
+
+		marker.remove = true
+
+		return
+	end
+
+	local full_debug_display = mod._psykhanium_full_debug_display == true
+	local show_dots = full_debug_display or display_mode and display_mode.show_dots == true
+	local show_debuffs = full_debug_display or display_mode and display_mode.show_debuffs == true
+	local show_damage_numbers = _feature_enabled("show_damage_numbers")
+	local use_armour_slot_offset = _damage_label_enabled()
+	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
+	local needs_hit_reaction_data = show_damage_numbers
+	local dot_text_font_size = mod:get("dot_text_font_size") or DEFAULT_DOT_TEXT_FONT_SIZE
+	local debuff_text_font_size = mod:get("debuff_text_font_size") or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+	local dot_numbers_only = mod:get("dot_numbers_only") == true
+
+	local health_extension = ScriptUnit_has_extension(unit, "health_system")
+	local is_dead = not health_extension or not health_extension:is_alive()
+	local health_percent = is_dead and 0 or health_extension:current_health_percent()
+	local shield_health, _, shield_fraction = get_minion_shield_health(unit)
+
+	local max_health = Managers.state.difficulty:get_minion_max_health(content.breed.name)
+	local damage_taken
+
+	if shield_health ~= nil then
+		local old_shield_health = content.shield_health
+
+		if old_shield_health ~= nil and shield_health ~= old_shield_health then
+			content.visibility_delay = template.damage_number_settings.visibility_delay
+		end
+
+		content.shield_health = shield_health
+	end
+
+	-- ----------------------------
+	-- Debuffs (polled via registry)
+	-- ----------------------------
+	marker.debuff_check_timer = marker.debuff_check_timer + dt
+
+	if marker.debuff_check_timer >= 0.1 then
+		marker.debuff_check_timer = 0
+
+		if show_dots or show_debuffs then
+			local buff_extension = ScriptUnit_extension(unit, "buff_system")
+
+			if buff_extension then
+				_poll_status_indicators(marker.debuffs, content, buff_extension, unit, show_dots, show_debuffs)
+
+				-- Detect debuff changes (for “show when applied” even without damage)
+				local sig = _debuff_signature(marker.debuffs)
+				if sig ~= marker._debuff_sig then
+					marker._debuff_sig = sig
+					-- “Applied/changed”: force visibility window (like damage does)
+					content.visibility_delay = template.damage_number_settings.visibility_delay
+				end
+			end
+		else
+			table_clear(marker.debuffs)
+		end
+	end
+
+	-- ----------------------------
+	-- Render DoTs and Debuffs (grid, fixed ordering)
+	-- DoTs: bleed, Chordclaw bleed, burn, Phosphor burn, warpfire, toxin
+	-- Debuffs include electrocution and aggregate brittleness (including Phosphor rending).
+	-- If any debuff is active: debuffs occupy bottom row (slots 1..GRID_COLS),
+	-- and all DoTs are moved to the next row (slot + GRID_COLS).
+	-- ----------------------------
+
+	-- Clear all allocated slots first
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local slot = SLOT_CACHE[i]
+		content[slot.icon_id] = nil
+		content[slot.stacks_id] = ""
+	end
+
+	local active_by_type = marker._active_by_type
+	local active_debuffs = marker._active_debuffs
+	local active_dots = marker._active_dots
+	local placements = marker._placements
+
+	table_clear(active_by_type)
+	table_clear(active_debuffs)
+	table_clear(active_dots)
+	table_clear(placements)
+
+	for i = 1, #marker.debuffs do
+		local debuff = marker.debuffs[i]
+		if debuff then
+			active_by_type[debuff.type] = debuff
+		end
+	end
+
+	for i = 1, #DEBUFF_ORDER do
+		local debuff = active_by_type[DEBUFF_ORDER[i]]
+		if debuff then
+			active_debuffs[#active_debuffs + 1] = debuff
+		end
+	end
+
+	for i = 1, #DOT_ORDER do
+		local debuff = active_by_type[DOT_ORDER[i]]
+		if debuff then
+			active_dots[#active_dots + 1] = debuff
+		end
+	end
+
+	local has_any_debuff = #active_debuffs > 0
+
+	-- slot mapping we want to show; ensure at least 2 rows are available
+	local max_slots_used = math_min(GRID_COLS * 2, MAX_DEBUFF_SLOTS_ALLOC)
+
+	if has_any_debuff then
+		-- Debuffs in top row from slot 1
+		for i = 1, #active_debuffs do
+			if i > GRID_COLS then
+				break
+			end
+			placements[#placements + 1] = { slot = i, debuff = active_debuffs[i] }
+		end
+
+		-- DoTs compacted into second row (slot + GRID_COLS)
+		for i = 1, #active_dots do
+			if i > GRID_COLS then
+				break
+			end
+			placements[#placements + 1] = { slot = GRID_COLS + i, debuff = active_dots[i] }
+		end
 	else
-		content.status_icon_3 = nil
-		content.status_stacks_3 = ""
+		-- Only DoTs: occupy top row in fixed order, compacted
+		for i = 1, #active_dots do
+			if i > GRID_COLS then
+				break
+			end
+			placements[#placements + 1] = { slot = i, debuff = active_dots[i] }
+		end
 	end
 
-	if ALIVE[unit] and marker.head_offset == 0 then
-		local root_position = Unit.world_position(unit, 1)
-		local node = Unit.node(unit, HEAD_NODE)
-		local head_position = Unit.world_position(unit, node)
-		marker.head_offset = head_position.z - root_position.z + 0.4
+	-- Apply placements to widget content/styles
+	for p = 1, #placements do
+		local slot = placements[p].slot
+		local debuff = placements[p].debuff
+
+		if slot <= max_slots_used and debuff then
+			local slot_data = SLOT_CACHE[slot]
+			local icon_id = slot_data.icon_id
+			local stacks_id = slot_data.stacks_id
+
+			local icon_style = style[icon_id]
+			local stacks_style = style[stacks_id]
+			local def = debuff.def
+			local is_dot = def and def.is_dot == true
+			local dot_display_mode = is_dot and def.display_setting and
+				(mod:get(def.display_setting) or def.display_default) or nil
+			local force_dot_icon = def.always_show_icon or dot_display_mode == "icon_only"
+			local use_dot_numbers_only = is_dot and dot_numbers_only and not force_dot_icon
+			local debuff_color = def and def.color and def.color(debuff) or (mod.colors and mod.colors[debuff.type]) or
+				COLOR_WHITE
+			local rule = DEBUFF_RULES[debuff.type]
+			local mode = rule and (mod:get(rule.setting) or rule.default) or nil
+			local status_text_font_size = nil
+			if is_dot then
+				status_text_font_size = dot_text_font_size
+			elseif mode == "stacks" or mode == "time" then
+				status_text_font_size = debuff_text_font_size
+			end
+
+			local x, y = _slot_pos(slot, use_armour_slot_offset)
+			if icon_style then
+				icon_style.offset[1], icon_style.offset[2] = x, y
+			end
+			if stacks_style then
+				stacks_style.offset[1], stacks_style.offset[2] = x, y
+				-- defaults: small number in bottom-right inside icon bounds
+				stacks_style.size[1], stacks_style.size[2] = ICON_SIZE, ICON_SIZE
+				stacks_style.text_horizontal_alignment = "right"
+				stacks_style.text_vertical_alignment = "bottom"
+				stacks_style.font_size = status_text_font_size or DEFAULT_DEBUFF_TEXT_FONT_SIZE
+				_set_style_color(stacks_style.text_color, DEFAULT_STATUS_TEXT_COLOR)
+
+				if use_dot_numbers_only then
+					stacks_style.text_horizontal_alignment = "center"
+					stacks_style.text_vertical_alignment = "center"
+					_set_style_color(stacks_style.text_color, debuff_color)
+				end
+			end
+
+			if use_dot_numbers_only then
+				content[icon_id] = nil
+			else
+				content[icon_id] = def and def.icon and def.icon() or (mod.textures and mod.textures[debuff.type])
+			end
+
+			-- icon color
+			if icon_style then
+				_set_style_color(icon_style.color, debuff_color)
+			end
+
+			-- text
+			if def and def.text then
+				content[stacks_id] = def.text(debuff) or ""
+			else
+				content[stacks_id] = tostring(debuff.stacks or "")
+			end
+
+			-- text for brittleness, skullcrusher, thunderstrike, melee_damage_taken and damage_taken debuffs
+			if rule then
+				if mode == rule.center_on then
+					_center_small_text(stacks_style, content[stacks_id])
+				end
+			end
+
+			-- Electrocution: no text
+			if debuff.type == "electrocuted" then
+				content[stacks_id] = ""
+			end
+		end
 	end
 
+	-- ----------------------------
+	-- Damage & hit info
+	-- ----------------------------
 	if not is_dead then
 		damage_taken = health_extension:total_damage_taken()
 	else
 		damage_taken = max_health
 	end
 
-	if health_extension then
+	if health_extension and (needs_last_hit_zone or needs_hit_reaction_data) then
 		local last_damaging_unit = health_extension:last_damaging_unit()
+		local replicated_critical_hit = mod._last_hit_was_critical[unit]
 
-		if last_damaging_unit then
-			content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
-			local breed = content.breed
-			local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
+		if needs_hit_reaction_data then
+			content.hit_weakspot = false
+			content.was_critical = false
+		end
 
-			if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
-				content.hit_weakspot = true
-			else
-				content.hit_weakspot = false
+		if last_damaging_unit or replicated_critical_hit ~= nil then
+			if needs_last_hit_zone then
+				content.last_hit_zone_name = health_extension:last_hit_zone_name() or "center_mass"
 			end
 
-			content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
+			if needs_hit_reaction_data then
+				if last_damaging_unit then
+					local weakspots = content.weakspots
+					content.hit_weakspot = weakspots and weakspots[content.last_hit_zone_name] and true or false
+					content.was_critical = health_extension:was_hit_by_critical_hit_this_render_frame()
+				else
+					content.hit_weakspot = mod._last_hit_weakspot[unit] == true
+					content.was_critical = replicated_critical_hit
+				end
+			end
 		end
 	end
 
-	if ALIVE[unit] and damage_taken > 0 then
-		local root_position = Unit.world_position(unit, 1)
-
-		if not marker.world_position then
-			local node = Unit.node(unit, HEAD_NODE)
-			local head_position = Unit.world_position(unit, node)
-			head_position.z = head_position.z + 0.5
-			marker.world_position = Vector3Box(head_position)
-		else
-			local position = marker.world_position:unbox()
-			position.x = root_position.x
-			position.y = root_position.y
-			position.z = root_position.z + marker.head_offset
-
-			marker.world_position:store(position)
-		end
-	end
-
+	-- ----------------------------
+	-- Damage number bookkeeping
+	-- ----------------------------
 	local old_damage_taken = content.damage_taken
-	local damage_number_settings = template.damage_number_settings
+	local dns = template.damage_number_settings
 
 	if damage_taken and damage_taken ~= old_damage_taken then
-		content.visibility_delay = damage_number_settings.visibility_delay
+		content.visibility_delay = dns.visibility_delay
 		content.damage_taken = damage_taken
 
-		if old_damage_taken < damage_taken then
+		if old_damage_taken < damage_taken and show_damage_numbers then
 			local damage_numbers = content.damage_numbers
-			local damage_diff = math.ceil(damage_taken - old_damage_taken)
-			local latest_damage_number = damage_numbers[#damage_numbers]
-			local should_add = true
-			local was_critical = health_extension and health_extension:was_hit_by_critical_hit_this_render_frame()
+			local damage_diff = math_ceil(damage_taken - old_damage_taken)
+			local latest = damage_numbers[#damage_numbers]
+			local was_critical = content.was_critical
 
-			if
-				latest_damage_number
-				and t - latest_damage_number.start_time < damage_number_settings.add_numbers_together_timer
-			then
+			local should_add = true
+			if latest and (t - latest.start_time) < dns.add_numbers_together_timer then
 				should_add = false
 			end
 
 			if content.add_on_next_number or was_critical or should_add then
-				local damage_number = {
+				local dn = {
 					expand_time = 0,
 					time = 0,
 					start_time = t,
-					duration = damage_number_settings.duration,
+					duration = dns.duration,
 					value = damage_diff,
-					expand_duration = damage_number_settings.expand_duration,
+					expand_duration = dns.expand_duration,
 				}
-				local breed = content.breed
-				local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
 
-				if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
-					damage_number.hit_weakspot = true
-				else
-					damage_number.hit_weakspot = false
-				end
+				dn.hit_weakspot = content.hit_weakspot
+				dn.was_critical = was_critical
 
-				damage_number.was_critical = was_critical
-				damage_numbers[#damage_numbers + 1] = damage_number
+				damage_numbers[#damage_numbers + 1] = dn
 
 				if content.add_on_next_number then
 					content.add_on_next_number = nil
 				end
-
 				if was_critical then
 					content.add_on_next_number = true
 				end
 			else
-				latest_damage_number.value = math.clamp(latest_damage_number.value + damage_diff, 0, max_health)
-				latest_damage_number.time = 0
-				latest_damage_number.y_position = nil
-				latest_damage_number.start_time = t
-				local breed = content.breed
-				local hit_zone_weakspot_types = breed.hit_zone_weakspot_types
+				latest.value = math_clamp(latest.value + damage_diff, 0, max_health)
+				latest.time = 0
+				latest.y_position = nil
+				latest.start_time = t
 
-				if hit_zone_weakspot_types and hit_zone_weakspot_types[content.last_hit_zone_name] then
-					latest_damage_number.hit_weakspot = true
-				else
-					latest_damage_number.hit_weakspot = false
-				end
-
-				latest_damage_number.was_critical = was_critical
+				latest.hit_weakspot = content.hit_weakspot
+				latest.was_critical = was_critical
 			end
 		end
 
-		if not content.damage_has_started then
-			content.damage_has_started = true
-		end
-
+		content.damage_has_started = content.damage_has_started or true
 		content.last_damage_taken_time = t
+		mod._last_hit_time[unit] = nil
+		mod._last_hit_weakspot[unit] = nil
+		mod._last_hit_was_critical[unit] = nil
 	end
 
+	-- ----------------------------
+	-- Health bar animation/layout
+	-- ----------------------------
 	content.t = t
-	local bar_logic = marker.bar_logic
 
+	local bar_logic = marker.bar_logic
 	bar_logic:update(dt, t, health_percent)
 
 	local health_fraction, health_ghost_fraction, health_max_fraction = bar_logic:animated_health_fractions()
@@ -767,83 +2389,122 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		local spacing = bar_settings.bar_spacing
 		local bar_width = template.size[1]
 		local default_width_offset = -bar_width * 0.5
+
 		local health_width = bar_width * health_fraction
 		style.bar.size[1] = health_width
-		local ghost_bar_width = math.max(bar_width * health_ghost_fraction - health_width, 0)
-		local ghost_bar_style = style.ghost_bar
-		ghost_bar_style.offset[1] = default_width_offset + health_width
-		ghost_bar_style.size[1] = ghost_bar_width
-		local background_width = math.max(bar_width - ghost_bar_width - health_width, 0)
-		background_width = math.max(background_width - spacing, 0)
-		local background_style = style.background
-		background_style.offset[1] = default_width_offset + bar_width - background_width
-		background_style.size[1] = background_width
-		local health_max_style = style.health_max
-		local health_max_width = bar_width - math.max(bar_width * health_max_fraction, 0)
-		health_max_width = math.max(health_max_width - spacing, 0)
-		health_max_style.offset[1] = default_width_offset + bar_width - health_max_width * 0.5
-		health_max_style.size[1] = health_max_width
-		local health_end_style = style.bar_end
-		health_end_style.offset[1] = -(bar_width - bar_width * health_fraction) + 6 + math.abs(default_width_offset)
+
+		local ghost_bar_width = math_max(bar_width * health_ghost_fraction - health_width, 0)
+		style.ghost_bar.offset[1] = default_width_offset + health_width
+		style.ghost_bar.size[1] = ghost_bar_width
+
+		local background_width = math_max(bar_width - ghost_bar_width - health_width, 0)
+		background_width = math_max(background_width - spacing, 0)
+		style.background.offset[1] = default_width_offset + bar_width - background_width
+		style.background.size[1] = background_width
+
+		local health_max_width = bar_width - math_max(bar_width * health_max_fraction, 0)
+		health_max_width = math_max(health_max_width - spacing, 0)
+		style.health_max.offset[1] = default_width_offset + bar_width - health_max_width * 0.5
+		style.health_max.size[1] = health_max_width
+
+		style.bar_end.offset[1] = -(bar_width - bar_width * health_fraction) + 6 + math_abs(default_width_offset)
+
 		marker.health_fraction = health_fraction
 	end
 
-	if not mod:get("show_bar") then
-		style.bar.visible = false
-		style.ghost_bar.visible = false
-		style.health_max.visible = false
-		style.bar_end.visible = false
-		style.background.visible = false
+	local show_bar = _feature_enabled("show_bar")
+	local show_shield_bar = show_bar and shield_fraction ~= nil and shield_fraction > 0 or false
+
+	if show_shield_bar then
+		style.shield_bar.size[1] = template.size[1] * math_clamp(shield_fraction, 0, 1)
 	end
 
+	style.bar.visible = show_bar
+	style.ghost_bar.visible = show_bar
+	style.health_max.visible = show_bar
+	style.bar_end.visible = show_bar
+	style.background.visible = show_bar
+	style.shield_bar.visible = show_shield_bar
+
+	-- ----------------------------
+	-- LOS fade + removal timing
+	-- ----------------------------
 	local line_of_sight_progress = content.line_of_sight_progress or 0
 
 	if marker.raycast_initialized then
 		local raycast_result = marker.raycast_result
-		local line_of_sight_speed = 10
+		local speed = 10
 
 		if raycast_result then
-			line_of_sight_progress = math.max(line_of_sight_progress - dt * line_of_sight_speed, 0)
+			line_of_sight_progress = math_max(line_of_sight_progress - dt * speed, 0)
 		else
-			line_of_sight_progress = math.min(line_of_sight_progress + dt * line_of_sight_speed, 1)
+			line_of_sight_progress = math_min(line_of_sight_progress + dt * speed, 1)
 		end
 	end
 
 	if not HEALTH_ALIVE[unit] then
 		if not content.remove_timer then
-			content.remove_timer = template.remove_on_death_duration
 			content.dead = true
+
+			if content.damage_has_started then
+				local post_kill_display_duration = _post_kill_display_duration()
+
+				content.remove_timer = post_kill_display_duration
+				content.visibility_delay = math_max(content.visibility_delay or 0, post_kill_display_duration)
+			else
+				content.remove_timer = template.remove_on_death_duration
+			end
 		else
 			content.remove_timer = content.remove_timer - dt
-
 			if content.remove_timer <= 0 and (not marker.health_fraction or marker.health_fraction == 0) then
 				marker.remove = true
 			end
 		end
 	end
 
+	-- ----------------------------
+	-- Visibility / Fade rules
+	-- Show while: (damage visibility window) OR (active debuff)
+	-- Also show when debuff is applied/changed (handled via content.visibility_delay above)
+	-- ----------------------------
 	local alpha_multiplier = line_of_sight_progress
 	content.line_of_sight_progress = line_of_sight_progress
-	local visibility_delay = content.visibility_delay
 
-	if visibility_delay then
-		visibility_delay = visibility_delay - dt
-		content.visibility_delay = visibility_delay >= 0 and visibility_delay or nil
+	local has_active_debuff = marker.debuffs and #marker.debuffs > 0
+	content.has_active_debuff = has_active_debuff
 
-		if not content.visibility_delay then
-			content.fade_delay = damage_number_settings.fade_delay
+	if has_active_debuff then
+		-- Hard-visible as long as any debuff is active
+		content.fade_delay = nil
+		-- keep visibility_delay untouched (damage numbers may use it), but it doesn't matter for alpha now
+		marker._had_active_debuff = true
+	else
+		-- If we *just* lost the last debuff, start fade-out
+		if marker._had_active_debuff then
+			content.fade_delay = template.damage_number_settings.fade_delay
+			marker._had_active_debuff = false
 		end
-	end
 
-	local fade_delay = content.fade_delay
+		local dns = template.damage_number_settings
 
-	if fade_delay then
-		fade_delay = fade_delay - dt
-		content.fade_delay = fade_delay >= 0 and fade_delay or nil
-		local progress = math.clamp(fade_delay / damage_number_settings.fade_delay, 0, 1)
-		alpha_multiplier = alpha_multiplier * progress
-	elseif not visibility_delay then
-		alpha_multiplier = 0
+		local visibility_delay = content.visibility_delay
+		if visibility_delay then
+			visibility_delay = visibility_delay - dt
+			content.visibility_delay = (visibility_delay >= 0) and visibility_delay or nil
+			if not content.visibility_delay then
+				content.fade_delay = dns.fade_delay
+			end
+		end
+
+		local fade_delay = content.fade_delay
+		if fade_delay then
+			fade_delay = fade_delay - dt
+			content.fade_delay = (fade_delay >= 0) and fade_delay or nil
+			local progress = math_clamp(fade_delay / dns.fade_delay, 0, 1)
+			alpha_multiplier = alpha_multiplier * progress
+		elseif not visibility_delay then
+			alpha_multiplier = 0
+		end
 	end
 
 	widget.alpha_multiplier = alpha_multiplier

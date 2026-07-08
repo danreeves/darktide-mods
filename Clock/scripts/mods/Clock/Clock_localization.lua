@@ -2,11 +2,11 @@ require("scripts/foundation/utilities/color")
 
 local FontDefinitions = require("scripts/managers/ui/ui_fonts_definitions")
 
-function firstToUpper(str)
+local function firstToUpper(str)
 	return str:gsub("^%l", string.upper)
 end
 
-function underscoreToSpace(str)
+local function underscoreToSpace(str)
 	return str:gsub("_", " ")
 end
 
