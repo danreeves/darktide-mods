@@ -23,6 +23,8 @@
 const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const https = require("https");
+const http = require("http");
 
 const NULL_COMMIT = "0000000000000000000000000000000000000000";
 const API_BASE = (
@@ -193,36 +195,42 @@ async function putToPresignedUrl(url, data) {
     });
   }
 
-  let includeContentLength = false;
-  try {
-    const u2 = new URL(url);
-    const signedRaw = (u2.searchParams.get("X-Amz-SignedHeaders") || u2.searchParams.get("x-amz-signedheaders") || "").toLowerCase();
-    includeContentLength = signedRaw.includes("content-length");
-  } catch (e) {}
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const options = {
+      method: "PUT",
+      hostname: u.hostname,
+      port: u.port || (u.protocol === "https:" ? 443 : 80),
+      path: u.pathname + u.search,
+      headers: {
+        "Content-Type": "application/octet-stream",
+        // Node's core http/https modules respect empty strings and won't drop this
+        "Content-Disposition": "", 
+        "Content-Length": Buffer.byteLength(data),
+      },
+    };
 
-  const headers = {
-    "Content-Type": "application/octet-stream",
-    // Some presigned URLs (Cloudflare R2 / S3) include `content-disposition` in
-    // the signed headers. Ensure we include it (empty string is accepted when
-    // the signer used an empty value) so the request signature matches.
-    "Content-Disposition": "",
-  };
-  if (includeContentLength) {
-    headers["Content-Length"] = String(data.byteLength ?? data.length);
-    if (DEBUG) console.log(`  Including Content-Length: ${headers["Content-Length"]}`);
-  }
+    const lib = u.protocol === "http:" ? http : https;
 
-  const resp = await fetch(url, {
-    method: "PUT",
-    headers,
-    body: data,
+    const req = lib.request(options, (res) => {
+      let body = "";
+      res.on("data", (chunk) => {
+        body += chunk;
+      });
+      res.on("end", () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          reject(new Error(`HTTP ${res.statusCode} uploading to presigned URL: ${body}`));
+        } else {
+          const etag = res.headers.etag || "";
+          resolve(etag.replace(/^"|"$/g, ""));
+        }
+      });
+    });
+
+    req.on("error", (err) => reject(err));
+    req.write(data);
+    req.end();
   });
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`HTTP ${resp.status} uploading to presigned URL: ${text}`);
-  }
-  const etag = resp.headers.get("ETag") || "";
-  return etag.replace(/^"|"$/g, "");
 }
 
 async function pollUntilAvailable(uploadId, apiKey) {
