@@ -22,6 +22,7 @@
 
 const { spawnSync } = require("child_process");
 const fs = require("fs");
+const fsp = require("fs/promises");
 const path = require("path");
 const https = require("https");
 const http = require("http");
@@ -31,7 +32,7 @@ const API_BASE = (
   process.env.NEXUSMODS_API_BASE || "https://api.nexusmods.com/v3"
 ).replace(/\/$/, "");
 const GAME_DOMAIN = process.env.NEXUSMODS_GAME_DOMAIN || "warhammer40kdarktide";
-const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MiB
+const DEFAULT_CONCURRENCY = 6;
 const DEBUG = process.env.PUBLISH_DEBUG === "1" || process.env.DEBUG === "1";
 
 function execCmd(args) {
@@ -180,38 +181,92 @@ function zipMod(modName) {
   return result.status === 0 && fs.existsSync(`${modName}.zip`);
 }
 
-async function putToPresignedUrl(url, data) {
-  if (DEBUG) {
-    console.log(`  Uploading ${data.byteLength ?? data.length} bytes to presigned URL`);
-  }
+async function uploadPart(fileHandle, partUrl, partNumber, totalParts, partSize) {
+  const buffer = Buffer.alloc(partSize);
+  const offset = (partNumber - 1) * partSize;
+  const { bytesRead } = await fileHandle.read(buffer, 0, partSize, offset);
+  const partData = bytesRead < partSize ? buffer.subarray(0, bytesRead) : buffer;
 
-  const headers = {
-    "Content-Type": "application/octet-stream",
-    
-    // 1. Force Content-Length (like the official script does).
-    // This stops Node's fetch from defaulting to chunked transfer encoding.
-    "Content-Length": String(data.byteLength ?? data.length),
-    
-    // 2. Use the single space hack.
-    // Because you use the single-upload endpoint for files < 100MB, 
-    // the Nexus API signs 'content-disposition'. This space stops 
-    // Node fetch from stripping the header.
-    "Content-Disposition": " ", 
-  };
-
-  const resp = await fetch(url, {
+  console.log(
+    `  Uploading part ${partNumber}/${totalParts} (${bytesRead} bytes)...`,
+  );
+  const resp = await fetch(partUrl, {
     method: "PUT",
-    headers,
-    body: data,
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": String(bytesRead),
+    },
+    body: partData,
   });
 
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`HTTP ${resp.status} uploading to presigned URL: ${text}`);
+    throw new Error(
+      `HTTP ${resp.status} uploading part ${partNumber}: ${text}`,
+    );
   }
-  
-  const etag = resp.headers.get("ETag") || "";
-  return etag.replace(/^"|"$/g, "");
+
+  const etag = resp.headers.get("ETag");
+  if (!etag) {
+    throw new Error(`No ETag returned for part ${partNumber}`);
+  }
+  return { partNumber, etag: etag.replace(/"/g, "") };
+}
+
+async function uploadParts(
+  zipPath,
+  partUrls,
+  partSize,
+  concurrency = DEFAULT_CONCURRENCY,
+) {
+  const fileHandle = await fsp.open(zipPath, "r");
+  const results = [];
+  const totalParts = partUrls.length;
+
+  try {
+    // Process parts in batches for controlled concurrency.
+    for (let i = 0; i < totalParts; i += concurrency) {
+      const batch = partUrls.slice(i, i + concurrency);
+      const batchResults = await Promise.all(
+        batch.map((url, batchIndex) =>
+          uploadPart(fileHandle, url, i + batchIndex + 1, totalParts, partSize),
+        ),
+      );
+      results.push(...batchResults);
+    }
+  } finally {
+    await fileHandle.close();
+  }
+
+  return results;
+}
+
+function buildCompleteMultipartXml(parts) {
+  const partElements = parts
+    .map(
+      ({ partNumber, etag }) =>
+        `  <Part>\n    <PartNumber>${partNumber}</PartNumber>\n    <ETag>${etag}</ETag>\n  </Part>`,
+    )
+    .join("\n");
+  return `<CompleteMultipartUpload>\n${partElements}\n</CompleteMultipartUpload>`;
+}
+
+async function completeMultipartUpload(completeUrl, parts) {
+  const xml = buildCompleteMultipartXml(parts);
+  if (DEBUG) {
+    console.log(`  Completing multipart upload with XML:\n${xml}`);
+  }
+  const resp = await fetch(completeUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/xml" },
+    body: xml,
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(
+      `HTTP ${resp.status} completing multipart upload: ${text}`,
+    );
+  }
 }
 
 async function pollUntilAvailable(uploadId, apiKey) {
@@ -231,88 +286,42 @@ async function pollUntilAvailable(uploadId, apiKey) {
 async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
   const fileSize = fs.statSync(zipPath).size;
   const zipBasename = path.basename(zipPath);
-  let uploadId;
 
-  if (fileSize <= MULTIPART_THRESHOLD) {
-    console.log(`  Creating upload (${zipBasename}, ${fileSize} bytes)...`);
-    const uploadInfo = await apiRequest("POST", "/uploads", apiKey, {
-      filename: zipBasename,
-      size_bytes: fileSize,
-    });
-    uploadId = uploadInfo.id;
-    const presignedUrl = uploadInfo.presigned_url;
-    if (DEBUG) {
-      try {
-        const u = new URL(presignedUrl);
-        console.log("  Presigned URL params:", Object.fromEntries(u.searchParams.entries()));
-      } catch (e) {}
-    }
-    console.log(`  Upload ID: ${uploadId}`);
-
-    console.log("  Uploading file...");
-    const data = fs.readFileSync(zipPath);
-    await putToPresignedUrl(presignedUrl, data);
-  } else {
-    console.log(
-      `  Creating multipart upload (${zipBasename}, ${fileSize} bytes)...`,
-    );
-    const uploadInfo = await apiRequest("POST", "/uploads/multipart", apiKey, {
-      filename: zipBasename,
-      size_bytes: fileSize,
-    });
-    uploadId = uploadInfo.id;
-    const partUrls = uploadInfo.parts_presigned_url;
-    const partSize = uploadInfo.parts_size;
-    const completeUrl = uploadInfo.complete_presigned_url;
-    if (DEBUG) {
-      try {
-        console.log(`  Multipart parts: ${partUrls.length}`);
-        const u = new URL(partUrls[0]);
-        console.log("  First part params:", Object.fromEntries(u.searchParams.entries()));
-        const cu = new URL(completeUrl);
-        console.log("  Complete URL params:", Object.fromEntries(cu.searchParams.entries()));
-      } catch (e) {}
-    }
-    console.log(
-      `  Upload ID: ${uploadId} (${partUrls.length} part(s) of ${partSize} bytes each)`,
-    );
-
-    const fd = fs.openSync(zipPath, "r");
-    const parts = [];
-    for (let i = 0; i < partUrls.length; i++) {
-      const partNumber = i + 1;
-      const chunk = Buffer.alloc(
-        Math.max(0, Math.min(partSize, fileSize - i * partSize)),
-      );
-      fs.readSync(fd, chunk, 0, chunk.length, i * partSize);
+  console.log(
+    `  Creating multipart upload (${zipBasename}, ${fileSize} bytes)...`,
+  );
+  const uploadInfo = await apiRequest("POST", "/uploads/multipart", apiKey, {
+    filename: zipBasename,
+    size_bytes: String(fileSize),
+  });
+  const uploadId = uploadInfo.id;
+  const partUrls = uploadInfo.part_presigned_urls;
+  const partSize = uploadInfo.part_size_bytes;
+  const completeUrl = uploadInfo.complete_presigned_url;
+  if (DEBUG) {
+    try {
+      console.log(`  Multipart parts: ${partUrls.length}`);
+      const u = new URL(partUrls[0]);
       console.log(
-        `  Uploading part ${partNumber}/${partUrls.length} (${chunk.length} bytes)...`,
+        "  First part params:",
+        Object.fromEntries(u.searchParams.entries()),
       );
-      const etag = await putToPresignedUrl(partUrls[i], chunk);
-      parts.push({ partNumber, etag });
-    }
-    fs.closeSync(fd);
-
-    console.log("  Completing multipart upload...");
-    const xmlParts = parts
-      .map(
-        ({ partNumber, etag }) =>
-          `  <Part>\n    <PartNumber>${partNumber}</PartNumber>\n    <ETag>${etag}</ETag>\n  </Part>`,
-      )
-      .join("\n");
-    const xml = `<CompleteMultipartUpload>\n${xmlParts}\n</CompleteMultipartUpload>`;
-    const completeResp = await fetch(completeUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/xml" },
-      body: xml,
-    });
-    if (!completeResp.ok) {
-      const text = await completeResp.text();
-      throw new Error(
-        `HTTP ${completeResp.status} completing multipart upload: ${text}`,
+      const cu = new URL(completeUrl);
+      console.log(
+        "  Complete URL params:",
+        Object.fromEntries(cu.searchParams.entries()),
       );
-    }
+    } catch (e) {}
   }
+  console.log(
+    `  Upload ID: ${uploadId} (${partUrls.length} part(s) of ${partSize} bytes each)`,
+  );
+
+  const parts = await uploadParts(zipPath, partUrls, partSize);
+  console.log(`  Uploaded ${parts.length} part(s).`);
+
+  console.log("  Completing multipart upload...");
+  await completeMultipartUpload(completeUrl, parts);
 
   console.log("  Finalising upload...");
   await apiRequest("POST", `/uploads/${uploadId}/finalise`, apiKey);
@@ -330,8 +339,7 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
       name: modName,
       version,
       file_category: "main",
-      // Archive previous version/file when uploading a new version
-      archive_existing_version: true,
+      // Archive the existing file when uploading a new version
       archive_existing_file: true,
     },
   );
