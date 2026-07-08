@@ -182,55 +182,36 @@ function zipMod(modName) {
 
 async function putToPresignedUrl(url, data) {
   if (DEBUG) {
-    try {
-      const u = new URL(url);
-      console.log(`  Presigned URL host: ${u.host}`);
-      const signedRaw = u.searchParams.get("X-Amz-SignedHeaders") || u.searchParams.get("x-amz-signedheaders") || "";
-      console.log(`  Presigned signed headers: ${signedRaw}`);
-    } catch (e) {}
     console.log(`  Uploading ${data.byteLength ?? data.length} bytes to presigned URL`);
-    console.log("  Upload request headers:", {
-      "Content-Type": "application/octet-stream",
-      "Content-Disposition": "",
-    });
   }
 
-  return new Promise((resolve, reject) => {
-    const u = new URL(url);
-    const options = {
-      method: "PUT",
-      hostname: u.hostname,
-      port: u.port || (u.protocol === "https:" ? 443 : 80),
-      path: u.pathname + u.search,
-      headers: {
-        "Content-Type": "application/octet-stream",
-        // Node's core http/https modules respect empty strings and won't drop this
-        "Content-Disposition": "", 
-        "Content-Length": Buffer.byteLength(data),
-      },
-    };
+  const headers = {
+    "Content-Type": "application/octet-stream",
+    
+    // 1. Force Content-Length (like the official script does).
+    // This stops Node's fetch from defaulting to chunked transfer encoding.
+    "Content-Length": String(data.byteLength ?? data.length),
+    
+    // 2. Use the single space hack.
+    // Because you use the single-upload endpoint for files < 100MB, 
+    // the Nexus API signs 'content-disposition'. This space stops 
+    // Node fetch from stripping the header.
+    "Content-Disposition": " ", 
+  };
 
-    const lib = u.protocol === "http:" ? http : https;
-
-    const req = lib.request(options, (res) => {
-      let body = "";
-      res.on("data", (chunk) => {
-        body += chunk;
-      });
-      res.on("end", () => {
-        if (res.statusCode < 200 || res.statusCode >= 300) {
-          reject(new Error(`HTTP ${res.statusCode} uploading to presigned URL: ${body}`));
-        } else {
-          const etag = res.headers.etag || "";
-          resolve(etag.replace(/^"|"$/g, ""));
-        }
-      });
-    });
-
-    req.on("error", (err) => reject(err));
-    req.write(data);
-    req.end();
+  const resp = await fetch(url, {
+    method: "PUT",
+    headers,
+    body: data,
   });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`HTTP ${resp.status} uploading to presigned URL: ${text}`);
+  }
+  
+  const etag = resp.headers.get("ETag") || "";
+  return etag.replace(/^"|"$/g, "");
 }
 
 async function pollUntilAvailable(uploadId, apiKey) {
