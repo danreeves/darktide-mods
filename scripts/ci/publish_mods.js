@@ -183,26 +183,38 @@ async function putToPresignedUrl(url, data) {
     try {
       const u = new URL(url);
       console.log(`  Presigned URL host: ${u.host}`);
-      console.log(`  Presigned signed headers: ${u.searchParams.get("X-Amz-SignedHeaders") || u.searchParams.get("x-amz-signedheaders")}`);
+      const signedRaw = u.searchParams.get("X-Amz-SignedHeaders") || u.searchParams.get("x-amz-signedheaders") || "";
+      console.log(`  Presigned signed headers: ${signedRaw}`);
     } catch (e) {}
     console.log(`  Uploading ${data.byteLength ?? data.length} bytes to presigned URL`);
     console.log("  Upload request headers:", {
       "Content-Type": "application/octet-stream",
-      "Content-Length": String(data.byteLength ?? data.length),
       "Content-Disposition": "",
     });
   }
 
+  let includeContentLength = false;
+  try {
+    const u2 = new URL(url);
+    const signedRaw = (u2.searchParams.get("X-Amz-SignedHeaders") || u2.searchParams.get("x-amz-signedheaders") || "").toLowerCase();
+    includeContentLength = signedRaw.includes("content-length");
+  } catch (e) {}
+
+  const headers = {
+    "Content-Type": "application/octet-stream",
+    // Some presigned URLs (Cloudflare R2 / S3) include `content-disposition` in
+    // the signed headers. Ensure we include it (empty string is accepted when
+    // the signer used an empty value) so the request signature matches.
+    "Content-Disposition": "",
+  };
+  if (includeContentLength) {
+    headers["Content-Length"] = String(data.byteLength ?? data.length);
+    if (DEBUG) console.log(`  Including Content-Length: ${headers["Content-Length"]}`);
+  }
+
   const resp = await fetch(url, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      "Content-Length": String(data.byteLength ?? data.length),
-      // Some presigned URLs (Cloudflare R2 / S3) include `content-disposition` in
-      // the signed headers. Ensure we include it (empty string is accepted when
-      // the signer used an empty value) so the request signature matches.
-      "Content-Disposition": "",
-    },
+    headers,
     body: data,
   });
   if (!resp.ok) {
@@ -329,11 +341,14 @@ async function uploadMod(modName, zipPath, version, fileGroupId, apiKey) {
       name: modName,
       version,
       file_category: "main",
+      // Archive previous version/file when uploading a new version
+      archive_existing_version: true,
+      archive_existing_file: true,
     },
   );
-  const fileUid = result.id;
-  console.log(`  Done — new file UID: ${fileUid}`);
-  return fileUid;
+  const versionId = result.version.id;
+  console.log(`  Done — new version ID: ${versionId}`);
+  return versionId;
 }
 
 async function main() {
