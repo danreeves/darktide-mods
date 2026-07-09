@@ -107,7 +107,7 @@ local loc = {
 	peril_icon = {
 		en = "Show peril icon",
 		["zh-cn"] = "显示危机值图标",
-		["zh-tw"] = "顯示危機值圖示",
+		["zh-tw"] = "顯示反噬圖示",
 		ru = "Показывать значок опасности",
 		fr = "Affiche l'icône du péril",
 	},
