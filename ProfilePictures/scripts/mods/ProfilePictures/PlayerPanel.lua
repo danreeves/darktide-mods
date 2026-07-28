@@ -5,7 +5,12 @@ local function _load_portrait_icon(self)
 	local player = self._player
 	local player_info = mod.player_info_for_player(player)
 	mod.load_profile_image(player_info, function(texture)
-		local widget = self._widgets_by_name.player_icon
+		if self.__deleted or self.destroyed or self._player ~= player then
+			return
+		end
+
+		local widgets_by_name = self._widgets_by_name
+		local widget = widgets_by_name and widgets_by_name.player_icon
 		if widget then
 			local style = widget.style.profile
 			if style then
@@ -51,6 +56,23 @@ end
 
 for _, hud_type in ipairs(hud_types) do
 	mod:hook_safe("HudElement" .. hud_type, "_cb_set_player_frame", _cb_set_player_frame)
+end
+
+local function _unload_portrait_frame(func, self, ...)
+	local widgets_by_name = self._widgets_by_name
+	local widget = widgets_by_name and widgets_by_name.player_icon
+	local frame = widget and widget.style and widget.style.frame
+
+	if frame and frame.material_values then
+		frame.material_values.texture_map = nil
+		widget.dirty = true
+	end
+
+	return func(self, ...)
+end
+
+for _, hud_type in ipairs(hud_types) do
+	mod:hook("HudElement" .. hud_type, "_unload_portrait_frame", _unload_portrait_frame)
 end
 
 local function modify_player_icon_widget(instance)
