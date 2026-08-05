@@ -9,3 +9,7 @@
   &bullet;
   <a href="https://github.com/danreeves/darktide-mods/issues/107">Pre-release downloads</a>
 </p>
+
+## Traditional Chinese localization
+
+When editing Traditional Chinese (zh-tw) strings, consult the [Darktide translation glossary](https://github.com/SyuanTsai/Warhammer-40-000-DARKTIDE-Mods/blob/main/Referneces/Translation.md). When the glossary lists multiple translations, preserve the existing context-specific terminology unless there is a clear reason to change it.
