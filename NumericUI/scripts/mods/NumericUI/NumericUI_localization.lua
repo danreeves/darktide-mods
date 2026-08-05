@@ -424,6 +424,9 @@ local loc = {
 		["zh-cn"] = "显示法务官标记骷髅图标",
 		["zh-tw"] = "顯示法務官標記骷髏圖示",
 	},
+	show_skit_ping_skull = {
+		en = "Show Skitarius tag skull",
+	},
 	ammo_text_font_size = {
 		en = "Ammo text font size",
 		ru = "Размер шрифта текста боеприпасов",
