@@ -350,6 +350,11 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
+					{
+						setting_id = "show_skit_ping_skull",
+						type = "checkbox",
+						default_value = true,
+					},
 				},
 			},
 		},
