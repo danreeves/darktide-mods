@@ -13,6 +13,6 @@ return {
         "Alfs_DMF_Extensions",
         "animation_events",
     },
-	version = "26.07.05",
+	version = "26.08.05",
 	mod_id = "16",
 }
