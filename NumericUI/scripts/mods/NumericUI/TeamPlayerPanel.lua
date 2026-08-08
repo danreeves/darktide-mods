@@ -349,7 +349,8 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		ability_cooldown_timer[player:name()] = ability_cooldown_timer[player:name()] + dt
 
 		if show_ability_text then
-			local cd_timer = ability_max_cooldown[player:name()] - ability_cooldown_timer[player:name()]
+			local cd_timer =
+				math.max(ability_max_cooldown[player:name()] - ability_cooldown_timer[player:name()], 0)
 			ability_text_widget.content.text = string.format("%03d", cd_timer)
 			ability_text_widget.dirty = true
 		end

@@ -456,7 +456,7 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 				self._prev_ammo = total_ammo
 			end
 		end
-	elseif mod:get("show_munitions_gained") and uses_ammo then --This one checks for grenades gained
+	elseif mod:get("show_munitions_gained") and uses_ammo and not self._uses_weapon_special_charges then --This one checks for grenades gained
 		local grenade_gained_widget = self._widgets_by_name.grenade_gained
 		local total_ammo = self._total_ammo
 
