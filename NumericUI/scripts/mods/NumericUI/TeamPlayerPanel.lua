@@ -42,6 +42,7 @@ local tough_text_style = {
 
 local ability_max_cooldown = {} -- "player ID -> max cooldown"
 local ability_cooldown_timer = {} -- "player ID -> cooldown timer"
+local ability_bar_cooldown_color = Color.terminal_background_gradient_selected(255, true)
 
 mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod:get("health_text") or mod:get("toughness_text") then
@@ -268,8 +269,10 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 end)
 
 local function update_numericui_ability_cd(self, player, ability_bar_widget, ability_text_widget, ability_component, dt)
-	if not ability_cooldown_timer[player:name()] then
-		ability_cooldown_timer[player:name()] = 0
+	local player_name = player:name()
+
+	if not ability_cooldown_timer[player_name] then
+		ability_cooldown_timer[player_name] = 0
 	end
 
 	local hide_widgets = (self._show_as_dead or self._dead or self._hogtied)
@@ -290,8 +293,10 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 		return
 	end
 
-	if ability_component.num_charges > 0 and ability_cooldown_timer[player:name()] > 0 then
-		ability_cooldown_timer[player:name()] = 0
+	local cooldown_timer = ability_cooldown_timer[player_name]
+
+	if ability_component.num_charges > 0 and cooldown_timer > 0 then
+		ability_cooldown_timer[player_name] = 0
 
 		if show_ability_text then
 			ability_text_widget.visible = false
@@ -303,7 +308,7 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 			ability_bar_widget.style.texture.size[1] = bar_size[1]
 			ability_bar_widget.dirty = true
 		end
-	elseif ability_component.num_charges > 0 and ability_cooldown_timer[player:name()] == 0 then
+	elseif ability_component.num_charges > 0 and cooldown_timer == 0 then
 		if show_ability_text then
 			if show_ability_text.visible then
 				show_ability_text.visible = false
@@ -323,44 +328,58 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 				ability_bar_widget.dirty = true
 			end
 		end
-	elseif
-		(ability_cooldown_timer[player:name()] == 0)
-		or (ability_cooldown_timer[player:name()] > ability_max_cooldown[player:name()])
-	then
+	elseif (cooldown_timer == 0) or (cooldown_timer > ability_max_cooldown[player_name]) then
 		local fixed_frame_t = FixedFrame.get_latest_fixed_time()
 		local time_remaining = math.max(ability_component.cooldown - fixed_frame_t, 0)
-		ability_max_cooldown[player:name()] = time_remaining
-		ability_cooldown_timer[player:name()] = dt
+		ability_max_cooldown[player_name] = time_remaining
+		ability_cooldown_timer[player_name] = dt
 
 		if show_ability_text then
 			ability_text_widget.visible = true
 			ability_text_widget.content.text = string.format("%03d", time_remaining)
+			ability_text_widget.content._numericui_last_value = math.floor(time_remaining)
 			ability_text_widget.dirty = true
 		end
 
 		if show_ability_bar then
-			ability_bar_widget.style.texture.color = Color.terminal_background_gradient_selected(255, true)
-			ability_bar_widget.style.texture.size[1] = bar_size[1]
-				* (ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()])
+			ability_bar_widget.style.texture.color = ability_bar_cooldown_color
+			ability_bar_widget.style.texture.size[1] = bar_size[1] * (dt / time_remaining)
 			ability_bar_widget.visible = true
 			ability_bar_widget.dirty = true
 		end
-	elseif ability_cooldown_timer[player:name()] > 0 then
-		ability_cooldown_timer[player:name()] = ability_cooldown_timer[player:name()] + dt
+	elseif cooldown_timer > 0 then
+		cooldown_timer = cooldown_timer + dt
+		ability_cooldown_timer[player_name] = cooldown_timer
 
 		if show_ability_text then
-			local cd_timer =
-				math.max(ability_max_cooldown[player:name()] - ability_cooldown_timer[player:name()], 0)
-			ability_text_widget.content.text = string.format("%03d", cd_timer)
-			ability_text_widget.dirty = true
+			local cd_timer = math.max(ability_max_cooldown[player_name] - cooldown_timer, 0)
+			local content = ability_text_widget.content
+			local display_value = math.floor(cd_timer)
+
+			-- only re-render the text when the displayed value changes
+			if content._numericui_last_value ~= display_value then
+				content._numericui_last_value = display_value
+				local text = string.format("%03d", cd_timer)
+
+				if content.text ~= text then
+					content.text = text
+					ability_text_widget.dirty = true
+				end
+			end
 		end
 
 		if show_ability_bar then
-			ability_bar_widget.style.texture.color = Color.terminal_background_gradient_selected(255, true)
-			local cd_progress =
-				math.clamp(ability_cooldown_timer[player:name()] / ability_max_cooldown[player:name()], 0, 1.0)
-			ability_bar_widget.style.texture.size[1] = bar_size[1] * cd_progress
-			ability_bar_widget.dirty = true
+			local texture_style = ability_bar_widget.style.texture
+			texture_style.color = ability_bar_cooldown_color
+
+			local cd_progress = math.clamp(cooldown_timer / ability_max_cooldown[player_name], 0, 1.0)
+			-- quantize to whole pixels so the retained bar only re-renders when it visibly grows
+			local bar_width = math.floor(bar_size[1] * cd_progress + 0.5)
+
+			if texture_style.size[1] ~= bar_width then
+				texture_style.size[1] = bar_width
+				ability_bar_widget.dirty = true
+			end
 		end
 	end
 end
@@ -446,27 +465,41 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 				end
 			end
 
-			if total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied then
-				-- No ammo or dead
-				ammo_text_widget.content.text = ""
-			elseif
-				total_max_ammo == 0
-				and (peril_icon_widget and peril_icon_widget.visible)
-				and mod:get("peril_text")
+			local show_as_empty = total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied
+
+			-- only re-render the retained widget when the displayed values change
+			if
+				total_current_ammo ~= self._numericui_ammo_current
+				or total_max_ammo ~= self._numericui_ammo_max
+				or show_as_empty ~= self._numericui_ammo_empty
 			then
-				-- Ammo text as peril percent
-				ammo_text_widget.content.text = string.format("%1d%%", math.round(warp_charge_level * 100))
-				ammo_text_widget.style.text.text_color = peril_color
-			else
-				-- Ammo
-				if mod:get("ammo_as_percent") then
-					ammo_text_widget.content.text = string.format("%1d%%", (total_current_ammo / total_max_ammo) * 100)
+				self._numericui_ammo_current = total_current_ammo
+				self._numericui_ammo_max = total_max_ammo
+				self._numericui_ammo_empty = show_as_empty
+
+				if show_as_empty then
+					-- No ammo or dead
+					ammo_text_widget.content.text = ""
+				elseif
+					total_max_ammo == 0
+					and (peril_icon_widget and peril_icon_widget.visible)
+					and mod:get("peril_text")
+				then
+					-- Ammo text as peril percent
+					ammo_text_widget.content.text = string.format("%1d%%", math.round(warp_charge_level * 100))
+					ammo_text_widget.style.text.text_color = peril_color
 				else
-					ammo_text_widget.content.text = string.format("%1d/%1d", total_current_ammo, total_max_ammo)
+					-- Ammo
+					if mod:get("ammo_as_percent") then
+						ammo_text_widget.content.text =
+							string.format("%1d%%", (total_current_ammo / total_max_ammo) * 100)
+					else
+						ammo_text_widget.content.text = string.format("%1d/%1d", total_current_ammo, total_max_ammo)
+					end
+					ammo_text_widget.style.text.text_color = self._widgets_by_name.ammo_status.style.ammo.color
 				end
-				ammo_text_widget.style.text.text_color = self._widgets_by_name.ammo_status.style.ammo.color
+				ammo_text_widget.dirty = true
 			end
-			ammo_text_widget.dirty = true
 		end
 	end
 

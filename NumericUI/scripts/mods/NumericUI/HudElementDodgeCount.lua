@@ -19,6 +19,25 @@ local scenegraph_definition = {
 local color_efficient = Color.terminal_text_header(255, true)
 local color_inefficient = Color.ui_hud_warp_charge_low(255, true)
 local color_limit = Color.ui_hud_warp_charge_high(255, true)
+local color_timer_hidden = Color.text_default(0, true)
+
+-- timer gradient colors by color name, so the update loop never allocates new color tables
+local timer_gradient_colors = {}
+local function _timer_gradient_color(color_name)
+	local color = timer_gradient_colors[color_name]
+	if not color then
+		color = Color[color_name](255, true)
+		timer_gradient_colors[color_name] = color
+	end
+	return color
+end
+
+local function _copy_color(destination, source)
+	destination[1] = source[1]
+	destination[2] = source[2]
+	destination[3] = source[3]
+	destination[4] = source[4]
+end
 
 local timer_x_offset = (-UIWorkspaceSettings.screen.size[1] + scenegraph_definition.container.size[1]) / 2
 
@@ -35,8 +54,8 @@ local timer_size_color = function(time_to_refresh, cooldown, current_dodges, for
 	timer_size[1] = mod:get("dodge_timer_width") * (1 - natural_time)
 	timer_size[2] = mod:get("dodge_timer_height")
 
-	local color_start = Color[mod:get("color_start")](255, true)
-	local color_end = Color[mod:get("color_end")](255, true)
+	local color_start = _timer_gradient_color(mod:get("color_start"))
+	local color_end = _timer_gradient_color(mod:get("color_end"))
 	for i = 1, 4 do
 		timer_color[i] = math.lerp(color_start[i], color_end[i], natural_time)
 	end
@@ -165,8 +184,9 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 		return
 	end
 
+	-- copy into the widget's own color table in place instead of cloning a new one every frame
 	local style = self._widgets_by_name.dodge_count.style
-	style.text.text_color = table.clone(color_efficient)
+	_copy_color(style.text.text_color, color_efficient)
 
 	local unit_data_extension = ScriptUnit.extension(self._player_unit, "unit_data_system")
 	local weapon_extension = ScriptUnit.has_extension(self._player_unit, "weapon_system")
@@ -207,7 +227,7 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 			timer_size_color(relative_time, relative_cooldown, current_dodges, force_show_max_width)
 
 		self._widgets_by_name.dodge_timer.style.timer.size = timer_size or ZERO_SIZE
-		self._widgets_by_name.dodge_timer.style.timer.color = timer_color or Color.text_default(0, true)
+		self._widgets_by_name.dodge_timer.style.timer.color = timer_color or color_timer_hidden
 
 		if num_efficient_dodges == math.huge then
 			if mod:get("show_dodge_count_for_infinite_dodge") then
@@ -226,11 +246,11 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 		end
 
 		if current_dodges >= num_efficient_dodges then
-			style.text.text_color = table.clone(color_inefficient)
+			_copy_color(style.text.text_color, color_inefficient)
 		end
 
 		if current_dodges >= math.floor(dr_limit + num_efficient_dodges) then
-			style.text.text_color = table.clone(color_limit)
+			_copy_color(style.text.text_color, color_limit)
 		end
 
 		if mod:get("fade_out_max_dodges") and current_dodges == 0 then
