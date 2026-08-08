@@ -59,7 +59,7 @@ mod:hook_safe("HudElementPlayerAbility", "update", function(self)
 				local unit_data_extension = ScriptUnit.extension(player_unit, "unit_data_system")
 				local ability_state_component = unit_data_extension:read_component("combat_ability")
 				local time = Managers.time:time("gameplay")
-				local time_remaining = ability_state_component.cooldown - time
+				local time_remaining = math.max(ability_state_component.cooldown - time, 0)
 				if time_remaining <= 1 then
 					text_widget.content.text = string.format("%.1f", time_remaining)
 				else
