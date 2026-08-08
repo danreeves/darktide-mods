@@ -33,6 +33,11 @@ local ammo_gained_data = {
 	alpha_multiplier = 1,
 }
 
+-- reusable scratch storage for Ammo.clips_in_use (fully overwritten on every call)
+local _clips_in_use_scratch = {}
+-- "ammo_text_" .. i built once instead of every frame
+local _ammo_text_widget_names = {}
+
 local directional_magnitude = 200
 for i = 1, 4 do
 	directional_magnitude = directional_magnitude * -1
@@ -304,7 +309,6 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 			if not max_reserve or max_reserve <= 0 then
 				return
 			end
-			local _clips_in_use_scratch = {}
 			local any_clip_in_use = Ammo.clips_in_use(slot_component, _clips_in_use_scratch)
 
 			if not any_clip_in_use then
@@ -324,8 +328,17 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 			local ammo_icon_offset_x = 0
 			local ammo_icon_offset_y = 0
 
+			local show_max_ammo_text = mod:get("max_ammo_text")
+			local show_max_ammo_as_percent = mod:get("show_max_ammo_as_percent")
+
 			for i = 1, NetworkConstants.clips_in_use.max_size do
-				local ammo_text_widget = self._widgets_by_name["ammo_text_" .. i]
+				local widget_name = _ammo_text_widget_names[i]
+				if not widget_name then
+					widget_name = "ammo_text_" .. i
+					_ammo_text_widget_names[i] = widget_name
+				end
+
+				local ammo_text_widget = self._widgets_by_name[widget_name]
 				local max_clip = Ammo.max_ammo_in_clips(slot_component, i) or 0
 				local current_clip = Ammo.current_ammo_in_clips(slot_component, i) or 0
 
@@ -343,19 +356,30 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 				if ammo_text_widget then
 					local content = ammo_text_widget.content
 					local style = ammo_text_widget.style
-					ammo_text_widget.content.max_ammo = ""
 
-					if mod:get("max_ammo_text") and max_reserve then
-						local display_text = ""
-						if mod:get("show_max_ammo_as_percent") then
-							display_text =
-								string.format("%d%%", math.min(total_current_ammo / total_max_ammo * 100, 100))
+					if show_max_ammo_text and max_reserve then
+						local max_ammo_value
+						if show_max_ammo_as_percent then
+							max_ammo_value = math.floor(math.min(total_current_ammo / total_max_ammo * 100, 100))
 						else
-							display_text = string.format("/%d", max_reserve)
+							max_ammo_value = max_reserve
 						end
-						content.max_ammo = display_text
+
+						-- only rebuild the string when the displayed value changes
+						if content._numericui_max_ammo_value ~= max_ammo_value then
+							content._numericui_max_ammo_value = max_ammo_value
+
+							if show_max_ammo_as_percent then
+								content.max_ammo = string.format("%d%%", max_ammo_value)
+							else
+								content.max_ammo = string.format("/%d", max_ammo_value)
+							end
+						end
 
 						style.max_ammo.drop_shadow = true
+					elseif content.max_ammo ~= "" then
+						content._numericui_max_ammo_value = nil
+						content.max_ammo = ""
 					end
 				end
 			end

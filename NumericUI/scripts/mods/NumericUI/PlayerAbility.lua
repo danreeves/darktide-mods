@@ -47,12 +47,21 @@ mod:hook_safe("HudElementPlayerAbility", "update", function(self)
 	local on_cooldown = self._on_cooldown
 
 	if text_widget then
-		local percent = progress * 100
+		local content = text_widget.content
+		-- new_text stays nil while the displayed value is unchanged, so the
+		-- retained widget is only re-rendered when the text actually changes
+		local new_text
+
 		if not on_cooldown or progress >= 1 then
-			text_widget.content.text = " "
+			content._numericui_last_value = nil
+			new_text = " "
 		else
 			if ability_cooldown_format == "percent" then
-				text_widget.content.text = string.format("%d%%", percent)
+				local percent = math.floor(progress * 100)
+				if content._numericui_last_value ~= percent then
+					content._numericui_last_value = percent
+					new_text = string.format("%d%%", percent)
+				end
 			elseif ability_cooldown_format == "time" then
 				local player = self._data.player
 				local player_unit = player.player_unit
@@ -61,15 +70,25 @@ mod:hook_safe("HudElementPlayerAbility", "update", function(self)
 				local time = Managers.time:time("gameplay")
 				local time_remaining = math.max(ability_state_component.cooldown - time, 0)
 				if time_remaining <= 1 then
-					text_widget.content.text = string.format("%.1f", time_remaining)
+					content._numericui_last_value = nil
+					new_text = string.format("%.1f", time_remaining)
 				else
-					text_widget.content.text = string.format("%d", time_remaining)
+					local seconds = math.floor(time_remaining)
+					if content._numericui_last_value ~= seconds then
+						content._numericui_last_value = seconds
+						new_text = string.format("%d", seconds)
+					end
 				end
 			else
-				text_widget.content.text = " "
+				content._numericui_last_value = nil
+				new_text = " "
 			end
 		end
-		text_widget.dirty = true
+
+		if new_text and content.text ~= new_text then
+			content.text = new_text
+			text_widget.dirty = true
+		end
 	end
 
 	if mod:get("disable_ability_background_progress") then
