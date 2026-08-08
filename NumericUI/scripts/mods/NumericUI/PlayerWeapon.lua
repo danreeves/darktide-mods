@@ -192,6 +192,26 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 	end
 end)
 
+mod:hook_safe("HudElementPlayerWeapon", "init", function(self)
+	local font_size = mod:get("ammo_text_font_size") or 16
+	local offset_x = mod:get("ammo_text_offset_x") or 80
+	local offset_y = mod:get("ammo_text_offset_y") or -16
+	local widgets_by_name = self._widgets_by_name
+
+	for i = 1, NetworkConstants.clips_in_use.max_size do
+		local ammo_text_widget = widgets_by_name["ammo_text_" .. i]
+		local max_ammo_style = ammo_text_widget and ammo_text_widget.style.max_ammo
+
+		if max_ammo_style then
+			max_ammo_style.font_size = font_size
+			max_ammo_style.default_font_size = font_size
+			max_ammo_style.focused_font_size = font_size
+			max_ammo_style.offset[1] = offset_x
+			max_ammo_style.offset[2] = offset_y
+		end
+	end
+end)
+
 local function display_grenade_gained(dt, widget)
 	if grenade_gained_amount == 0 then
 		return false
@@ -335,8 +355,6 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, _dt, _t, ui_ren
 						end
 						content.max_ammo = display_text
 
-						style.max_ammo.offset[1] = 0 + style.max_ammo.font_size * 2
-						style.max_ammo.offset[2] = style.ammo_amount_4.offset[2] + (style.max_ammo.font_size * 1.1)
 						style.max_ammo.drop_shadow = true
 					end
 				end
