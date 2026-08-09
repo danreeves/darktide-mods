@@ -97,6 +97,18 @@ local loc = {
 		ru = "Показывать уровень",
 		fr = "Affiche le niveau",
 	},
+	grenades_count = {
+		en = "Show team grenade count",
+	},
+	grenades_count_format = {
+		en = "Grenade count format",
+	},
+	icons = {
+		en = "Icons",
+	},
+	number = {
+		en = "Numbers",
+	},
 	ammo_text = {
 		en = "Show ammo text",
 		["zh-cn"] = "显示弹药量",

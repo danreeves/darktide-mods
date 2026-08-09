@@ -44,6 +44,16 @@ local ability_max_cooldown = {} -- "player ID -> max cooldown"
 local ability_cooldown_timer = {} -- "player ID -> cooldown timer"
 local ability_bar_cooldown_color = Color.terminal_background_gradient_selected(255, true)
 
+local throwable_size = HudElementTeamPlayerPanelSettings.throwable_size
+local throwable_icon_gap = 3
+local throwable_icon_material = "content/ui/materials/hud/icons/party_throwable"
+local throwable_max_icons = 4
+local throwable_style_ids = { "icon_1", "icon_2", "icon_3", "icon_4" }
+-- colors are swapped in by reference so the update path never allocates
+local throwable_color_hidden = { 0, 255, 255, 255 }
+local throwable_color_empty = UIHudSettings.color_tint_main_3
+local throwable_color_depleted = Color.dark_red(255, true)
+
 mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod:get("health_text") or mod:get("toughness_text") then
 		instance.widget_definitions.coherency_indicator = UIWidget.create_definition({
@@ -173,6 +183,55 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 		}, "toughness_bar")
 	else
 		instance.widget_definitions.numeric_ui_ammo_text = nil
+	end
+
+	if mod:get("grenades_count") then
+		instance.widget_definitions.team_throwable_text = UIWidget.create_definition({
+			{
+				value_id = "text",
+				style_id = "text",
+				pass_type = "text",
+				value = " ",
+				style = {
+					vertical_alignment = "bottom",
+					horizontal_alignment = "right",
+					text_horizontal_alignment = "right",
+					offset = { 0, -20, 0 },
+					font_type = "machine_medium",
+					font_size = 17,
+					text_color = UIHudSettings.color_tint_main_1,
+					character_spacing = 0.05,
+				},
+			},
+		}, "toughness_bar")
+
+		-- the icon row is laid out here because the spacing never depends on
+		-- runtime state; the update path only swaps colors
+		local throwable_icon_passes = {}
+
+		for i = 1, throwable_max_icons do
+			local style_id = throwable_style_ids[i]
+
+			throwable_icon_passes[i] = {
+				value = throwable_icon_material,
+				value_id = style_id,
+				style_id = style_id,
+				pass_type = "texture",
+				style = {
+					vertical_alignment = "bottom",
+					horizontal_alignment = "right",
+					offset = { -(i - 1) * (throwable_size[1] - throwable_icon_gap), -11, 0 },
+					size = { 13, 14 },
+					color = { 0, 255, 255, 255 },
+				},
+			}
+		end
+
+		instance.widget_definitions.team_throwable_icon =
+			UIWidget.create_definition(throwable_icon_passes, "toughness_bar")
+	else
+		instance.widget_definitions.team_throwable_text = nil
+		instance.widget_definitions.team_throwable_icon = nil
 	end
 
 	if mod:get("health_text") then
@@ -384,6 +443,78 @@ local function update_numericui_ability_cd(self, player, ability_bar_widget, abi
 	end
 end
 
+local function update_numericui_throwables(self, ability_extension)
+	local remaining = ability_extension:remaining_ability_charges("grenade_ability") or 0
+	local max_charges = ability_extension:max_ability_charges("grenade_ability") or 0
+	local hide_widget = (self._show_as_dead or self._dead or self._hogtied) and true or false
+
+	-- only re-render the retained widget when the displayed values change
+	if
+		remaining == self._numericui_throwable_remaining
+		and max_charges == self._numericui_throwable_max
+		and hide_widget == self._numericui_throwable_hidden
+	then
+		return
+	end
+
+	self._numericui_throwable_remaining = remaining
+	self._numericui_throwable_max = max_charges
+	self._numericui_throwable_hidden = hide_widget
+
+	local widget = self._numericui_throwable_widget
+
+	if hide_widget or max_charges == 0 then
+		if widget.visible then
+			widget.visible = false
+			widget.dirty = true
+		end
+
+		return
+	end
+
+	local charge_color, empty_color
+
+	if remaining == 0 then
+		charge_color = UIHudSettings.color_tint_ammo_high
+		empty_color = throwable_color_depleted
+	else
+		empty_color = throwable_color_empty
+
+		local remaining_ratio = remaining / max_charges
+
+		if remaining_ratio <= 0.49 then
+			charge_color = UIHudSettings.color_tint_ammo_medium
+		elseif remaining_ratio <= 0.74 then
+			charge_color = UIHudSettings.color_tint_ammo_low
+		else
+			charge_color = UIHudSettings.color_tint_main_1
+		end
+	end
+
+	if self._numericui_throwable_icons then
+		local style = widget.style
+		local shown_icons = math.min(max_charges, throwable_max_icons)
+
+		for i = 1, throwable_max_icons do
+			local icon_style = style[throwable_style_ids[i]]
+
+			if i > shown_icons then
+				icon_style.color = throwable_color_hidden
+			elseif i > remaining then
+				icon_style.color = empty_color
+			else
+				icon_style.color = charge_color
+			end
+		end
+	else
+		widget.content.text = string.format("%d/%d", remaining, max_charges)
+		widget.style.text.text_color = charge_color
+	end
+
+	widget.visible = true
+	widget.dirty = true
+end
+
 mod:hook_safe("HudElementPlayerPanelBase", "destroy", function(self)
 	local player_extensions = self:_player_extensions(self._data.player)
 
@@ -503,6 +634,14 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 		end
 	end
 
+	if self._numericui_throwable_widget then
+		local ability_extension = extensions and extensions.ability
+
+		if ability_extension then
+			update_numericui_throwables(self, ability_extension)
+		end
+	end
+
 	if mod:get("ability_cd_text") or mod:get("ability_cd_bar") then
 		if extensions then
 			local ability_component = unit_data_extension:read_component("combat_ability")
@@ -527,6 +666,17 @@ mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _dra
 	HudElementTeamPlayerPanelSettings.feature_list.level = mod:get("level")
 
 	func(self, _parent, _draw_layer, _start_scale, data)
+
+	local throwable_icon_widget = self._widgets_by_name.team_throwable_icon
+	local throwable_text_widget = self._widgets_by_name.team_throwable_text
+
+	if throwable_icon_widget then
+		throwable_icon_widget.visible = false
+	end
+
+	if throwable_text_widget then
+		throwable_text_widget.visible = false
+	end
 
 	local player_extensions = self:_player_extensions(data.player)
 
@@ -553,6 +703,51 @@ mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _dra
 			elseif mod:get("ammo_text") then
 				peril_icon_widget.content.icon_text = ""
 				peril_icon_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
+			end
+
+			-- one-time grenade counter layout, the charges themselves are kept
+			-- up to date by update_numericui_throwables
+			if
+				throwable_icon_widget
+				and throwable_text_widget
+				and player_extensions.ability
+				and archetype ~= "psyker"
+			then
+				local widgets_by_name = self._widgets_by_name
+				local throwable_widget = widgets_by_name.throwable
+				local ammo_status_widget = widgets_by_name.ammo_status
+				local pocketable_widget = widgets_by_name.pocketable
+				local ammo_text_widget = widgets_by_name.numeric_ui_ammo_text
+				local shift = throwable_size[1]
+
+				-- make room for the counter by shifting the icon row along
+				if ammo_status_widget then
+					ammo_status_widget.style.ammo.offset[1] = ammo_status_widget.style.ammo.offset[1] - shift
+				end
+
+				if pocketable_widget then
+					pocketable_widget.style.texture.offset[1] = pocketable_widget.style.texture.offset[1] - shift
+				end
+
+				if ammo_text_widget then
+					ammo_text_widget.style.text.offset[1] = ammo_text_widget.style.text.offset[1] - shift
+				end
+
+				-- safe to read once, on_setting_changed recreates the hud
+				local show_icons = mod:get("grenades_count_format") == "icons"
+
+				if throwable_widget then
+					if show_icons then
+						throwable_widget.visible = false
+					else
+						throwable_widget.style.texture.offset[1] = 135
+					end
+
+					throwable_widget.dirty = true
+				end
+
+				self._numericui_throwable_icons = show_icons
+				self._numericui_throwable_widget = show_icons and throwable_icon_widget or throwable_text_widget
 			end
 		end
 	end
