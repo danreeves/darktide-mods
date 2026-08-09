@@ -81,7 +81,7 @@ local function recreate_hud()
 end
 
 local initialized = false
-mod.on_update = function()
+mod.update = function()
 	if initialized then
 		return
 	end
