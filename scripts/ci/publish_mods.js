@@ -139,7 +139,38 @@ async function resolveFileGroupId(modId, apiKey) {
       `Unexpected response from API: no 'id' in mod file for mod ${modId}`,
     );
   }
-  return fileId;
+  return { fileId, nexusModId: modUuid };
+}
+
+function getChangelogText(modName, version) {
+  const changelogPath = `${modName}/CHANGELOG.md`;
+  if (!fs.existsSync(changelogPath)) return null;
+
+  const lines = fs
+    .readFileSync(changelogPath, "utf8")
+    .split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) => {
+    const match = line.match(/^#{1,6}\s+(.+?)\s*#*$/);
+    return match && match[1] === version;
+  });
+  if (headingIndex === -1) return null;
+
+  const section = [];
+  for (let i = headingIndex + 1; i < lines.length; i += 1) {
+    if (/^#{1,6}\s+/.test(lines[i])) break;
+    section.push(lines[i]);
+  }
+
+  const changelogText = section.join("\n").trim();
+  return changelogText || null;
+}
+
+async function publishChangelog(nexusModId, version, changelogText, apiKey) {
+  await apiRequest("POST", `/mods/${nexusModId}/changelogs`, apiKey, {
+    version,
+    changelog: changelogText,
+  });
+  console.log(`  Changelog published for ${version}`);
 }
 
 function getPrevVersion(filePath, before) {
@@ -400,20 +431,35 @@ async function main() {
     }
 
     if (dryRun) {
+      const changelogText = getChangelogText(modName, cur.version);
       console.log(
         `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`,
       );
+      if (changelogText) {
+        console.log(`  Dry run: would publish changelog for ${cur.version}:`);
+        console.log(changelogText);
+      } else {
+        console.warn(
+          `  Dry run: no changelog found for ${modName} v${cur.version}`,
+        );
+      }
       uploaded.push(modName);
       continue;
     }
 
     let fileGroupId;
+    let nexusModId;
+    let changelogText;
     try {
       console.log(
         `  Resolving file_group_id from API for mod_id=${cur.mod_id}...`,
       );
-      fileGroupId = await resolveFileGroupId(cur.mod_id, apiKey);
+      ({ fileId: fileGroupId, nexusModId } = await resolveFileGroupId(
+        cur.mod_id,
+        apiKey,
+      ));
       console.log(`  Resolved file_group_id: ${fileGroupId}`);
+      changelogText = getChangelogText(modName, cur.version);
     } catch (e) {
       console.error(`Skipping ${modName}: ${e.message}`);
       skipped.push(modName);
@@ -444,6 +490,15 @@ async function main() {
         apiKey,
       );
       uploaded.push(modName);
+      if (changelogText) {
+        try {
+          await publishChangelog(nexusModId, cur.version, changelogText, apiKey);
+        } catch (e) {
+          console.error(
+            `Warning: failed to publish ${modName} changelog: ${e.message}`,
+          );
+        }
+      }
     } catch (e) {
       console.error(`Error uploading ${modName}: ${e.message}`);
     }

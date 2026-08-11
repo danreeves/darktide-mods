@@ -13,3 +13,7 @@
 ## Traditional Chinese localization
 
 When editing Traditional Chinese (zh-tw) strings, consult the [Darktide translation glossary](https://github.com/SyuanTsai/Warhammer-40-000-DARKTIDE-Mods/blob/main/Referneces/Translation.md). When the glossary lists multiple translations, preserve the existing context-specific terminology unless there is a clear reason to change it.
+
+## Mod changelogs
+
+Each published mod can keep its changelog in `<ModName>/CHANGELOG.md`. Add a heading matching the version in the `.mod` file, for example `## 26.08.10`, followed by the release notes. When available, the release workflow publishes that version section to Nexus Mods and includes the changelog in the downloaded mod archive.
