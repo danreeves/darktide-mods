@@ -438,6 +438,10 @@ async function main() {
       if (changelogText) {
         console.log(`  Dry run: would publish changelog for ${cur.version}:`);
         console.log(changelogText);
+      } else {
+        console.warn(
+          `  Dry run: no changelog found for ${modName} v${cur.version}`,
+        );
       }
       uploaded.push(modName);
       continue;
