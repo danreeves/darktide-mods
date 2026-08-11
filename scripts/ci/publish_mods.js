@@ -139,7 +139,45 @@ async function resolveFileGroupId(modId, apiKey) {
       `Unexpected response from API: no 'id' in mod file for mod ${modId}`,
     );
   }
-  return fileId;
+  return { fileId, nexusModId: modUuid };
+}
+
+function getChangelogText(modName, version) {
+  const changelogPath = `${modName}/CHANGELOG.md`;
+  if (!fs.existsSync(changelogPath)) {
+    throw new Error(`Missing ${changelogPath}; add a ## ${version} entry before publishing`);
+  }
+
+  const lines = fs
+    .readFileSync(changelogPath, "utf8")
+    .split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) => {
+    const match = line.match(/^#{1,6}\s+(.+?)\s*#*$/);
+    return match && match[1] === version;
+  });
+  if (headingIndex === -1) {
+    throw new Error(`Missing ## ${version} heading in ${changelogPath}`);
+  }
+
+  const section = [];
+  for (let i = headingIndex + 1; i < lines.length; i += 1) {
+    if (/^#{1,6}\s+/.test(lines[i])) break;
+    section.push(lines[i]);
+  }
+
+  const changelogText = section.join("\n").trim();
+  if (!changelogText) {
+    throw new Error(`Empty ## ${version} section in ${changelogPath}`);
+  }
+  return changelogText;
+}
+
+async function publishChangelog(nexusModId, version, changelogText, apiKey) {
+  await apiRequest("POST", `/mods/${nexusModId}/changelogs`, apiKey, {
+    version,
+    changelog: changelogText,
+  });
+  console.log(`  Changelog published for ${version}`);
 }
 
 function getPrevVersion(filePath, before) {
@@ -175,9 +213,13 @@ function getChangedModFiles(before, sha) {
 }
 
 function zipMod(modName) {
-  const result = spawnSync("zip", ["-r", `${modName}.zip`, modName], {
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    "zip",
+    ["-r", `${modName}.zip`, modName, `-x`, `${modName}/CHANGELOG.md`],
+    {
+      encoding: "utf8",
+    },
+  );
   return result.status === 0 && fs.existsSync(`${modName}.zip`);
 }
 
@@ -408,12 +450,18 @@ async function main() {
     }
 
     let fileGroupId;
+    let nexusModId;
+    let changelogText;
     try {
       console.log(
         `  Resolving file_group_id from API for mod_id=${cur.mod_id}...`,
       );
-      fileGroupId = await resolveFileGroupId(cur.mod_id, apiKey);
+      ({ fileId: fileGroupId, nexusModId } = await resolveFileGroupId(
+        cur.mod_id,
+        apiKey,
+      ));
       console.log(`  Resolved file_group_id: ${fileGroupId}`);
+      changelogText = getChangelogText(modName, cur.version);
     } catch (e) {
       console.error(`Skipping ${modName}: ${e.message}`);
       skipped.push(modName);
@@ -443,6 +491,7 @@ async function main() {
         fileGroupId,
         apiKey,
       );
+      await publishChangelog(nexusModId, cur.version, changelogText, apiKey);
       uploaded.push(modName);
     } catch (e) {
       console.error(`Error uploading ${modName}: ${e.message}`);
