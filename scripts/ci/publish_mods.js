@@ -489,10 +489,16 @@ async function main() {
         fileGroupId,
         apiKey,
       );
-      if (changelogText) {
-        await publishChangelog(nexusModId, cur.version, changelogText, apiKey);
-      }
       uploaded.push(modName);
+      if (changelogText) {
+        try {
+          await publishChangelog(nexusModId, cur.version, changelogText, apiKey);
+        } catch (e) {
+          console.error(
+            `Warning: failed to publish ${modName} changelog: ${e.message}`,
+          );
+        }
+      }
     } catch (e) {
       console.error(`Error uploading ${modName}: ${e.message}`);
     }
