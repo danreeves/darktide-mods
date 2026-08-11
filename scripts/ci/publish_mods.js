@@ -438,9 +438,12 @@ async function main() {
     }
 
     if (dryRun) {
+      const changelogText = getChangelogText(modName, cur.version);
       console.log(
         `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`,
       );
+      console.log(`  Dry run: would publish changelog for ${cur.version}:`);
+      console.log(changelogText);
       uploaded.push(modName);
       continue;
     }
