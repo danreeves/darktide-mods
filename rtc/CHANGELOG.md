@@ -1,5 +1,5 @@
 # rtc Changelog
 
-## Unreleased
+## 0.0.0
 
-- Changelog tracking initialized.
+Empty changelog.

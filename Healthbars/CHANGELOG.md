@@ -1,5 +1,5 @@
 # Healthbars Changelog
 
-## 26.08.05
+## 0.0.0
 
-- Changelog tracking initialized.
+Empty changelog.

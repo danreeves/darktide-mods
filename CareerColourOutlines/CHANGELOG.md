@@ -1,5 +1,5 @@
 # CareerColourOutlines Changelog
 
-## 26.04.12-1
+## 0.0.0
 
-- Changelog tracking initialized.
+Empty changelog.

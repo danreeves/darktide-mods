@@ -1,5 +1,5 @@
 # LogMeIn Changelog
 
-## 26.06.08
+## 0.0.0
 
-- Changelog tracking initialized.
+Empty changelog.

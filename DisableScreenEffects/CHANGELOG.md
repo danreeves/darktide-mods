@@ -1,5 +1,5 @@
 # DisableScreenEffects Changelog
 
-## 26.02.08-1
+## 0.0.0
 
-- Changelog tracking initialized.
+Empty changelog.
