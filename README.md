@@ -16,4 +16,4 @@ When editing Traditional Chinese (zh-tw) strings, consult the [Darktide translat
 
 ## Mod changelogs
 
-Each published mod keeps its changelog in `<ModName>/CHANGELOG.md`. Add a heading matching the version in the `.mod` file, for example `## 26.08.10`, followed by the release notes. The release workflow publishes that version section to Nexus Mods and includes the changelog in the downloaded mod archive.
+Each published mod can keep its changelog in `<ModName>/CHANGELOG.md`. Add a heading matching the version in the `.mod` file, for example `## 26.08.10`, followed by the release notes. When available, the release workflow publishes that version section to Nexus Mods and includes the changelog in the downloaded mod archive.

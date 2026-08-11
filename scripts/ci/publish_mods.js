@@ -144,9 +144,7 @@ async function resolveFileGroupId(modId, apiKey) {
 
 function getChangelogText(modName, version) {
   const changelogPath = `${modName}/CHANGELOG.md`;
-  if (!fs.existsSync(changelogPath)) {
-    throw new Error(`Missing ${changelogPath}; add a ## ${version} entry before publishing`);
-  }
+  if (!fs.existsSync(changelogPath)) return null;
 
   const lines = fs
     .readFileSync(changelogPath, "utf8")
@@ -155,9 +153,7 @@ function getChangelogText(modName, version) {
     const match = line.match(/^#{1,6}\s+(.+?)\s*#*$/);
     return match && match[1] === version;
   });
-  if (headingIndex === -1) {
-    throw new Error(`Missing ## ${version} heading in ${changelogPath}`);
-  }
+  if (headingIndex === -1) return null;
 
   const section = [];
   for (let i = headingIndex + 1; i < lines.length; i += 1) {
@@ -166,10 +162,7 @@ function getChangelogText(modName, version) {
   }
 
   const changelogText = section.join("\n").trim();
-  if (!changelogText) {
-    throw new Error(`Empty ## ${version} section in ${changelogPath}`);
-  }
-  return changelogText;
+  return changelogText || null;
 }
 
 async function publishChangelog(nexusModId, version, changelogText, apiKey) {
@@ -442,8 +435,10 @@ async function main() {
       console.log(
         `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`,
       );
-      console.log(`  Dry run: would publish changelog for ${cur.version}:`);
-      console.log(changelogText);
+      if (changelogText) {
+        console.log(`  Dry run: would publish changelog for ${cur.version}:`);
+        console.log(changelogText);
+      }
       uploaded.push(modName);
       continue;
     }
@@ -490,7 +485,9 @@ async function main() {
         fileGroupId,
         apiKey,
       );
-      await publishChangelog(nexusModId, cur.version, changelogText, apiKey);
+      if (changelogText) {
+        await publishChangelog(nexusModId, cur.version, changelogText, apiKey);
+      }
       uploaded.push(modName);
     } catch (e) {
       console.error(`Error uploading ${modName}: ${e.message}`);
