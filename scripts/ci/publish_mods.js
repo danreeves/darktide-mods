@@ -213,13 +213,9 @@ function getChangedModFiles(before, sha) {
 }
 
 function zipMod(modName) {
-  const result = spawnSync(
-    "zip",
-    ["-r", `${modName}.zip`, modName, `-x`, `${modName}/CHANGELOG.md`],
-    {
-      encoding: "utf8",
-    },
-  );
+  const result = spawnSync("zip", ["-r", `${modName}.zip`, modName], {
+    encoding: "utf8",
+  });
   return result.status === 0 && fs.existsSync(`${modName}.zip`);
 }
 
