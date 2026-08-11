@@ -25,7 +25,7 @@ function mod.load_profile_image(player_info, cb)
 
 	if platform == "steam" then
 		xuid = Application.hex64_to_dec(player_info:platform_user_id())
-		url = "https://steam-profile-json.deno.dev/" .. xuid
+		url = "https://steam-profile-xml-to-json.dnrvs.workers.dev/" .. xuid
 		get_image_url = function(response)
 			return response.body.profile.avatarFull
 		end
