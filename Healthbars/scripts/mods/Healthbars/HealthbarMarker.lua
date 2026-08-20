@@ -152,20 +152,21 @@ local function _localized_breed_name(breed)
 	return _localize_or_fallback(breed.display_name, "")
 end
 
-local function _damage_label_enabled()
-	return _feature_enabled("show_armour_type")
+local function _damage_label_enabled(ui_content)
+	return ui_content and ui_content.healthbars_show_info_label == true or false
 end
 
-local function _damage_label_display_mode()
+local function _damage_label_display_mode(ui_content)
 	if mod._psykhanium_full_debug_display then
 		return LABEL_DISPLAY_MODE_ARMOUR_TYPE
 	end
 
-	return mod:get("show_armour_type_display") or LABEL_DISPLAY_MODE_ARMOUR_TYPE
+	return ui_content and ui_content.healthbars_info_label_content or LABEL_DISPLAY_MODE_ARMOUR_TYPE
 end
 
-local function _damage_label_uses_hit_zone()
-	return _damage_label_enabled() and _damage_label_display_mode() == LABEL_DISPLAY_MODE_ARMOUR_TYPE
+local function _damage_label_uses_hit_zone(ui_content)
+	return _damage_label_enabled(ui_content) and
+		_damage_label_display_mode(ui_content) == LABEL_DISPLAY_MODE_ARMOUR_TYPE
 end
 
 local function _damage_label_visible(ui_content)
@@ -179,7 +180,7 @@ local function _post_kill_display_duration()
 end
 
 local function _damage_label_text(ui_content)
-	local display_mode = _damage_label_display_mode()
+	local display_mode = _damage_label_display_mode(ui_content)
 
 	if display_mode == LABEL_DISPLAY_MODE_ENEMY_NAME then
 		return ui_content.enemy_name_text or _localized_breed_name(ui_content.breed)
@@ -305,7 +306,7 @@ end
 -- ---------------------------------------------------------------------------
 
 local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
-	if not _damage_label_enabled() or not _damage_label_visible(ui_content) then
+	if not _damage_label_enabled(ui_content) or not _damage_label_visible(ui_content) then
 		return
 	end
 
@@ -327,15 +328,11 @@ local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, p
 	UIRenderer_draw_text(ui_renderer, label_text, font_size, font_type, label_pos, ui_style.size, ui_style.text_color, {})
 end
 
-local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
-	if not _feature_enabled("show_damage_numbers") then
-		return
-	end
-
+local function _draw_damage_numbers(template, ui_renderer, ui_style, ui_content, position)
 	local settings = template.damage_number_settings
 	local damage_numbers = ui_content.damage_numbers
-	local num = #damage_numbers
-	local show_dps = ui_content.damage_has_started and _feature_enabled("show_dps")
+	local num = ui_content.healthbars_show_damage_numbers == true and #damage_numbers or 0
+	local show_dps = ui_content.damage_has_started and ui_content.healthbars_show_dps == true
 	if num == 0 and not show_dps then
 		return
 	end
@@ -563,7 +560,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 		{
 			pass_type = "logic",
 			value = function(pass, ui_renderer, ui_style, ui_content, position, size)
-				_draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
+				_draw_damage_numbers(template, ui_renderer, ui_style, ui_content, position)
 				_draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
 			end,
 			style = {
@@ -658,7 +655,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 		local slot = SLOT_CACHE[i]
 		local icon_id = slot.icon_id
 		local stacks_id = slot.stacks_id
-		local x, y = _slot_pos(i, _damage_label_enabled())
+		local x, y = _slot_pos(i, false)
 
 		passes[#passes + 1] = {
 			pass_type = "texture",
@@ -2008,6 +2005,27 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 		return
 	end
 
+	local breed_features = mod._healthbar_breed_features
+	local features = breed_features and breed_features[breed.name]
+
+	if not features or features.enabled ~= true then
+		target.healthbars_vanilla_boss_indicator_state = nil
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
+	local full_debug_display = mod._psykhanium_full_debug_display == true
+	local show_dots = full_debug_display or features.show_dots == true
+	local show_debuffs = full_debug_display or features.show_debuffs == true
+
+	if not show_dots and not show_debuffs then
+		target.healthbars_vanilla_boss_indicator_state = nil
+		_hide_boss_indicator_widget(widget)
+
+		return
+	end
+
 	local buff_extension = ScriptUnit_has_extension(unit, "buff_system")
 
 	if not buff_extension then
@@ -2028,9 +2046,7 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 	if state.debuff_check_timer >= 0.1 then
 		state.debuff_check_timer = 0
 
-		-- Vanilla boss indicators ignore the Boss enemy display mode; only this
-        -- setting and the individual DoT/debuff toggles gate what appears here.
-		_poll_status_indicators(state.debuffs, state.content, buff_extension, unit, true, true)
+		_poll_status_indicators(state.debuffs, state.content, buff_extension, unit, show_dots, show_debuffs)
 	end
 
 	_pack_indicator_placements(state)
@@ -2046,14 +2062,12 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local content = widget.content
 	local style = widget.style
 	local unit = marker.unit
-	local psykhanium_behavior = mod._active_psykhanium_healthbar_behavior
-	local display_modes = mod._healthbar_breed_display_modes
+	local breed_features = mod._healthbar_breed_features
 	local breed = content.breed
-	local display_mode = display_modes and breed and display_modes[breed.name]
+	local features = breed_features and breed and breed_features[breed.name]
 
 	if mod._inactive_outside_psykhanium or mod._psykhanium_vanilla_only or
-		(psykhanium_behavior == "normal" and
-			(not display_mode or display_mode.show_healthbar ~= true)) then
+		not features or features.enabled ~= true then
 		local custom_marker_units = mod._custom_marker_units
 		if custom_marker_units then
 			custom_marker_units[unit] = nil
@@ -2065,11 +2079,28 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	end
 
 	local full_debug_display = mod._psykhanium_full_debug_display == true
-	local show_dots = full_debug_display or display_mode and display_mode.show_dots == true
-	local show_debuffs = full_debug_display or display_mode and display_mode.show_debuffs == true
-	local show_damage_numbers = _feature_enabled("show_damage_numbers")
-	local use_armour_slot_offset = _damage_label_enabled()
-	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
+	local show_healthbar = full_debug_display or features.show_healthbar == true
+	local show_dots = full_debug_display or features.show_dots == true
+	local show_debuffs = full_debug_display or features.show_debuffs == true
+	local global_damage_numbers_enabled = _feature_enabled("show_damage_numbers")
+	local show_damage_numbers = full_debug_display or
+		global_damage_numbers_enabled and features.show_damage_numbers == true
+	local show_dps = full_debug_display or features.show_dps == true and _feature_enabled("show_dps")
+	local show_info_label = full_debug_display or features.show_info_label == true and
+		_feature_enabled("show_armour_type")
+	local info_label_content = full_debug_display and LABEL_DISPLAY_MODE_ARMOUR_TYPE or features.info_label_content
+
+	if not show_damage_numbers and content.healthbars_show_damage_numbers ~= false then
+		table_clear(content.damage_numbers)
+	end
+
+	content.healthbars_show_damage_numbers = show_damage_numbers
+	content.healthbars_show_dps = show_dps
+	content.healthbars_show_info_label = show_info_label
+	content.healthbars_info_label_content = info_label_content
+
+	local use_armour_slot_offset = show_info_label
+	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone(content)
 	local needs_hit_reaction_data = show_damage_numbers
 	local dot_text_font_size = mod:get("dot_text_font_size") or DEFAULT_DOT_TEXT_FONT_SIZE
 	local debuff_text_font_size = mod:get("debuff_text_font_size") or DEFAULT_DEBUFF_TEXT_FONT_SIZE
@@ -2412,7 +2443,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		marker.health_fraction = health_fraction
 	end
 
-	local show_bar = _feature_enabled("show_bar")
+	local show_bar = show_healthbar and _feature_enabled("show_bar")
 	local show_shield_bar = show_bar and shield_fraction ~= nil and shield_fraction > 0 or false
 
 	if show_shield_bar then
