@@ -18,15 +18,6 @@ local TAB_GENERAL = mod:localize("tab_general")
 local TAB_DOT_DEBUFFS = mod:localize("tab_dot_debuffs")
 local TAB_ENEMIES = mod:localize("tab_enemies")
 
-local REQUIRED_ICON_PACKAGES = {
-	"packages/ui/hud/player_weapon/player_weapon",
-	"packages/ui/views/inventory_background_view/inventory_background_view",
-	"packages/ui/views/character_appearance_view/character_appearance_view",
-	"packages/ui/material_sets/circumstances",
-}
-
-mod.required_icon_packages = REQUIRED_ICON_PACKAGES
-
 local ICON_WARPFIRE = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_ember"
 local ICON_BLEED = "content/ui/materials/icons/presets/preset_13"
 local ICON_CHORDCLAW_BLEED = "content/ui/materials/icons/item_types/scars"
@@ -60,6 +51,12 @@ local function dropdown_option(text, value, icon, icon_colour)
 		value = value,
 		icon = icon,
 		icon_colour = icon_colour,
+		icon_style = {
+			color = icon_colour,
+			default_color = icon_colour,
+			hover_color = icon_colour,
+			selected_color = icon_colour,
+		},
 	}
 end
 
@@ -149,66 +146,74 @@ end
 
 local widgets = {
 	{
-		setting_id = "feature_toggles",
+		setting_id = "general_settings",
+		title = "tab_general",
 		type = "group",
 		tab = TAB_GENERAL,
 		sub_widgets = {
 			{
-				setting_id = "only_active_in_psykhanium",
-				type = "checkbox",
-				default_value = false,
-			},
-			{
-				setting_id = "psykhanium_healthbar_behavior",
-				type = "dropdown",
-				default_value = "normal",
-				tooltip = "psykhanium_healthbar_behavior_tooltip",
-				options = {
-					{ text = "psykhanium_healthbar_behavior_normal", value = "normal" },
-					{ text = "psykhanium_healthbar_behavior_vanilla_only", value = "vanilla_only" },
-					{ text = "psykhanium_healthbar_behavior_full_debug", value = "full_debug" },
+				setting_id = "feature_toggles",
+				type = "group",
+				tab = TAB_GENERAL,
+				sub_widgets = {
+					{
+						setting_id = "only_active_in_psykhanium",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
+						setting_id = "psykhanium_healthbar_behavior",
+						type = "dropdown",
+						default_value = "normal",
+						tooltip = "psykhanium_healthbar_behavior_tooltip",
+						options = {
+							{ text = "psykhanium_healthbar_behavior_normal", value = "normal" },
+							{ text = "psykhanium_healthbar_behavior_vanilla_only", value = "vanilla_only" },
+							{ text = "psykhanium_healthbar_behavior_full_debug", value = "full_debug" },
+						},
+					},
+					{
+						setting_id = "show_bar",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "show_vanilla_boss_bar_indicators",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "post_kill_display_duration",
+						type = "numeric",
+						default_value = 0,
+						range = { 0, 10 },
+						decimals_number = 1,
+						step_size_value = 0.2,
+						tooltip = "post_kill_display_duration_tooltip",
+					},
 				},
 			},
 			{
-				setting_id = "show_bar",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "show_vanilla_boss_bar_indicators",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "post_kill_display_duration",
-				type = "numeric",
-				default_value = 0,
-				range = { 0, 10 },
-				decimals_number = 1,
-				step_size_value = 0.2,
-				tooltip = "post_kill_display_duration_tooltip",
-			},
-		},
-	},
-	{
-		setting_id = "damage_number_settings",
-		type = "group",
-		tab = TAB_GENERAL,
-		sub_widgets = {
-			{
-				setting_id = "show_damage_numbers",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "show_dps",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "show_armour_type",
-				type = "checkbox",
-				default_value = true,
+				setting_id = "damage_number_settings",
+				type = "group",
+				tab = TAB_GENERAL,
+				sub_widgets = {
+					{
+						setting_id = "show_damage_numbers",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "show_dps",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "show_armour_type",
+						type = "checkbox",
+						default_value = true,
+					},
+				},
 			},
 		},
 	},
@@ -490,34 +495,42 @@ local widgets = {
 		},
 	},
 	{
-		setting_id = "horde_breeds",
+		setting_id = "enemy_settings",
+		title = "tab_enemies",
 		type = "group",
 		tab = TAB_ENEMIES,
-		sub_widgets = horde_and_roamers,
-	},
-	{
-		setting_id = "elite_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = elites,
-	},
-	{
-		setting_id = "special_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = specials,
-	},
-	{
-		setting_id = "monster_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = monsters,
-	},
-	{
-		setting_id = "ritualist_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = ritualists,
+		sub_widgets = {
+			{
+				setting_id = "horde_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = horde_and_roamers,
+			},
+			{
+				setting_id = "elite_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = elites,
+			},
+			{
+				setting_id = "special_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = specials,
+			},
+			{
+				setting_id = "monster_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = monsters,
+			},
+			{
+				setting_id = "ritualist_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = ritualists,
+			},
+		},
 	},
 }
 
@@ -525,7 +538,6 @@ return {
 	name = mod:localize("mod_name"),
 	description = mod:localize("mod_description"),
 	is_togglable = true,
-	required_icon_packages = REQUIRED_ICON_PACKAGES,
 	options = {
 		widgets = widgets,
 	},
