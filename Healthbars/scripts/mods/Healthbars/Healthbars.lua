@@ -7,6 +7,8 @@ local BreedActions = require("scripts/settings/breed/breed_actions")
 require("scripts/extension_systems/health/health_extension_base")
 local HealthExtension = require("scripts/extension_systems/health/health_extension")
 require("scripts/extension_systems/behavior/nodes/actions/bt_stagger_action")
+local EnemyFeatures = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarsEnemyFeatures")
+local enemy_feature_setting_id = EnemyFeatures.setting_id
 local MarkerTemplate = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarMarker")
 
 mod.textures = {
@@ -307,67 +309,150 @@ function mod.on_all_mods_loaded()
 	end
 end
 
-local display_modes_by_breed = {}
+local breed_features_by_breed = {}
+local breed_features_by_setting_breed = {}
+local enemy_enabled_setting_ids = {}
 local MUTATOR_BREED_SETTING_OVERRIDES = {
 	chaos_mutator_ritualist = "cultist_ritualist",
 }
 local PSYKHANIUM_BEHAVIOR_NORMAL = "normal"
 local PSYKHANIUM_BEHAVIOR_VANILLA_ONLY = "vanilla_only"
 local PSYKHANIUM_BEHAVIOR_FULL_DEBUG = "full_debug"
+local INFO_LABEL_CONTENT_ARMOUR_TYPE = "armour_type"
+local INFO_LABEL_CONTENT_ENEMY_NAME = "enemy_name"
 
-local DISPLAY_MODE_FULL = {
-	show_healthbar = true,
-	show_dots = true,
-	show_debuffs = true,
-}
-local DISPLAY_MODES = {
-	full = DISPLAY_MODE_FULL,
+local LEGACY_DISPLAY_MODE_FEATURES = {
+	full = {
+		enabled = true,
+		show_healthbar = true,
+		show_dots = true,
+		show_debuffs = true,
+	},
 	disabled = {
-		show_healthbar = false,
-		show_dots = false,
-		show_debuffs = false,
+		enabled = false,
+		show_healthbar = true,
+		show_dots = true,
+		show_debuffs = true,
 	},
 	healthbar_only = {
+		enabled = true,
 		show_healthbar = true,
 		show_dots = false,
 		show_debuffs = false,
 	},
 	healthbar_dots = {
+		enabled = true,
 		show_healthbar = true,
 		show_dots = true,
 		show_debuffs = false,
 	},
 	healthbar_debuffs = {
+		enabled = true,
 		show_healthbar = true,
 		show_dots = false,
 		show_debuffs = true,
 	},
 }
 
-local function get_display_mode(setting_id)
-	local value = mod:get(setting_id)
+local function canonical_breed_setting_name(breed_name)
+	local setting_breed_name = MUTATOR_BREED_SETTING_OVERRIDES[breed_name]
 
-	if value == true then
-		value = "full"
-		mod:set(setting_id, value, false)
-	elseif value == false then
-		value = "disabled"
-		mod:set(setting_id, value, false)
+	if setting_breed_name then
+		return setting_breed_name
+	elseif string_match(breed_name, "mutator") then
+		return (breed_name):gsub("_mutator", "")
 	end
 
-	return DISPLAY_MODES[value]
+	return breed_name
 end
 
-local function cache_display_modes()
-	for breed_name in pairs(Breeds) do
-		local setting_id = MUTATOR_BREED_SETTING_OVERRIDES[breed_name]
+local function set_migrated_breed_features(breed_name, legacy_features, info_label_content)
+	mod:set(enemy_feature_setting_id(breed_name, "enabled"), legacy_features.enabled, false)
+	mod:set(enemy_feature_setting_id(breed_name, "show_healthbar"), legacy_features.show_healthbar, false)
+	mod:set(enemy_feature_setting_id(breed_name, "show_damage_numbers"), true, false)
+	mod:set(enemy_feature_setting_id(breed_name, "show_dps"), true, false)
+	mod:set(enemy_feature_setting_id(breed_name, "show_info_label"), true, false)
+	mod:set(enemy_feature_setting_id(breed_name, "info_label_content"), info_label_content, false)
+	mod:set(enemy_feature_setting_id(breed_name, "show_dots"), legacy_features.show_dots, false)
+	mod:set(enemy_feature_setting_id(breed_name, "show_debuffs"), legacy_features.show_debuffs, false)
+end
 
-		if setting_id then
-			display_modes_by_breed[breed_name] = get_display_mode(setting_id)
-		elseif string_match(breed_name, "mutator") then
-			display_modes_by_breed[breed_name] = get_display_mode((breed_name):gsub("_mutator", ""))
+local function migrate_enemy_feature_settings()
+	local schema_version = mod:get(EnemyFeatures.schema_setting_id)
+
+	if type(schema_version) ~= "number" then
+		schema_version = 0
+	elseif schema_version >= EnemyFeatures.schema_version then
+		return
+	end
+
+	if schema_version < 1 then
+		local info_label_content = mod:get("show_armour_type_display")
+
+		if info_label_content ~= INFO_LABEL_CONTENT_ENEMY_NAME then
+			info_label_content = INFO_LABEL_CONTENT_ARMOUR_TYPE
+		end
+
+		for breed_name in pairs(Breeds) do
+			if not string_match(breed_name, "mutator") and
+				mod:get(enemy_feature_setting_id(breed_name, "enabled")) ~= nil then
+				local legacy_value = mod:get(breed_name)
+
+				if legacy_value == true then
+					legacy_value = "full"
+				elseif legacy_value == false then
+					legacy_value = "disabled"
+				end
+
+				local legacy_features = LEGACY_DISPLAY_MODE_FEATURES[legacy_value]
+
+				if legacy_features then
+					set_migrated_breed_features(breed_name, legacy_features, info_label_content)
+				end
+			end
+		end
+	end
+
+	-- DPS used to be implicitly gated by Show Damage Numbers. Preserve that
+	-- effective state when making the two global settings independent.
+	if schema_version < 2 and mod:get("show_damage_numbers") ~= true then
+		mod:set("show_dps", false, false)
+	end
+
+	mod:set(EnemyFeatures.schema_setting_id, EnemyFeatures.schema_version, false)
+end
+
+local function cache_breed_features()
+	for breed_name in pairs(Breeds) do
+		local setting_breed_name = canonical_breed_setting_name(breed_name)
+		local enabled_setting_id = enemy_feature_setting_id(setting_breed_name, "enabled")
+		local enabled = mod:get(enabled_setting_id)
+
+		if enabled == nil then
+			breed_features_by_breed[breed_name] = nil
 		else
-			display_modes_by_breed[breed_name] = get_display_mode(breed_name)
+			local features = breed_features_by_setting_breed[setting_breed_name]
+
+			if not features then
+				features = {}
+				breed_features_by_setting_breed[setting_breed_name] = features
+			end
+
+			local info_label_content = mod:get(enemy_feature_setting_id(setting_breed_name, "info_label_content"))
+
+			features.enabled = enabled == true
+			features.show_healthbar = mod:get(enemy_feature_setting_id(setting_breed_name, "show_healthbar")) == true
+			features.show_damage_numbers =
+				mod:get(enemy_feature_setting_id(setting_breed_name, "show_damage_numbers")) == true
+			features.show_dps = mod:get(enemy_feature_setting_id(setting_breed_name, "show_dps")) == true
+			features.show_info_label = mod:get(enemy_feature_setting_id(setting_breed_name, "show_info_label")) == true
+			features.info_label_content = info_label_content == INFO_LABEL_CONTENT_ENEMY_NAME and
+				INFO_LABEL_CONTENT_ENEMY_NAME or INFO_LABEL_CONTENT_ARMOUR_TYPE
+			features.show_dots = mod:get(enemy_feature_setting_id(setting_breed_name, "show_dots")) == true
+			features.show_debuffs = mod:get(enemy_feature_setting_id(setting_breed_name, "show_debuffs")) == true
+
+			breed_features_by_breed[breed_name] = features
+			enemy_enabled_setting_ids[enabled_setting_id] = true
 		end
 	end
 end
@@ -406,7 +491,7 @@ local function healthbar_breed(unit)
 	return unit_data_extension:breed()
 end
 
-local function should_enable_healthbar(unit, psykhanium_behavior)
+local function should_enable_marker(unit, psykhanium_behavior)
 	local breed = healthbar_breed(unit)
 	if not breed then
 		return false
@@ -425,13 +510,9 @@ local function should_enable_healthbar(unit, psykhanium_behavior)
 		return false
 	end
 
-	if behavior == PSYKHANIUM_BEHAVIOR_FULL_DEBUG then
-		return display_modes_by_breed[breed.name] ~= nil
-	end
+	local features = breed_features_by_breed[breed.name]
 
-	local display_mode = display_modes_by_breed[breed.name]
-
-	return display_mode and display_mode.show_healthbar == true or false
+	return features and features.enabled == true or false
 end
 
 local function add_custom_healthbar_marker(unit)
@@ -439,7 +520,7 @@ local function add_custom_healthbar_marker(unit)
 		return false
 	end
 
-	if not should_enable_healthbar(unit) then
+	if not should_enable_marker(unit) then
 		return false
 	end
 
@@ -582,11 +663,11 @@ local function resync_existing_healthbars()
 
 	local function reconcile_unit(unit)
 		local breed = healthbar_breed(unit)
-		if not breed or display_modes_by_breed[breed.name] == nil then
+		if not breed or breed_features_by_breed[breed.name] == nil then
 			return false
 		end
 
-		if should_enable_healthbar(unit, behavior) then
+		if should_enable_marker(unit, behavior) then
 			local vanilla_marker_id = vanilla_by_unit[unit]
 			if vanilla_marker_id then
 				marker_ids_to_remove[#marker_ids_to_remove + 1] = vanilla_marker_id
@@ -685,25 +766,20 @@ end
 
 local function setting_requires_marker_resync(setting_id)
 	if setting_id == "only_active_in_psykhanium" or setting_id == "psykhanium_healthbar_behavior" or
-		display_modes_by_breed[setting_id] ~= nil then
+		enemy_enabled_setting_ids[setting_id] then
 		return true
-	end
-
-	for _, mapped_setting_id in pairs(MUTATOR_BREED_SETTING_OVERRIDES) do
-		if mapped_setting_id == setting_id then
-			return true
-		end
 	end
 
 	return false
 end
 
-cache_display_modes()
-mod._healthbar_breed_display_modes = display_modes_by_breed
+migrate_enemy_feature_settings()
+cache_breed_features()
+mod._healthbar_breed_features = breed_features_by_breed
 current_psykhanium_behavior()
 
 mod.on_setting_changed = function(setting_id)
-	cache_display_modes()
+	cache_breed_features()
 	refresh_colors()
 	current_psykhanium_behavior()
 
@@ -895,7 +971,7 @@ mod:hook("HudElementWorldMarkers", "event_add_world_marker_unit", function(func,
 	if marker_type == "damage_indicator" then
 		local behavior = current_psykhanium_behavior()
 
-		if behavior and should_enable_healthbar(unit, behavior) then
+		if behavior and should_enable_marker(unit, behavior) then
 			return
 		end
 	end

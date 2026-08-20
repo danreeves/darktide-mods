@@ -1,5 +1,7 @@
 local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
+local EnemyFeatures = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarsEnemyFeatures")
+local enemy_feature_setting_id = EnemyFeatures.setting_id
 
 local horde_and_roamers = {}
 local elites = {}
@@ -61,23 +63,66 @@ local function dropdown_option(text, value, icon, icon_colour)
 	}
 end
 
-local function enemy_display_mode_options()
-	return {
-		{ text = "enemy_display_mode_full", value = "full" },
-		{ text = "enemy_display_mode_disabled", value = "disabled" },
-		{ text = "enemy_display_mode_healthbar_only", value = "healthbar_only" },
-		{ text = "enemy_display_mode_healthbar_dots", value = "healthbar_dots" },
-		{ text = "enemy_display_mode_healthbar_debuffs", value = "healthbar_debuffs" },
-	}
-end
-
-local function add(tbl, breed_name, default_value)
+local function add(tbl, breed_name, default_enabled)
 	tbl[#tbl + 1] = {
-		setting_id = breed_name,
-		type = "dropdown",
-		default_value = default_value and "full" or "disabled",
-		tooltip = "enemy_display_mode_tooltip",
-		options = enemy_display_mode_options(),
+		setting_id = enemy_feature_setting_id(breed_name, "enabled"),
+		title = breed_name,
+		type = "checkbox",
+		default_value = default_enabled,
+		sub_widgets = {
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_healthbar"),
+				title = "show_bar",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_damage_numbers"),
+				title = "show_damage_numbers",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_dps"),
+				title = "show_dps",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_info_label"),
+				title = "show_armour_type",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+				sub_widgets = {
+					{
+						setting_id = enemy_feature_setting_id(breed_name, "info_label_content"),
+						title = "show_armour_type_display",
+						type = "dropdown",
+						default_value = "armour_type",
+						options = {
+							{ text = "display_armour_type", value = "armour_type" },
+							{ text = "display_enemy_name", value = "enemy_name" },
+						},
+					},
+				},
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_dots"),
+				title = "show_dots",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_debuffs"),
+				title = "show_debuffs",
+				type = "checkbox",
+				default_value = true,
+			},
+		},
 	}
 end
 
@@ -154,31 +199,16 @@ local widgets = {
 				setting_id = "show_damage_numbers",
 				type = "checkbox",
 				default_value = true,
-
-				sub_widgets = {
-					{
-						setting_id = "show_dps",
-						type = "checkbox",
-						default_value = true,
-					},
-					{
-						setting_id = "show_armour_type",
-						type = "checkbox",
-						default_value = true,
-
-						sub_widgets = {
-							{
-								setting_id = "show_armour_type_display",
-								type = "dropdown",
-								default_value = "armour_type",
-								options = {
-									{ text = "display_armour_type", value = "armour_type" },
-									{ text = "display_enemy_name", value = "enemy_name" },
-								},
-							},
-						},
-					},
-				},
+			},
+			{
+				setting_id = "show_dps",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = "show_armour_type",
+				type = "checkbox",
+				default_value = true,
 			},
 		},
 	},
