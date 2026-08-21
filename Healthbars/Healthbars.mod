@@ -8,7 +8,12 @@ return {
 			mod_localization = "Healthbars/scripts/mods/Healthbars/Healthbars_localization",
 		})
 	end,
-	packages = {},
+	packages = {
+		"packages/ui/hud/player_weapon/player_weapon",
+		"packages/ui/views/inventory_background_view/inventory_background_view",
+		"packages/ui/views/character_appearance_view/character_appearance_view",
+		"packages/ui/material_sets/circumstances",
+	},
     load_after = {
         "Alfs_DMF_Extensions",
         "animation_events",
