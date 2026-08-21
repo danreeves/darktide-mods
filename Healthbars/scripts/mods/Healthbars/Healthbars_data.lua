@@ -207,6 +207,16 @@ local widgets = {
 						setting_id = "show_dps",
 						type = "checkbox",
 						default_value = true,
+						sub_widgets = {
+							{
+								setting_id = "dps_report_duration",
+								type = "numeric",
+								default_value = 3.0,
+								range = { 0, 10 },
+								decimals_number = 1,
+								step_size_value = 0.2,
+							},
+						},
 					},
 					{
 						setting_id = "show_armour_type",
