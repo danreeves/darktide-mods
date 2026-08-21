@@ -292,21 +292,6 @@ function mod.on_all_mods_loaded()
 	if not refresh_animation_events_availability() then
 		publish_animation_events_definitions(false)
 	end
-
-	-- Preload icon packages
-	local function load_package(package_name)
-		if not Managers.package:has_loaded(package_name) then
-			Managers.package:load(package_name, "Healthbars")
-		end
-	end
-
-	local required_icon_packages = mod.required_icon_packages
-
-	if required_icon_packages then
-		for i = 1, #required_icon_packages do
-			load_package(required_icon_packages[i])
-		end
-	end
 end
 
 local breed_features_by_breed = {}
