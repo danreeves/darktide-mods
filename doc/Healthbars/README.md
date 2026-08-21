@@ -4,11 +4,12 @@
 
 ### What it includes
 - **Enemy healthbars** for selected enemy types in regular game modes
+- **Per-enemy feature controls** for healthbars, damage numbers, DPS reports, info labels, DoTs, and debuffs
 - **Vanguard enemy support**
 - **Shield healthbars** for enemies with shield health
 - **Damage numbers** when tracked enemies take damage
 - **DPS report** for tracked targets after the damage window ends
-- **Configurable post-kill display duration** for the healthbar, info label, and DPS report
+- **Independent post-kill durations** for the normal Healthbars UI and the DPS report
 - **Info label** above the bar
   - **Armour type**
   - **Enemy name**
@@ -39,16 +40,23 @@
 
 Open the Healthbars page in the mod options.
 
-The standard DMF page organizes settings into groups for general features, damage numbers, DoT/debuff indicators, and enemy selection.
-
-If **Alf's DMF Mod Settings Extensions** is installed, the same settings are presented in localized tabs:
-- **General** - general feature toggles and damage-number settings
+Healthbars uses the current Darktide Mod Framework settings system and organizes its options into three main sections:
+- **General** - general feature toggles, Psykhanium behavior, post-kill timing, and damage-number settings
 - **DoT & Debuffs** - status indicators, display modes, text sizing, and Warpfire color
-- **Enemies** - per-enemy healthbar and indicator display modes
+- **Enemies** - per-enemy enable and feature controls
 
-The extension is optional. Healthbars retains the same settings and functionality with standard DMF.
+The settings use native DMF groups and nested `sub_widgets`, so child settings are shown only when their parent option is enabled where applicable.
 
-### Toggles (on/off)
+If **Alf's DMF Mod Settings Extensions** is installed, the same settings and semantic tab structure are presented through ALF's interface. The extension is optional. Healthbars uses the same settings definition and functionality with standard DMF and does not require an ALF-specific configuration path.
+
+There are currently two presentation-only compatibility issues when ALF's settings extension is installed and its tabbed settings interface is enabled:
+
+- Healthbars' current DMF dropdown icon styling overrides ALF's extension-specific dropdown icon coloring. The configured status icons still display, but ALF's own coloring treatment is not applied as intended.
+- ALF restores the previously active Healthbars tab when reopening Mod Options, but does not restore that tab's previous scroll position. The tab opens at its initial scroll position instead. Native DMF restores the scroll position correctly when ALF's tabbed interface is not active.
+
+Neither issue affects Healthbars gameplay behavior or the saved feature settings themselves.
+
+### Global toggles (on/off)
 - Only active in Psykhanium
 - Show health bar
 - Show DoT/debuff markers on vanilla boss health bars
@@ -71,8 +79,11 @@ The extension is optional. Healthbars retains the same settings and functionalit
 - Show Increased damage taken debuff
 - Show Empyric Shock debuff
 
-### Enemy selection
-Each enemy has an independent display-mode dropdown within these groups:
+The global healthbar, damage-number, DPS, and info-label settings act as master switches. Their corresponding per-enemy setting must also be enabled for the feature to appear on that enemy.
+
+### Enemy selection and per-enemy features
+
+Enemies are organized into these groups:
 - **Horde/Roamer**
 - **Elite**
 - **Special**
@@ -81,19 +92,37 @@ Each enemy has an independent display-mode dropdown within these groups:
 
 The Horde/Roamer group includes the Cultist and Renegade Vanguard enemies.
 
-The available modes are:
-- **Full display** - healthbar, DoTs, and debuffs
-- **Disabled** - no Healthbars marker
-- **Healthbar only** - healthbar without status indicators
-- **Healthbar + DoTs** - healthbar and DoT indicators, without debuffs
-- **Healthbar + Debuffs** - healthbar and debuff indicators, without DoTs
+Each enemy has a master checkbox. Disabling it prevents Healthbars UI from being shown for that enemy and hides its child settings. When enabled, the following features can be configured independently:
 
-Existing boolean settings are migrated automatically. Previously enabled enemies use **Full display**, while previously disabled enemies remain **Disabled**. Changing a mode updates enemies already present in the world; they do not need to be respawned. Indicator categories hidden by the selected mode are not polled for that enemy.
+- **Show Healthbar**
+- **Show Damage Numbers**
+- **Show DPS Report**
+- **Show Info Label**
+  - **Info Label Content**: `Armour type` / `Enemy name`
+- **Show DoTs**
+- **Show Debuffs**
+
+This allows combinations that were not possible with the old display-mode dropdowns, including DoTs only, debuffs only, DoTs + debuffs without a healthbar, or an info label without damage numbers.
+
+The per-enemy feature switches are combined with the corresponding global settings. For example:
+
+```text
+effective healthbar visibility =
+    global Show Healthbar
+    AND enemy Enabled
+    AND enemy Show Healthbar
+```
+
+The same principle applies to damage numbers, DPS reports, and info labels. The per-enemy **Show DoTs** and **Show Debuffs** switches gate their respective categories, while the individual DoT/debuff settings still determine which effects are displayed.
+
+Existing per-enemy display-mode settings are migrated automatically into the new feature settings. Previously configured enabled/disabled states and healthbar/DoT/debuff combinations are preserved, while the newly added per-enemy controls for damage numbers, DPS, and info labels receive defaults that preserve the previous global behavior.
+
+Changing per-enemy settings updates enemies already present in the world; they do not need to be respawned. Indicator categories disabled for an enemy are not polled for that enemy.
 
 ### Psykhanium behavior
 
 **Psykhanium Healthbar Behavior** controls which healthbars are used inside the Psykhanium:
-- **Use normal breed settings** - applies each enemy's configured display mode
+- **Use normal breed settings** - applies each enemy's configured enable state and per-feature settings
 - **Vanilla Healthbars only** - uses Darktide's standard Psykhanium healthbars without custom Healthbars markers
 - **Full Healthbars debug display** - displays custom Healthbars markers for every supported enemy and enables all supported Healthbars features, DoTs, and debuffs
 
@@ -116,8 +145,17 @@ These colors apply in both regular missions and the Psykhanium.
 Enemies with shield health display a thin white shield layer over the main healthbar. Its width follows the remaining shield percentage. Shield damage triggers the same temporary marker-visibility window as health damage.
 
 ### Display duration
-- **Post-kill display duration**: controls how long the healthbar, info label, and DPS report remain visible after an enemy dies. Range: `0-10` seconds, default: `0`, adjustable in `0.2` second steps. Set it to `0` to let the healthbar disappear immediately after death.
-- This duration only applies while the enemy unit still exists in the world. Healthbars are anchored to the enemy unit's head node, so when the game removes the body, the marker loses its world anchor and cannot continue rendering in the current implementation.
+
+Healthbars uses separate timers for the normal post-kill marker UI and the final DPS report:
+
+- **Post-kill display duration**: controls how long the normal Healthbars UI remains visible after an enemy dies. This includes the healthbar, info label, damage numbers, and status indicators. Range: `0-10` seconds, default: `0`, adjustable in `0.2` second steps. Set it to `0` to hide the normal post-kill UI immediately.
+- **DPS report duration**: controls how long the final DPS result remains visible after an enemy dies. Range: `0-10` seconds, default: `3.0`, adjustable in `0.2` second steps. This setting is shown below **Show DPS report**.
+
+The two timers are independent. For example, with **Post-kill display duration** set to `0` and **DPS report duration** set to `3`, the normal marker UI disappears immediately while the DPS result remains visible for up to three seconds.
+
+The marker remains alive for the longer active timer. The DPS duration does not extend marker lifetime when DPS is disabled globally or for that enemy.
+
+Both durations only apply while the enemy unit still exists in the world. Healthbars are anchored to the enemy unit's head node, so when the game removes the body, the marker loses its world anchor and cannot continue rendering in the current implementation.
 
 ### Readability options
 - **DOT stack number size**: adjusts the font size for Bleed, Chordclaw Bleed, Burn, Phosphor Burn, Warpfire / Soulblaze, and Toxin status text. Range: `10-24`, default: `14`.
@@ -140,7 +178,7 @@ Animation Events is optional; authoritative local tracking works without it. The
 
 When enabled, Healthbars can also draw the configured DoT and debuff indicators on the game's normal boss health bars.
 
-This is independent from **Show health bar**, so players can disable the custom overhead boss healthbar while still seeing boss DoTs and debuffs on the vanilla boss UI.
+This is independent from the per-enemy **Show Healthbar** setting, so players can disable the custom overhead boss healthbar while still seeing boss DoTs and debuffs on the vanilla boss UI.
 
 The vanilla boss indicators reuse the existing status settings:
 - Per-effect toggles
@@ -149,7 +187,7 @@ The vanilla boss indicators reuse the existing status settings:
 - Debuff stack/time text size
 - DOT numbers only
 - Warpfire color
-- The boss enemy's per-enemy DoT/debuff display mode
+- The boss enemy's **Enabled**, **Show DoTs**, and **Show Debuffs** settings
 
 ### Display modes (per effect)
 Some effects have a display dropdown:
@@ -228,9 +266,11 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 - Healthbars are anchored natively to the enemy **head node** instead of relying on custom world-position logic, which helps prevent the occasional bar-at-the-feet issue.
 - Debuff changes trigger the same visibility window as damage, so indicators can appear when a debuff is applied even if the enemy has not taken direct damage yet.
 - Debuff-only visibility also supports the **info label**, so armour type or enemy name can appear when a debuff is applied without direct damage.
-- The **Post-kill display duration** extends the marker lifetime after damage has started, but it intentionally does not detach healthbars from enemy units. The current implementation relies on Fatshark's world marker anchoring to the enemy unit and its head node; once the game despawns that unit/body, there is no valid source transform for the healthbar to follow. Keeping a marker alive past that point would require a different fallback marker system, so Healthbars lets the marker disappear with the body instead of inventing a disconnected position.
-- The mod supports **per-enemy display modes**, grouped by Horde/Roamer, Elite, Special, Monster/Captain, and Ritualist.
-- **Damage numbers**, **DPS**, and the **info label** are handled independently, so the label can still work when damage numbers are disabled.
+- **Post-kill display duration** and **DPS report duration** are independent. The normal post-kill UI uses the first timer, the final DPS result uses the second, and the marker remains alive for the longer active timer.
+- Neither post-kill timer detaches healthbars from enemy units. The current implementation relies on Fatshark's world marker anchoring to the enemy unit and its head node; once the game despawns that unit/body, there is no valid source transform for the healthbar to follow. Keeping a marker alive past that point would require a different fallback marker system, so Healthbars lets the marker disappear with the body instead of inventing a disconnected position.
+- The mod supports **per-enemy feature controls**, grouped by Horde/Roamer, Elite, Special, Monster/Captain, and Ritualist.
+- **Healthbar**, **damage numbers**, **DPS**, **info label**, **DoTs**, and **debuffs** can be gated independently for each enemy.
+- The existing global healthbar, damage-number, DPS, and info-label settings remain master switches over the corresponding per-enemy options.
 - **Enemy name** mode uses the game's localized `breed.display_name`.
 - If localization data is missing or broken, the mod hides the label instead of showing internal names or `<unlocalized ...>` placeholders.
 - **Armour type** uses the exact last hit zone when that data is available.
@@ -245,28 +285,32 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 - **Warpfire** uses a player-selectable icon tint, with **Sanctified Cerulean** as the default option.
 - **Increased damage taken (total)** is a **combined value**, so it can jump between color tiers quickly depending on team debuffs.
 - Vanilla Psykhanium damage indicators are suppressed only in the **Psykhanium**, which avoids duplicate bars there while keeping regular mission behavior intact.
+- Healthbars uses native DMF nested settings and declares its settings icon packages through the `.mod` package list instead of manually managing their package lifecycle.
 
 ## Known issues
+- With **Alf's DMF Mod Settings Extensions** and its tabbed settings interface enabled, Healthbars' DMF dropdown icon styling currently overrides ALF's extension-specific dropdown icon coloring. This is a settings-menu presentation issue only.
+- With **Alf's DMF Mod Settings Extensions** and its tabbed settings interface enabled, the active Healthbars tab is restored when reopening Mod Options, but the previous scroll position within that tab is not. Native DMF restores the scroll position correctly without ALF's tabbed interface.
 - **Brittleness `Time (s)`** depends on the game exposing reliable duration progress for the active rending buff. On some enemies or situations the icon may remain visible while the timer text is blank.
 - **Armour type** in normal missions may reflect the enemy's default/body armour when exact hit-zone data is unavailable on the client.
 - Percentage text can still be hard to read depending on icon color and background contrast.
 - Very dense fights can produce a lot of simultaneous information if many status toggles are enabled at once.
 
 ## Recent additions
+- Overhauled the **Enemies** settings with a master enable switch and independent per-enemy controls for healthbars, damage numbers, DPS reports, info labels, DoTs, and debuffs, including automatic migration from the previous display-mode settings.
+- Modernized the settings structure for the current DMF release, including native grouping/nested settings and `.mod` package declarations for settings icons while preserving compatibility with **Alf's DMF Mod Settings Extensions**.
+- Added a separate **DPS report duration** so the final DPS result can remain visible independently from the normal post-kill healthbar and info-label duration.
 - Added an optional **Stagger** indicator with `Icon only` and `Time (s)` modes, authoritative local tracking, and optional Animation Events estimates for public non-host games.
 - Added configurable **Psykhanium Healthbar Behavior** and **Only active in Psykhanium** settings.
-- Replaced per-enemy toggles with **Full display**, **Disabled**, **Healthbar only**, **Healthbar + DoTs**, and **Healthbar + Debuffs** modes, including automatic migration of existing settings.
 - Added **Vanguard enemies** and **shield healthbars**.
 - Corrected live-mission damage-number colors: critical hits are orange and weakspot hits are yellow.
 - Added Darktide 1.12 Skitarii/Cryptic support for **Chordclaw Bleed**, **Phosphor Burn**, grouped **Electrocution**, **Servo-Skull damage taken**, and **Weapon Malfunction**.
 - Added independent settings and display modes for **Chordclaw Bleed** and **Phosphor Burn**.
 - Added `Stacks` / `Icon only` display choices for regular **Bleed**, **Burn**, and **Toxin**.
 - Combined Phosphor and other separately stacking enemy-side rending debuffs into the existing **Brittleness** indicator, using **2.5% per equivalent stack** with **40 stack / 100%** caps.
-- Added explicit package coverage for the new status icons used both in Mod Options and during gameplay.
 - Added optional support for **Alf's DMF Mod Settings Extensions**, including localized tabs and colored DoT/debuff dropdown icons.
 - Reduced the minimum **Post-kill display duration** to `0`, changed the default to `0`, and added `0.2` second adjustment steps.
 - Added optional DoT/debuff indicators for vanilla boss health bars, independent from the custom overhead healthbar.
-- Added **Post-kill display duration** to keep the healthbar, info label, and DPS report visible for longer after an enemy dies.
+- Added **Post-kill display duration** to keep the healthbar and info label visible for longer after an enemy dies.
 - Improved info-label visibility so armour type or enemy name can appear from debuff-only marker visibility, even before direct damage is dealt.
 - Added a configurable **info label** that can show either **armour type** or **enemy name**.
 - Added safe localized enemy-name handling to prevent `<unlocalized ...>` strings or internal breed ids from appearing in the HUD.
