@@ -1,5 +1,7 @@
 local mod = get_mod("ProfilePictures")
 
+local _apply_profile_image = mod.apply_profile_image
+
 local hud_types = {
 	"PersonalPlayerPanel",
 	"PersonalPlayerPanelHub",
@@ -7,24 +9,11 @@ local hud_types = {
 	"TeamPlayerPanelHub",
 }
 
--- The portrait is a render target fed into the frame material's icon slot, so the picture goes into that same slot instead of being drawn over the panel. The equipped frame keeps rendering around it, and the panel's own tint, shadowing and fades still apply.
-local function _apply_profile_image(self, texture)
+-- The player icon widget belongs to the panel, so resolve it before handing the picture over
+local function _apply_panel_profile_image(self, texture)
 	local widgets_by_name = self._widgets_by_name
-	local widget = widgets_by_name and widgets_by_name.player_icon
-	local style = widget and widget.style.texture
 
-	if not style then
-		return
-	end
-
-	local material_values = style.material_values
-
-	material_values.use_placeholder_texture = 0
-	material_values.rows = 1
-	material_values.columns = 1
-	material_values.grid_index = 0
-	material_values.texture_icon = texture
-	widget.dirty = true
+	_apply_profile_image(widgets_by_name and widgets_by_name.player_icon, "texture", texture)
 end
 
 local function _load_portrait_icon(self)
@@ -38,7 +27,7 @@ local function _load_portrait_icon(self)
 
 		self._profile_picture_texture = texture
 
-		_apply_profile_image(self, texture)
+		_apply_panel_profile_image(self, texture)
 	end)
 end
 
@@ -47,7 +36,7 @@ local function _cb_set_player_icon(self)
 	local texture = self._profile_picture_texture
 
 	if texture then
-		_apply_profile_image(self, texture)
+		_apply_panel_profile_image(self, texture)
 	end
 end
 
