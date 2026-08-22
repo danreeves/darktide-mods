@@ -1,22 +1,6 @@
 local mod = get_mod("ProfilePictures")
 
--- The plaque portrait is a render target fed into the frame material's icon slot, so the picture goes into that same slot instead of being drawn over the plaque. The equipped frame keeps rendering around it.
-local function _apply_profile_image(widget, texture)
-	local style = widget.style.portrait
-
-	if not style then
-		return
-	end
-
-	local material_values = style.material_values
-
-	material_values.use_placeholder_texture = 0
-	material_values.rows = 1
-	material_values.columns = 1
-	material_values.grid_index = 0
-	material_values.texture_icon = texture
-	widget.dirty = true
-end
+local _apply_profile_image = mod.apply_profile_image
 
 local function _load_profile_image(widget, player_info)
 	local widget_content = widget.content
@@ -36,7 +20,7 @@ local function _load_profile_image(widget, player_info)
 
 		widget_content.profile_picture_texture = texture
 
-		_apply_profile_image(widget, texture)
+		_apply_profile_image(widget, "portrait", texture)
 	end)
 end
 
@@ -49,7 +33,7 @@ mod:hook_safe("SocialMenuRosterView", "_cb_set_player_icon", function(_self, wid
 	local texture = widget.content.profile_picture_texture
 
 	if texture then
-		_apply_profile_image(widget, texture)
+		_apply_profile_image(widget, "portrait", texture)
 	end
 end)
 
@@ -83,7 +67,7 @@ mod:hook_safe("ViewElementPlayerSocialPopup", "_cb_set_player_icon", function(_s
 	local texture = widget.content.profile_picture_texture
 
 	if texture then
-		_apply_profile_image(widget, texture)
+		_apply_profile_image(widget, "portrait", texture)
 	end
 end)
 

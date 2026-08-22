@@ -250,7 +250,26 @@ function mod.load_profile_image(player_info, cb)
 	_load_profile_image(player_info, cb, true)
 end
 
+-- The portrait is a render target fed into the frame material's icon slot, so the picture goes into that same slot instead of being drawn over the panel. The equipped frame keeps rendering around it, and each panel's own tint, shadowing and fades still apply.
+function mod.apply_profile_image(widget, style_id, texture)
+	local style = widget and widget.style[style_id]
+
+	if not style then
+		return
+	end
+
+	local material_values = style.material_values
+
+	material_values.use_placeholder_texture = 0
+	material_values.rows = 1
+	material_values.columns = 1
+	material_values.grid_index = 0
+	material_values.texture_icon = texture
+	widget.dirty = true
+end
+
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/PlayerPanel")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/SocialMenu")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/Lobby")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/EndScreen")
+mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/GroupFinder")
