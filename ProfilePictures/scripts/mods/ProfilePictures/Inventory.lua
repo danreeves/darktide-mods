@@ -1,6 +1,7 @@
 local mod = get_mod("ProfilePictures")
 
 local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
 -- The view owns a single portrait widget, and neither vanilla callback passes it, so resolve it here
 local function _apply_view_profile_image(self, texture)
@@ -10,6 +11,10 @@ local function _apply_view_profile_image(self, texture)
 end
 
 mod:hook_safe("InventoryBackgroundView", "_load_portrait_icon", function(self)
+	if not location_enabled.inventory then
+		return
+	end
+
 	local player = self._preview_player
 	local player_info = player and mod.player_info_for_player(player)
 

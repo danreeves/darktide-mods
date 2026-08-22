@@ -268,6 +268,31 @@ function mod.apply_profile_image(widget, style_id, texture)
 	widget.dirty = true
 end
 
+-- Read on every portrait load, so keep the toggles out of the settings lookup path. Mutated in place, so the integrations can hold a local reference to it.
+local location_enabled = {}
+
+mod.location_enabled = location_enabled
+
+local LOCATION_SETTING_IDS = {
+	player_hud = "location_player_hud",
+	social_menu = "location_social_menu",
+	lobby = "location_lobby",
+	end_screen = "location_end_screen",
+	party_finder = "location_party_finder",
+	inventory = "location_inventory",
+}
+
+local function _cache_location_settings()
+	for location, setting_id in pairs(LOCATION_SETTING_IDS) do
+		-- A setting that was never written stays enabled, so an update keeps the current behavior
+		location_enabled[location] = mod:get(setting_id) ~= false
+	end
+end
+
+_cache_location_settings()
+
+mod.on_setting_changed = _cache_location_settings
+
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/PlayerPanel")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/SocialMenu")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/Lobby")

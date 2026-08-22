@@ -1,6 +1,7 @@
 local mod = get_mod("ProfilePictures")
 
 local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
 local hud_types = {
 	"PersonalPlayerPanel",
@@ -17,6 +18,10 @@ local function _apply_panel_profile_image(self, texture)
 end
 
 local function _load_portrait_icon(self)
+	if not location_enabled.player_hud then
+		return
+	end
+
 	local player = self._player
 	local player_info = mod.player_info_for_player(player)
 

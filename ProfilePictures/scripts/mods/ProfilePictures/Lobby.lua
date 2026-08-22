@@ -1,8 +1,13 @@
 local mod = get_mod("ProfilePictures")
 
 local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
 mod:hook_safe("LobbyView", "_assign_player_to_slot", function(_self, player, slot)
+	if not location_enabled.lobby then
+		return
+	end
+
 	local unique_id = slot.unique_id
 	local player_info = mod.player_info_for_player(player)
 
