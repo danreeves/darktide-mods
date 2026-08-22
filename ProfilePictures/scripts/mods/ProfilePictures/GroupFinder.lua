@@ -1,6 +1,7 @@
 local mod = get_mod("ProfilePictures")
 
 local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
 local TEAM_MEMBER_WIDGET_NAMES = {
 	"team_member_1",
@@ -21,6 +22,11 @@ local function _load_profile_image(widget, account_id)
 	widget_content.profile_picture_account_id = account_id
 
 	if not account_id then
+		return
+	end
+
+	-- Assigned above either way, so the recycled entries and party slots stop asking while the location is off
+	if not location_enabled.party_finder then
 		return
 	end
 

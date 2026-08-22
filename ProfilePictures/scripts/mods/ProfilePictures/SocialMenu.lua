@@ -1,6 +1,7 @@
 local mod = get_mod("ProfilePictures")
 
 local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
 local function _load_profile_image(widget, player_info)
 	local widget_content = widget.content
@@ -11,6 +12,11 @@ local function _load_profile_image(widget, player_info)
 	end
 
 	widget_content.profile_picture_player_info = player_info
+
+	-- Assigned above either way, so the per-frame callers stop asking while the location is off
+	if not location_enabled.social_menu then
+		return
+	end
 
 	mod.load_profile_image(player_info, function(texture)
 		-- Widgets are reused, so a late callback may belong to a player this widget no longer shows, or to a plaque the popup has torn down since

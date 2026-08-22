@@ -1,8 +1,13 @@
 local mod = get_mod("ProfilePictures")
 
 local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
 mod:hook_safe("EndView", "_load_portrait_icon", function(_self, widget, _profile)
+	if not location_enabled.end_screen then
+		return
+	end
+
 	local widget_content = widget.content
 	local player_info = widget_content.player_info
 
