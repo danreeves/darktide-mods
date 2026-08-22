@@ -294,6 +294,7 @@ _cache_location_settings()
 mod.on_setting_changed = _cache_location_settings
 
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/PlayerPanel")
+mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/NotificationFeed")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/SocialMenu")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/Lobby")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/EndScreen")
