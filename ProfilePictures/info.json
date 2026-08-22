@@ -1,0 +1,14 @@
+{
+  "name": "Profile Pictures",
+  "description": "Shows the Steam or Xbox profile picture of each player instead of their character portrait.",
+  "version": "26.08.11",
+  "author": "danreeves",
+  "maintainers": [
+    "LucLeto"
+  ],
+  "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/275",
+  "source": "https://github.com/danreeves/darktide-mods",
+  "funding": {
+    "kofi": "https://ko-fi.com/raindish"
+  }
+}
