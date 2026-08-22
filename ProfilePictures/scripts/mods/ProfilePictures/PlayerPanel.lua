@@ -1,26 +1,7 @@
 local mod = get_mod("ProfilePictures")
-local UIWidget = require("scripts/managers/ui/ui_widget")
 
-local function _load_portrait_icon(self)
-	local player = self._player
-	local player_info = mod.player_info_for_player(player)
-	mod.load_profile_image(player_info, function(texture)
-		if self.__deleted or self.destroyed or self._player ~= player then
-			return
-		end
-
-		local widgets_by_name = self._widgets_by_name
-		local widget = widgets_by_name and widgets_by_name.player_icon
-		if widget then
-			local style = widget.style.profile
-			if style then
-				local material_values = style.material_values
-				material_values.texture_map = texture
-				widget.dirty = true
-			end
-		end
-	end)
-end
+local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
 local hud_types = {
 	"PersonalPlayerPanel",
@@ -29,128 +10,50 @@ local hud_types = {
 	"TeamPlayerPanelHub",
 }
 
-for _, hud_type in ipairs(hud_types) do
-	mod:hook_safe("HudElement" .. hud_type, "_load_portrait_icon", _load_portrait_icon)
+-- The player icon widget belongs to the panel, so resolve it before handing the picture over
+local function _apply_panel_profile_image(self, texture)
+	local widgets_by_name = self._widgets_by_name
+
+	_apply_profile_image(widgets_by_name and widgets_by_name.player_icon, "texture", texture)
 end
 
-local function _cb_set_player_frame(self, item)
-	if self.__deleted then
+local function _load_portrait_icon(self)
+	if not location_enabled.player_hud then
 		return
 	end
 
-	local icon = nil
+	local player = self._player
+	local player_info = mod.player_info_for_player(player)
 
-	if item.icon then
-		icon = item.icon
-	else
-		icon = "content/ui/textures/nameplates/portrait_frames/default"
-	end
+	mod.load_profile_image(player_info, function(texture)
+		if self.__deleted or self.destroyed or self._player ~= player then
+			return
+		end
 
-	local widget = self._widgets_by_name.player_icon
-	if widget.style.frame then
-		local material_values = widget.style.frame.material_values
-		material_values.texture_map = icon
-		widget.dirty = true
+		self._profile_picture_texture = texture
+
+		_apply_panel_profile_image(self, texture)
+	end)
+end
+
+-- Vanilla replaces the icon slot with the character render target once it finishes loading
+local function _cb_set_player_icon(self)
+	local texture = self._profile_picture_texture
+
+	if texture then
+		_apply_panel_profile_image(self, texture)
 	end
+end
+
+-- Runs at the start of every portrait load, so the previous player's picture never carries over
+local function _unload_portrait_icon(self)
+	self._profile_picture_texture = nil
 end
 
 for _, hud_type in ipairs(hud_types) do
-	mod:hook_safe("HudElement" .. hud_type, "_cb_set_player_frame", _cb_set_player_frame)
-end
+	local class_name = "HudElement" .. hud_type
 
-local function _unload_portrait_frame(func, self, ...)
-	local widgets_by_name = self._widgets_by_name
-	local widget = widgets_by_name and widgets_by_name.player_icon
-	local frame = widget and widget.style and widget.style.frame
-
-	if frame and frame.material_values then
-		frame.material_values.texture_map = nil
-		widget.dirty = true
-	end
-
-	return func(self, ...)
-end
-
-for _, hud_type in ipairs(hud_types) do
-	mod:hook("HudElement" .. hud_type, "_unload_portrait_frame", _unload_portrait_frame)
-end
-
-local function modify_player_icon_widget(instance)
-	local scenegraph_definition = instance.scenegraph_definition
-	local panel_size = scenegraph_definition.player_icon.size
-	local size = {
-		panel_size[1] - 20,
-		panel_size[2] - 20,
-	}
-	if not instance.widget_definitions.player_icon.content.frame then
-		UIWidget.add_definition_pass(instance.widget_definitions.player_icon, {
-			style_id = "frame",
-			value_id = "frame",
-			pass_type = "texture",
-			style = {
-				material_values = {
-					use_placeholder_texture = 0,
-					texture_map = "content/ui/textures/nameplates/portrait_frames/default",
-				},
-				color = {
-					255,
-					255,
-					255,
-					255,
-				},
-				offset = {
-					0,
-					0,
-					10,
-				},
-			},
-			visibility_function = function(_content, style)
-				if style.material_values.texture_map then
-					return true
-				end
-
-				return false
-			end,
-		})
-		UIWidget.add_definition_pass(instance.widget_definitions.player_icon, {
-			style_id = "profile",
-			value_id = "profile",
-			pass_type = "texture",
-			style = {
-				material_values = {
-					use_placeholder_texture = 0,
-				},
-				color = {
-					255,
-					255,
-					255,
-					255,
-				},
-				offset = {
-					10,
-					10,
-					1,
-				},
-				size = size,
-			},
-			visibility_function = function(_content, style)
-				if style.material_values.texture_map then
-					return true
-				end
-
-				return false
-			end,
-		})
-	end
-end
-
-local definitions = {
-	"scripts/ui/hud/elements/personal_player_panel/hud_element_personal_player_panel_definitions",
-	"scripts/ui/hud/elements/personal_player_panel_hub/hud_element_personal_player_panel_hub_definitions",
-	"scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions",
-	"scripts/ui/hud/elements/team_player_panel_hub/hud_element_team_player_panel_hub_definitions",
-}
-
-for _, definition in ipairs(definitions) do
-	mod:hook_require(definition, modify_player_icon_widget)
+	mod:hook_safe(class_name, "_load_portrait_icon", _load_portrait_icon)
+	mod:hook_safe(class_name, "_cb_set_player_icon", _cb_set_player_icon)
+	mod:hook_safe(class_name, "_unload_portrait_icon", _unload_portrait_icon)
 end

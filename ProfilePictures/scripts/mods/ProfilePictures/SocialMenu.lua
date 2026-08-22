@@ -1,127 +1,132 @@
 local mod = get_mod("ProfilePictures")
 
-mod:hook_safe("SocialMenuRosterView", "_load_widget_portrait", function(_self, widget, _profile)
-	local content = widget.content
-	local player_info = content.player_info
-	mod.load_profile_image(player_info, function(texture)
-		local material_values = widget.style.profile.material_values
-		material_values.texture_map = texture
-		widget.dirty = true
-	end)
-end)
+local _apply_profile_image = mod.apply_profile_image
+local location_enabled = mod.location_enabled
 
--- Reuse the frame texture when it gets loaded
-mod:hook_safe("SocialMenuRosterView", "_cb_set_player_frame", function(_self, widget, item)
+local function _load_profile_image(widget, player_info)
 	local widget_content = widget.content
-	local profile = widget_content.player_info:profile()
-	local loadout = profile and profile.loadout
-	local frame_item = loadout and loadout.slot_portrait_frame
-	local frame_item_gear_id = frame_item and frame_item.gear_id
-	local icon = nil
 
-	if frame_item_gear_id == item.gear_id then
-		icon = item.icon
+	-- A widget kept for another player must not re-apply the previous picture when vanilla writes its render target
+	if widget_content.profile_picture_player_info ~= player_info then
+		widget_content.profile_picture_texture = nil
 	end
 
-	if not icon then
+	widget_content.profile_picture_player_info = player_info
+
+	-- Assigned above either way, so the per-frame callers stop asking while the location is off
+	if not location_enabled.social_menu then
 		return
 	end
 
-	local portrait_style = widget.style.frame
-	portrait_style.material_values.texture_map = icon
-	widget.dirty = true
+	mod.load_profile_image(player_info, function(texture)
+		-- Widgets are reused, so a late callback may belong to a player this widget no longer shows, or to a plaque the popup has torn down since
+		if widget_content.profile_picture_player_info ~= player_info then
+			return
+		end
+
+		widget_content.profile_picture_texture = texture
+
+		_apply_profile_image(widget, "portrait", texture)
+	end)
+end
+
+mod:hook_safe("SocialMenuRosterView", "_load_widget_portrait", function(_self, widget, _profile)
+	_load_profile_image(widget, widget.content.player_info)
 end)
 
--- Stop using the frame texture before it gets unloaded
-mod:hook("SocialMenuRosterView", "_queue_icons_for_unload", function(func, self, widget)
-	local portrait_style = widget.style.frame
-	if portrait_style then
-		portrait_style.material_values.texture_map = nil
+-- Vanilla replaces the icon slot with the character render target once it finishes loading
+mod:hook_safe("SocialMenuRosterView", "_cb_set_player_icon", function(_self, widget)
+	local texture = widget.content.profile_picture_texture
+
+	if texture then
+		_apply_profile_image(widget, "portrait", texture)
 	end
-	return func(self, widget)
+end)
+
+-- Runs at the start of every portrait load, so a recycled widget never keeps the previous player's picture
+mod:hook_safe("SocialMenuRosterView", "_unload_widget_portrait", function(_self, widget)
+	widget.content.profile_picture_texture = nil
 end)
 
 mod:hook_require("scripts/ui/views/social_menu_roster_view/social_menu_roster_view_blueprints", function(instance)
-	local blueprint = instance.player_plaque
-
-	if not table.find_by_key(blueprint.pass_template, "style_id", "profile") then
-		table.insert(blueprint.pass_template, {
-			style_id = "frame",
-			value_id = "frame",
-			pass_type = "texture",
-			visibility_function = function(_content, style)
-				if style.material_values.texture_map then
-					return true
-				end
-
-				return false
-			end,
-		})
-
-		table.insert(blueprint.pass_template, {
-			style_id = "profile",
-			value_id = "profile",
-			pass_type = "texture",
-			visibility_function = function(_content, style)
-				if style.material_values.texture_map then
-					return true
-				end
-
-				return false
-			end,
-		})
-	end
-
 	mod:hook_safe(
-		blueprint,
+		instance.player_plaque,
 		"init",
 		function(_parent, widget, player_info, _callback_name, _secondary_callback_name, _ui_renderer)
-			mod.load_profile_image(player_info, function(texture)
-				local material_values = widget.style.profile.material_values
-				material_values.texture_map = texture
-				widget.dirty = true
-			end)
+			_load_profile_image(widget, player_info)
 		end
 	)
-
-	local orig_size = blueprint.style.portrait.size
-	local size = { orig_size[1] - 20, orig_size[2] - 20 }
-
-	table.merge_recursive(blueprint.style, {
-		frame = {
-			material_values = {
-				use_placeholder_texture = 0,
-				texture_map = "content/ui/textures/nameplates/portrait_frames/default",
-			},
-			color = {
-				255,
-				255,
-				255,
-				255,
-			},
-			offset = {
-				0,
-				0,
-				10,
-			},
-			size = orig_size,
-		},
-		profile = {
-			material_values = {
-				use_placeholder_texture = 0,
-			},
-			color = {
-				255,
-				255,
-				255,
-				255,
-			},
-			offset = {
-				10,
-				10,
-				1,
-			},
-			size = size,
-		},
-	})
 end)
+
+-- The popup draws its header portrait itself instead of going through the roster view, both for a roster entry and for the Find Player search
+mod:hook_safe("ViewElementPlayerSocialPopup", "_set_player_info", function(self, _parent, player_info)
+	_load_profile_image(self._widgets_by_name.player_header, player_info)
+end)
+
+-- Runs when the shown player's profile changes
+mod:hook_safe("ViewElementPlayerSocialPopup", "_update_portrait", function(self)
+	_load_profile_image(self._widgets_by_name.player_header, self._player_info)
+end)
+
+-- Vanilla replaces the icon slot with the character render target once it finishes loading
+mod:hook_safe("ViewElementPlayerSocialPopup", "_cb_set_player_icon", function(_self, widget)
+	local texture = widget.content.profile_picture_texture
+
+	if texture then
+		_apply_profile_image(widget, "portrait", texture)
+	end
+end)
+
+mod:hook_safe("ViewElementPlayerSocialPopup", "_cb_unset_player_icon", function(_self, widget)
+	widget.content.profile_picture_texture = nil
+end)
+
+-- One plaque serves every search, and the result only arrives once the friend code request comes back, so drop what the previous search was loading
+mod:hook_safe("ViewElementPlayerSocialPopup", "_search_for_player", function(self)
+	local widget = self._widgets_by_name.player_plaque
+
+	if not widget then
+		return
+	end
+
+	local widget_content = widget.content
+
+	widget_content.profile_picture_player_info = nil
+	widget_content.profile_picture_texture = nil
+end)
+
+-- The popup can go away with a request still in flight, so stop it from reaching the widgets it was started for
+mod:hook_safe("ViewElementPlayerSocialPopup", "destroy", function(self)
+	local widgets_by_name = self._widgets_by_name
+
+	if not widgets_by_name then
+		return
+	end
+
+	local header = widgets_by_name.player_header
+
+	if header then
+		header.content.profile_picture_player_info = nil
+	end
+
+	local plaque = widgets_by_name.player_plaque
+
+	if plaque then
+		plaque.content.profile_picture_player_info = nil
+	end
+end)
+
+mod:hook_require(
+	"scripts/ui/view_elements/view_element_player_social_popup/view_element_player_social_popup_blueprints",
+	function(instance)
+		mod:hook_safe(instance.player_plaque, "update", function(_parent, widget)
+			local widget_content = widget.content
+			local player_info = widget_content.player_info
+
+			-- The search result is assigned asynchronously, and vanilla only loads a portrait for it when the account resolves to a character profile
+			if widget_content.profile_picture_player_info ~= player_info then
+				_load_profile_image(widget, player_info)
+			end
+		end)
+	end
+)
