@@ -2,6 +2,9 @@ local mod = get_mod("ProfilePictures")
 
 local cache = mod:persistent_table("cache")
 
+-- Profile requests in flight, keyed by url. Deliberately not persistent: a reload leaves the promises behind.
+local pending_requests = {}
+
 local string_byte = string.byte
 local string_find = string.find
 local string_format = string.format
@@ -90,7 +93,30 @@ local function _image_proxy_prefix()
 	return _proxy_url_prefix_cache
 end
 
-local function _load_texture(image_url, fallback_image_url, cache_key, cb)
+local function _steam_image_url(response)
+	local body = response and response.body
+	local profile = body and body.profile
+	local avatar_url = profile and profile.avatarFull
+
+	if type(avatar_url) ~= "string" or avatar_url == "" then
+		return nil
+	end
+
+	return _steam_avatar_urls(avatar_url)
+end
+
+local function _xbox_image_url(response)
+	local body = response and response.body
+	local gamerpic = body and body.gamerpic
+
+	if type(gamerpic) ~= "string" or gamerpic == "" then
+		return nil
+	end
+
+	return gamerpic
+end
+
+local function _load_texture(image_url, fallback_image_url, cache_key, callbacks)
 	-- Public urls on third party CDNs, so don't attach the backend auth token
 	Managers.url_loader
 		:load_texture(image_url, false)
@@ -98,11 +124,14 @@ local function _load_texture(image_url, fallback_image_url, cache_key, cb)
 			local texture = data.texture
 
 			cache[cache_key] = texture
-			cb(texture)
+
+			for i = 1, #callbacks do
+				callbacks[i](texture)
+			end
 		end)
 		:catch(function(_error)
 			if fallback_image_url then
-				_load_texture(fallback_image_url, nil, cache_key, cb)
+				_load_texture(fallback_image_url, nil, cache_key, callbacks)
 
 				return
 			end
@@ -123,11 +152,8 @@ function mod.player_info_for_player(player)
 	return player_info
 end
 
-function mod.load_profile_image(player_info, cb)
-	if not player_info then
-		return
-	end
-
+-- The platform is resolved lazily through presence, so an account we are the first to ask about reports "" until the stream delivers. Retry once when the first update lands.
+local function _load_profile_image(player_info, cb, allow_retry)
 	local platform = player_info:platform()
 
 	local xuid, url, get_image_url
@@ -135,32 +161,32 @@ function mod.load_profile_image(player_info, cb)
 	if platform == "steam" then
 		xuid = Application.hex64_to_dec(player_info:platform_user_id())
 		url = "https://steam-profile-xml-to-json.dnrvs.workers.dev/" .. xuid
-		get_image_url = function(response)
-			local body = response and response.body
-			local profile = body and body.profile
-			local avatar_url = profile and profile.avatarFull
-
-			if type(avatar_url) ~= "string" or avatar_url == "" then
-				return nil
-			end
-
-			return _steam_avatar_urls(avatar_url)
-		end
+		get_image_url = _steam_image_url
 	end
 
 	if platform == "xbox" then
 		xuid = Application.hex64_to_dec(player_info:platform_user_id())
 		url = "https://xboxapi-workers.dnrvs.workers.dev/profiles/" .. xuid
-		get_image_url = function(response)
-			local body = response and response.body
-			local gamerpic = body and body.gamerpic
+		get_image_url = _xbox_image_url
+	end
 
-			if type(gamerpic) ~= "string" or gamerpic == "" then
-				return nil
-			end
+	if not (url and get_image_url) then
+		if allow_retry and player_info:account_id() then
+			player_info
+				:first_update_promise()
+				:next(function()
+					_load_profile_image(player_info, cb, false)
+				end)
+				:catch(function(_error)
+					mod:info("Presence lookup failed, no profile image")
+				end)
 
-			return gamerpic
+			return
 		end
+
+		mod:info("No profile image for platform '%s'", platform)
+
+		return
 	end
 
 	if cache[url] then
@@ -168,34 +194,63 @@ function mod.load_profile_image(player_info, cb)
 		return
 	end
 
-	if url and get_image_url then
-		Managers.backend
-			:url_request(url)
-			:next(function(profile_res)
-				local image_url, fallback_image_url = get_image_url(profile_res)
+	local pending = pending_requests[url]
 
-				if not image_url then
-					mod:info("No profile image in response from '%s'", url)
+	-- Several panels ask for the same player at once, so join a request that is already running. A cancelled promise never runs its handlers, so check that this one is still alive rather than waiting on it forever.
+	if pending and pending.promise and pending.promise:is_pending() then
+		local callbacks = pending.callbacks
 
-					return
-				end
+		callbacks[#callbacks + 1] = cb
 
-				local proxy_url = _image_proxy_prefix()
-
-				-- With a proxy configured, try it first and fall back to loading directly
-				if proxy_url then
-					fallback_image_url = image_url
-					image_url = _proxied_url(proxy_url, image_url)
-				end
-
-				_load_texture(image_url, fallback_image_url, url, cb)
-			end)
-			:catch(function(_error)
-				mod:info("Failed to request profile from '%s'", url)
-			end)
+		return
 	end
+
+	local request = {
+		callbacks = {
+			cb,
+		},
+	}
+
+	pending_requests[url] = request
+	request.promise = Managers.backend
+		:url_request(url)
+		:next(function(profile_res)
+			pending_requests[url] = nil
+
+			local image_url, fallback_image_url = get_image_url(profile_res)
+
+			if not image_url then
+				mod:info("No profile image in response from '%s'", url)
+
+				return
+			end
+
+			local proxy_url = _image_proxy_prefix()
+
+			-- With a proxy configured, try it first and fall back to loading directly
+			if proxy_url then
+				fallback_image_url = image_url
+				image_url = _proxied_url(proxy_url, image_url)
+			end
+
+			_load_texture(image_url, fallback_image_url, url, request.callbacks)
+		end)
+		:catch(function(_error)
+			pending_requests[url] = nil
+
+			mod:info("Failed to request profile from '%s'", url)
+		end)
+end
+
+function mod.load_profile_image(player_info, cb)
+	if not player_info then
+		return
+	end
+
+	_load_profile_image(player_info, cb, true)
 end
 
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/PlayerPanel")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/SocialMenu")
--- mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/Lobby") -- Doesn't work
+mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/Lobby")
+mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/EndScreen")
