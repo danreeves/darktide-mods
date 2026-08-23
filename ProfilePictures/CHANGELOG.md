@@ -1,5 +1,9 @@
 # ProfilePictures Changelog
 
+## 26.08.23.1
+
+Fixed an error that prevented profile pictures from loading on the loadout screen when inspecting a player from the Party Finder or the social menu.
+
 ## 26.08.23
 
 Improved profile image loading reliability by normalizing problematic Steam CDN URLs, loading public avatar textures without backend authentication, adding graceful fallbacks, and introducing an optional image proxy for Linux/Proton users.
