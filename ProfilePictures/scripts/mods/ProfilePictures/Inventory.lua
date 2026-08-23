@@ -10,13 +10,30 @@ local function _apply_view_profile_image(self, texture)
 	_apply_profile_image(widgets_by_name and widgets_by_name.character_portrait, "texture_portrait", texture)
 end
 
+-- Vanilla always opens the view with a Player, but the mods that add an inspect button to Party Finder and the social menu pass the PlayerInfo they hold instead, which is already what the loader wants
+local function _preview_player_info(player)
+	if not player then
+		return
+	end
+
+	-- Every Player class defines this and PlayerInfo does not
+	if player.is_human_controlled then
+		return mod.player_info_for_player(player)
+	end
+
+	-- Only hand on something that really is a PlayerInfo, so an unexpected preview player loads nothing rather than erroring further in
+	if player.account_id then
+		return player
+	end
+end
+
 mod:hook_safe("InventoryBackgroundView", "_load_portrait_icon", function(self)
 	if not location_enabled.inventory then
 		return
 	end
 
 	local player = self._preview_player
-	local player_info = player and mod.player_info_for_player(player)
+	local player_info = _preview_player_info(player)
 
 	mod.load_profile_image(player_info, function(texture)
 		-- The view can go away with the request still in flight
