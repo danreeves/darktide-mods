@@ -2044,27 +2044,6 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 		return
 	end
 
-	local breed_features = mod._healthbar_breed_features
-	local features = breed_features and breed_features[breed.name]
-
-	if not features or features.enabled ~= true then
-		target.healthbars_vanilla_boss_indicator_state = nil
-		_hide_boss_indicator_widget(widget)
-
-		return
-	end
-
-	local full_debug_display = mod._psykhanium_full_debug_display == true
-	local show_dots = full_debug_display or features.show_dots == true
-	local show_debuffs = full_debug_display or features.show_debuffs == true
-
-	if not show_dots and not show_debuffs then
-		target.healthbars_vanilla_boss_indicator_state = nil
-		_hide_boss_indicator_widget(widget)
-
-		return
-	end
-
 	local buff_extension = ScriptUnit_has_extension(unit, "buff_system")
 
 	if not buff_extension then
@@ -2085,7 +2064,10 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 	if state.debuff_check_timer >= 0.1 then
 		state.debuff_check_timer = 0
 
-		_poll_status_indicators(state.debuffs, state.content, buff_extension, unit, show_dots, show_debuffs)
+		-- Vanilla boss indicators ignore the per-enemy Healthbars feature settings; only
+		-- `show_vanilla_boss_bar_indicators` and the individual DoT/debuff toggles gate
+		-- what appears here.
+		_poll_status_indicators(state.debuffs, state.content, buff_extension, unit, true, true)
 	end
 
 	_pack_indicator_placements(state)
