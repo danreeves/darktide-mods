@@ -43,9 +43,25 @@ mod:hook_safe("SocialMenuRosterView", "_cb_set_player_icon", function(_self, wid
 	end
 end)
 
+-- Vanilla queues the superseded frame icon for unload and starts the replacement in the same frame, and a cached icon calls back synchronously, so _cb_set_player_frame lands first. _unload_icons then drops the old icon on the next update, and its unload callback resets the frame texture the replacement just wrote. Keep what was resolved so the stomp can be undone.
+mod:hook_safe("SocialMenuRosterView", "_cb_set_player_frame", function(_self, widget)
+	widget.content.profile_picture_frame_texture = widget.style.portrait.material_values.portrait_frame_texture
+end)
+
+-- A frame_load_id means a newer icon already owns this widget, so this is the superseded one being dropped rather than the entry being torn down
+mod:hook_safe("SocialMenuRosterView", "_cb_unset_player_frame", function(_self, widget)
+	local widget_content = widget.content
+	local frame_texture = widget_content.profile_picture_frame_texture
+
+	if frame_texture and widget_content.frame_load_id then
+		widget.style.portrait.material_values.portrait_frame_texture = frame_texture
+	end
+end)
+
 -- Runs at the start of every portrait load, so a recycled widget never keeps the previous player's picture
 mod:hook_safe("SocialMenuRosterView", "_unload_widget_portrait", function(_self, widget)
 	widget.content.profile_picture_texture = nil
+	widget.content.profile_picture_frame_texture = nil
 end)
 
 mod:hook_require("scripts/ui/views/social_menu_roster_view/social_menu_roster_view_blueprints", function(instance)

@@ -242,8 +242,9 @@ local function _load_profile_image(player_info, cb, allow_retry)
 		end)
 end
 
+-- Called with whatever the surface holds, and the loader goes straight on to PlayerInfo methods, so anything that is not one has to stop here rather than error inside a hook
 function mod.load_profile_image(player_info, cb)
-	if not player_info then
+	if not player_info or type(player_info.platform) ~= "function" then
 		return
 	end
 
