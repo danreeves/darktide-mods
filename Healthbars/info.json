@@ -1,11 +1,8 @@
 {
   "name": "Healthbars",
   "description": "Adds configurable enemy healthbars to regular missions, with damage numbers, DPS reports, info labels, DoT and debuff indicators, and per-enemy feature controls.",
-  "version": "26.08.21",
-  "author": "danreeves",
-  "maintainers": [
-    "LucLeto"
-  ],
+  "version": "26.08.25",
+  "author": "raindish & LucLeto",
   "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/16",
   "source": "https://github.com/danreeves/darktide-mods",
   "funding": {
