@@ -1,5 +1,11 @@
 # ProfilePictures Changelog
 
+## 26.08.24
+
+Fixed an error that could appear when inspecting a player from the Party Finder, by ignoring preview players the profile image loader cannot read a platform from.
+Added profile pictures to Party Finder inspect paths that only carry an account ID, by resolving it through the social service the way the Party Finder entries already do.
+Fixed Social Menu roster entries falling back to the default portrait frame instead of the equipped one, by restoring the frame texture that the unload of a superseded frame icon resets.
+
 ## 26.08.23.1
 
 Fixed an error that prevented profile pictures from loading on the loadout screen when inspecting a player from the Party Finder or the social menu.
