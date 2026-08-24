@@ -10,7 +10,7 @@ local function _apply_view_profile_image(self, texture)
 	_apply_profile_image(widgets_by_name and widgets_by_name.character_portrait, "texture_portrait", texture)
 end
 
--- Vanilla always opens the view with a Player, but the mods that add an inspect button to Party Finder and the social menu pass the PlayerInfo they hold instead, which is already what the loader wants
+-- Vanilla always opens the view with a Player, but the mods that add an inspect button to Party Finder and the social menu pass whatever they hold for the inspected account instead
 local function _preview_player_info(player)
 	if not player then
 		return
@@ -21,9 +21,22 @@ local function _preview_player_info(player)
 		return mod.player_info_for_player(player)
 	end
 
-	-- Only hand on something that really is a PlayerInfo, so an unexpected preview player loads nothing rather than erroring further in
-	if player.account_id then
+	-- A PlayerInfo, or a clone of one, is already what the loader wants
+	if type(player.platform) == "function" then
 		return player
+	end
+
+	local account_id = player.account_id
+
+	-- A Party Finder grid entry carries the account id as a field, a Player-shaped object as a method
+	if type(account_id) == "function" then
+		account_id = player:account_id()
+	end
+
+	if account_id then
+		local social_service = Managers.data_service.social
+
+		return social_service and social_service:get_player_info_by_account_id(account_id)
 	end
 end
 
