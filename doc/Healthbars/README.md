@@ -178,7 +178,7 @@ Animation Events is optional; authoritative local tracking works without it. The
 
 When enabled, Healthbars can also draw the configured DoT and debuff indicators on the game's normal boss health bars.
 
-This is independent from the per-enemy **Show Healthbar** setting, so players can disable the custom overhead boss healthbar while still seeing boss DoTs and debuffs on the vanilla boss UI.
+This is independent from the **Enemies** settings, so players can disable an enemy's custom overhead healthbar, or that enemy entirely, and still see its DoTs and debuffs on the vanilla boss UI. **Show DoT/debuff markers on vanilla boss health bars** is the only master switch for this display.
 
 The vanilla boss indicators reuse the existing status settings:
 - Per-effect toggles
@@ -187,7 +187,6 @@ The vanilla boss indicators reuse the existing status settings:
 - Debuff stack/time text size
 - DOT numbers only
 - Warpfire color
-- The boss enemy's **Enabled**, **Show DoTs**, and **Show Debuffs** settings
 
 ### Display modes (per effect)
 Some effects have a display dropdown:
@@ -233,6 +232,8 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 - Debuffs use the lower row.
 - If no tracked debuff is active, DoTs move to the lower row so they sit closer to the boss health bar.
 - The game normally renders up to two vanilla boss health bars. Additional tracked enemies can still use the regular head-anchored Healthbars marker when enabled.
+- Mods that display more than the vanilla two boss health bars, such as **Recolor Boss Health Bars**, are supported. Every displayed bar receives the indicators of its own boss, and Healthbars does not change the number, layout, or colors of the bars.
+- When such a mod stacks the boss health bars into several rows, bars below the top row use a single indicator row placed directly above their own bar, DoTs first and debuffs after, so the indicators do not draw across the bar above them. Bars on the top row keep the normal two-row layout.
 
 ### Ordering
 - DoTs: `Bleed` -> `Chordclaw Bleed` -> `Burn` -> `Phosphor Burn` -> `Warpfire` -> `Toxin`
@@ -294,8 +295,10 @@ With **Alf's DMF Mod Settings Extensions**, the Warpfire color and DoT/debuff di
 - **Armour type** in normal missions may reflect the enemy's default/body armour when exact hit-zone data is unavailable on the client.
 - Percentage text can still be hard to read depending on icon color and background contrast.
 - Very dense fights can produce a lot of simultaneous information if many status toggles are enabled at once.
+- When another mod stacks the vanilla boss health bars into several rows, indicators on the lower rows can still overlap the boss name text of the row above. The rows are too close together for the icons to clear it entirely.
 
 ## Recent additions
+- Added support for mods that display more than the vanilla two boss health bars, such as **Recolor Boss Health Bars**, including a compact single-row indicator layout for bars that are stacked into additional rows.
 - Overhauled the **Enemies** settings with a master enable switch and independent per-enemy controls for healthbars, damage numbers, DPS reports, info labels, DoTs, and debuffs, including automatic migration from the previous display-mode settings.
 - Modernized the settings structure for the current DMF release, including native grouping/nested settings and `.mod` package declarations for settings icons while preserving compatibility with **Alf's DMF Mod Settings Extensions**.
 - Added a separate **DPS report duration** so the final DPS result can remain visible independently from the normal post-kill healthbar and info-label duration.
