@@ -103,6 +103,20 @@ return {
 						default_value = false,
 					},
 					{
+						setting_id = "dodge_count_x_offset",
+						type = "numeric",
+						default_value = 0,
+						range = { -2000, 2000 },
+						step_size_value = 1,
+					},
+					{
+						setting_id = "dodge_count_y_offset",
+						type = "numeric",
+						default_value = 0,
+						range = { -2000, 2000 },
+						step_size_value = 1,
+					},
+					{
 						setting_id = "debug_dodge_count",
 						type = "checkbox",
 						default_value = false,
@@ -131,11 +145,18 @@ return {
 						options = get_color_options(),
 					},
 					{
+						setting_id = "dodge_timer_x_offset",
+						type = "numeric",
+						default_value = 0,
+						range = { -2000, 2000 },
+						step_size_value = 1,
+					},
+					{
 						setting_id = "dodge_timer_y_offset",
 						type = "numeric",
 						default_value = 30,
-						range = { -50, 50 },
-						step_size_value = 2,
+						range = { -2000, 2000 },
+						step_size_value = 1,
 					},
 					{
 						setting_id = "dodge_timer_width",

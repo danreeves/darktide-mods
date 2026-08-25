@@ -80,22 +80,47 @@ local function recreate_hud()
 	return true
 end
 
+local live_applied_settings = {
+	dodge_count_x_offset = true,
+	dodge_count_y_offset = true,
+	dodge_timer_x_offset = true,
+	dodge_timer_y_offset = true,
+	dodge_timer_width = true,
+	dodge_timer_height = true,
+}
+
+local RECREATE_HUD_DELAY = 0.25
+
 local initialized = false
-mod.update = function()
+local recreate_hud_delay = 0
+mod.update = function(dt)
 	if initialized then
 		return
 	end
+
+	if recreate_hud_delay > 0 then
+		recreate_hud_delay = recreate_hud_delay - dt
+		return
+	end
+
 	initialized = recreate_hud()
 end
 
 mod.on_all_mods_loaded = function()
 	initialized = false
+	recreate_hud_delay = 0
 	if mod:get("show_medical_crate_radius") then
 		local package_name = "content/levels/training_grounds/missions/mission_tg_basic_combat_01"
 		Managers.package:load(package_name, "NumericUI")
 	end
 end
 
-mod.on_setting_changed = function()
+mod.on_setting_changed = function(setting_id)
+	if live_applied_settings[setting_id] then
+		mod._dodge_hud_dirty = true
+		return
+	end
+
 	initialized = false
+	recreate_hud_delay = RECREATE_HUD_DELAY
 end
