@@ -66,6 +66,11 @@ local timer_size_color = function(time_to_refresh, cooldown, current_dodges, for
 	return timer_size, timer_color
 end
 
+local DEBUG_TEXT_Y_OFFSET = 30
+
+local dodge_count_x_offset = mod:get("dodge_count_x_offset") or 0
+local dodge_count_y_offset = mod:get("dodge_count_y_offset") or 0
+
 local style = {
 	line_spacing = 1.2,
 	font_size = 25,
@@ -82,7 +87,9 @@ local widget_definitions = {
 			value_id = "text",
 			style_id = "text",
 			pass_type = "text",
-			style = style,
+			style = table.merge_recursive(table.clone(style), {
+				offset = { dodge_count_x_offset, dodge_count_y_offset },
+			}),
 		} },
 		"container"
 	),
@@ -98,7 +105,7 @@ local widget_definitions = {
 				drop_shadow = true,
 				size = { 100, 8 },
 				offset = {
-					timer_x_offset,
+					timer_x_offset + (mod:get("dodge_timer_x_offset") or 0),
 					mod:get("dodge_timer_y_offset"),
 				},
 			},
@@ -111,9 +118,10 @@ local widget_definitions = {
 	debug_dodge_count = UIWidget.create_definition({
 		{
 			value_id = "text",
+			style_id = "text",
 			pass_type = "text",
-			style = table.merge_recursive(style, {
-				offset = { 0, 30 },
+			style = table.merge_recursive(table.clone(style), {
+				offset = { dodge_count_x_offset, dodge_count_y_offset + DEBUG_TEXT_Y_OFFSET },
 				text_vertical_alignment = "top",
 			}),
 		},
@@ -133,6 +141,24 @@ HudElementDodgeCount.init = function(self, parent, draw_layer, start_scale)
 	local player_unit = player.player_unit
 	self._player_unit = player_unit
 	self._is_in_hub = mod._is_in_hub()
+end
+
+HudElementDodgeCount._refresh_offsets = function(self)
+	local widgets_by_name = self._widgets_by_name
+	local count_x_offset = mod:get("dodge_count_x_offset") or 0
+	local count_y_offset = mod:get("dodge_count_y_offset") or 0
+
+	local count_offset = widgets_by_name.dodge_count.style.text.offset
+	count_offset[1] = count_x_offset
+	count_offset[2] = count_y_offset
+
+	local debug_offset = widgets_by_name.debug_dodge_count.style.text.offset
+	debug_offset[1] = count_x_offset
+	debug_offset[2] = count_y_offset + DEBUG_TEXT_Y_OFFSET
+
+	local timer_offset = widgets_by_name.dodge_timer.style.timer.offset
+	timer_offset[1] = timer_x_offset + (mod:get("dodge_timer_x_offset") or 0)
+	timer_offset[2] = mod:get("dodge_timer_y_offset") or 0
 end
 
 local function _calculate_dodge_diminishing_return(
@@ -175,12 +201,20 @@ end
 local ZERO_SIZE = { 0, 0 }
 HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 	HudElementDodgeCount.super.update(self, dt, t, ui_renderer, render_settings, input_service)
+
+	if mod._dodge_hud_dirty then
+		mod._dodge_hud_dirty = false
+		self:_refresh_offsets()
+	end
+
 	-- Reset to empty in case we can't fill it in
 	self._widgets_by_name.dodge_count.content.text = ""
 	self._widgets_by_name.debug_dodge_count.content.text = ""
 	self._widgets_by_name.dodge_timer.style.timer.size = ZERO_SIZE
 
-	if self._is_in_hub or not mod:get("dodge_count") then
+	local show_dodge_count = mod:get("dodge_count")
+	local show_dodge_timer = mod:get("dodge_timer")
+	if self._is_in_hub or not (show_dodge_count or show_dodge_timer) then
 		return
 	end
 
@@ -208,55 +242,60 @@ HudElementDodgeCount.update = function(self, dt, t, ui_renderer, render_settings
 			gameplay_t
 		)
 
-		local archetype = unit_data_extension:archetype()
-		local base_dodge_template = archetype.dodge
-		local weapon_consecutive_dodges_reset = weapon_dodge_template and weapon_dodge_template.consecutive_dodges_reset
-			or 0
-		local stat_buffs = buff_extension:stat_buffs()
-		local buff_modifier = stat_buffs.dodge_cooldown_reset_modifier
-		local buff_dodge_cooldown_reset_modifier = buff_modifier and 1 - (buff_modifier - 1) or 1
-		local relative_cooldown = (base_dodge_template.consecutive_dodges_reset + weapon_consecutive_dodges_reset)
-			* buff_dodge_cooldown_reset_modifier
+		if show_dodge_timer then
+			local archetype = unit_data_extension:archetype()
+			local base_dodge_template = archetype.dodge
+			local weapon_consecutive_dodges_reset = weapon_dodge_template
+					and weapon_dodge_template.consecutive_dodges_reset
+				or 0
+			local stat_buffs = buff_extension:stat_buffs()
+			local buff_modifier = stat_buffs.dodge_cooldown_reset_modifier
+			local buff_dodge_cooldown_reset_modifier = buff_modifier and 1 - (buff_modifier - 1) or 1
+			local relative_cooldown = (base_dodge_template.consecutive_dodges_reset + weapon_consecutive_dodges_reset)
+				* buff_dodge_cooldown_reset_modifier
 
-		local is_actually_dodging = (movement_state_component.method ~= "vaulting")
-			and movement_state_component.is_dodging
-		local relative_time = gameplay_t - dodge_state_component.consecutive_dodges_cooldown
-		local force_show_max_width = current_dodges ~= 0
-			and (is_actually_dodging or movement_state_component.method == "sliding")
-		local timer_size, timer_color =
-			timer_size_color(relative_time, relative_cooldown, current_dodges, force_show_max_width)
+			local is_actually_dodging = (movement_state_component.method ~= "vaulting")
+				and movement_state_component.is_dodging
+			local relative_time = gameplay_t - dodge_state_component.consecutive_dodges_cooldown
+			local force_show_max_width = current_dodges ~= 0
+				and (is_actually_dodging or movement_state_component.method == "sliding")
+			local timer_size, timer_color =
+				timer_size_color(relative_time, relative_cooldown, current_dodges, force_show_max_width)
 
-		self._widgets_by_name.dodge_timer.style.timer.size = timer_size or ZERO_SIZE
-		self._widgets_by_name.dodge_timer.style.timer.color = timer_color or color_timer_hidden
+			self._widgets_by_name.dodge_timer.style.timer.size = timer_size or ZERO_SIZE
+			self._widgets_by_name.dodge_timer.style.timer.color = timer_color or color_timer_hidden
+		end
 
-		if num_efficient_dodges == math.huge then
-			if mod:get("show_dodge_count_for_infinite_dodge") then
-				self._widgets_by_name.dodge_count.content.text = tostring(current_dodges)
-			end
-		else
-			local display_dodges = mod:get("dodges_count_up") and current_dodges
-				or (math.ceil(num_efficient_dodges) - current_dodges)
-
-			if mod:get("show_efficient_dodges") then
-				self._widgets_by_name.dodge_count.content.text =
-					string.format("%d/%d", display_dodges, math.ceil(num_efficient_dodges))
+		if show_dodge_count then
+			if num_efficient_dodges == math.huge then
+				if mod:get("show_dodge_count_for_infinite_dodge") then
+					self._widgets_by_name.dodge_count.content.text = tostring(current_dodges)
+				end
 			else
-				self._widgets_by_name.dodge_count.content.text = tostring(math.ceil(display_dodges))
+				local display_dodges = mod:get("dodges_count_up") and current_dodges
+					or (math.ceil(num_efficient_dodges) - current_dodges)
+
+				if mod:get("show_efficient_dodges") then
+					self._widgets_by_name.dodge_count.content.text =
+						string.format("%d/%d", display_dodges, math.ceil(num_efficient_dodges))
+				else
+					self._widgets_by_name.dodge_count.content.text = tostring(math.ceil(display_dodges))
+				end
 			end
-		end
 
-		if current_dodges >= num_efficient_dodges then
-			_copy_color(style.text.text_color, color_inefficient)
-		end
+			if current_dodges >= num_efficient_dodges then
+				_copy_color(style.text.text_color, color_inefficient)
+			end
 
-		if current_dodges >= math.floor(dr_limit + num_efficient_dodges) then
-			_copy_color(style.text.text_color, color_limit)
-		end
+			if current_dodges >= math.floor(dr_limit + num_efficient_dodges) then
+				_copy_color(style.text.text_color, color_limit)
+			end
 
-		if mod:get("fade_out_max_dodges") and current_dodges == 0 then
-			local time_since_cooldown =
-				math.clamp(gameplay_t - dodge_state_component.consecutive_dodges_cooldown - 1, 0, 1)
-			style.text.text_color[1] = math.lerp(255, 0, time_since_cooldown)
+			if mod:get("fade_out_max_dodges") and current_dodges == 0 then
+				local time_since_cooldown =
+					math.clamp(gameplay_t - dodge_state_component.consecutive_dodges_cooldown - 1, 0, 1)
+				style.text.text_color[1] = math.lerp(255, 0, time_since_cooldown)
+			end
 		end
 
 		if mod:get("debug_dodge_count") then
