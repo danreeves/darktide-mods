@@ -3,6 +3,10 @@
 -- Author: raindish
 local mod = get_mod("NumericUI")
 
+local table_find_by_key = table.find_by_key
+local table_insert = table.insert
+local ipairs = ipairs
+
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/utils")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/TeamPlayerPanel")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
@@ -41,8 +45,8 @@ end
 
 mod:hook("UIHud", "init", function(func, self, elements, visibility_groups, params)
 	for _, hud_element in ipairs(hud_elements) do
-		if not table.find_by_key(elements, "class_name", hud_element.class_name) then
-			table.insert(elements, {
+		if not table_find_by_key(elements, "class_name", hud_element.class_name) then
+			table_insert(elements, {
 				class_name = hud_element.class_name,
 				filename = hud_element.filename,
 				use_hud_scale = true,
@@ -107,6 +111,8 @@ mod.update = function(dt)
 end
 
 mod.on_all_mods_loaded = function()
+	mod.flush_settings()
+
 	initialized = false
 	recreate_hud_delay = 0
 	if mod:get("show_medical_crate_radius") then
@@ -116,6 +122,8 @@ mod.on_all_mods_loaded = function()
 end
 
 mod.on_setting_changed = function(setting_id)
+	mod.flush_settings()
+
 	if live_applied_settings[setting_id] then
 		mod._dodge_hud_dirty = true
 		return
@@ -123,4 +131,12 @@ mod.on_setting_changed = function(setting_id)
 
 	initialized = false
 	recreate_hud_delay = RECREATE_HUD_DELAY
+end
+
+mod.on_game_state_changed = function(status, state)
+	if state == "GameplayStateRun" then
+		-- Mission-scoped caches (Havoc modifiers, ammo pickup preview) must not survive a mission.
+		mod._havoc_ammo_modifier = nil
+		mod._pickup_preview_dirty = false
+	end
 end

@@ -4,105 +4,170 @@
 local mod = get_mod("NumericUI")
 
 local Pickups = require("scripts/settings/pickup/pickups")
-local Havoc = require("scripts/utilities/havoc")
-local HavocSettings = require("scripts/settings/havoc_settings")
 local Ammo = require("scripts/utilities/ammo")
+
+local string_format = string.format
+local pairs = pairs
 
 local small_clip_data = Pickups.by_name["small_clip"]
 local large_clip_data = Pickups.by_name["large_clip"]
 
-mod:hook_safe("HudElementInteraction", "update", function(self)
-	if mod:get("show_ammo_amount_from_packs") then
-		if self._active_presentation_data then
-			local interactor_extension = self._active_presentation_data.interactor_extension
-			local description_widget = self._widgets_by_name.description_text
+local SMALL_CLIP_DESCRIPTION = "loc_pickup_consumable_small_clip_01"
+local LARGE_CLIP_DESCRIPTION = "loc_pickup_consumable_large_clip_01"
 
-			local hud_description = interactor_extension:hud_description()
+local function _havoc_ammo_modifier()
+	local cached = mod._havoc_ammo_modifier
 
-			if hud_description == nil then
-				return
-			end
+	if cached then
+		return cached
+	end
 
-			local player = Managers.player:local_player(1)
-			local player_unit = player.player_unit
-			local unit_data_ext = ScriptUnit.extension(player_unit, "unit_data_system")
-			local visual_loadout_extension = ScriptUnit.extension(player_unit, "visual_loadout_system")
-			local weapon_slot_configuration = visual_loadout_extension:slot_configuration_by_type("weapon")
-			local ammo_modifier = 1
-			if Managers.mechanism._mechanism then
-				local mechanism_data = Managers.mechanism._mechanism._mechanism_data
-				if mechanism_data.havoc_data then
-					local parsed = Havoc.parse_data(mechanism_data.havoc_data)
-					if parsed.modifiers then
-						for _, modifier in ipairs(parsed.modifiers) do
-							if modifier.name == "ammo_pickup_modifier" then
-								ammo_modifier = HavocSettings.modifier_templates.ammo_pickup_modifier[modifier.level].ammo_pickup_modifier
-									or 1
-							end
-						end
-					end
-				end
-			end
+	local modifier = 1
+	local game_mode_manager = Managers.state.game_mode
+	local game_mode = game_mode_manager and game_mode_manager:game_mode()
+	local havoc_extension = game_mode and game_mode.extension and game_mode:extension("havoc")
 
-			local max_ammo_reserve = 0
-			local ammo_reserve = 0
-			local ammo_clip = 0
-			local max_ammo_clip = 0
+	if havoc_extension then
+		modifier = havoc_extension:get_modifier_value("ammo_pickup_modifier") or 1
+	end
 
-			for slot_name in pairs(weapon_slot_configuration) do
-				local wieldable_component = unit_data_ext:write_component(slot_name)
-				if wieldable_component.max_ammunition_reserve > 0 then
-					ammo_reserve = Ammo.current_ammo_in_reserve(wieldable_component)
-					max_ammo_reserve = Ammo.max_ammo_in_reserve(wieldable_component)
-					ammo_clip = Ammo.current_ammo_in_clips(wieldable_component)
-					max_ammo_clip = Ammo.max_ammo_in_clips(wieldable_component)
-					break
-				end
-			end
+	mod._havoc_ammo_modifier = modifier
 
-			local max_ammo = max_ammo_reserve + max_ammo_clip
-			local current_ammo = ammo_clip + ammo_reserve
+	return modifier
+end
 
-			small_clip_data.modifier = ammo_modifier
-			large_clip_data.modifier = ammo_modifier
+local function _weapon_ammo_totals(player_unit)
+	local unit_data_extension = ScriptUnit.has_extension(player_unit, "unit_data_system")
+	local visual_loadout_extension = ScriptUnit.has_extension(player_unit, "visual_loadout_system")
 
-			local small_clip_gain = small_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, small_clip_data)
-			local large_clip_gain = large_clip_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, large_clip_data)
+	if not unit_data_extension or not visual_loadout_extension then
+		return
+	end
 
-			if description_widget and max_ammo then
-				local missing_ammo = max_ammo - current_ammo
-				local ammo_gain = 0
-				local ammo_wasted = 0
+	local weapon_slot_configuration = visual_loadout_extension:slot_configuration_by_type("weapon")
 
-				if hud_description == "loc_pickup_consumable_small_clip_01" then
-					if missing_ammo >= small_clip_gain then
-						ammo_gain = small_clip_gain
-					elseif missing_ammo > 0 then
-						ammo_gain = missing_ammo
-						ammo_wasted = small_clip_gain - missing_ammo
-					end
-				elseif hud_description == "loc_pickup_consumable_large_clip_01" then
-					if missing_ammo >= large_clip_gain then
-						ammo_gain = large_clip_gain
-					elseif missing_ammo > 0 then
-						ammo_gain = missing_ammo
-						ammo_wasted = large_clip_gain - missing_ammo
-					end
-				end
+	for slot_name in pairs(weapon_slot_configuration) do
+		local wieldable_component = unit_data_extension:read_component(slot_name)
 
-				local show_ammo_gain = ammo_gain > 0
-				local show_ammo_wasted = ammo_wasted > 0
-
-				local desc_str = show_ammo_gain
-						and show_ammo_wasted
-						and "%s {#color(0,255,0,200);}(+%d) {#color(255,0,0,200);}(%d)"
-					or show_ammo_gain and not show_ammo_wasted and "%s {#color(0,255,0,200);}(+%d)"
-					or "%s"
-
-				description_widget.content.text =
-					string.format(desc_str, Localize(hud_description), ammo_gain, ammo_wasted)
-				description_widget.dirty = true
-			end
+		if wieldable_component and wieldable_component.max_ammunition_reserve > 0 then
+			return Ammo.current_ammo_in_reserve(wieldable_component),
+				Ammo.max_ammo_in_reserve(wieldable_component),
+				Ammo.current_ammo_in_clips(wieldable_component),
+				Ammo.max_ammo_in_clips(wieldable_component)
 		end
 	end
+end
+
+local function _pickup_gain(pickup_data, max_ammo_reserve, max_ammo_clip, ammo_modifier)
+	local previous_modifier = pickup_data.modifier
+
+	pickup_data.modifier = ammo_modifier
+
+	local gain = pickup_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, pickup_data)
+
+	pickup_data.modifier = previous_modifier
+
+	return gain
+end
+
+local function _update_pickup_description(self, interactor_extension)
+	local description_widget = self._widgets_by_name.description_text
+	local base_text = self._numericui_pickup_base_text
+	local hud_description = self._numericui_pickup_hud_description
+
+	if not description_widget or not base_text then
+		return
+	end
+
+	if hud_description ~= SMALL_CLIP_DESCRIPTION and hud_description ~= LARGE_CLIP_DESCRIPTION then
+		return
+	end
+
+	local player = Managers.player:local_player(1)
+	local player_unit = player and player.player_unit
+
+	if not player_unit then
+		return
+	end
+
+	local ammo_reserve, max_ammo_reserve, ammo_clip, max_ammo_clip = _weapon_ammo_totals(player_unit)
+
+	if not ammo_reserve then
+		return
+	end
+
+	local ammo_modifier = _havoc_ammo_modifier()
+	local pickup_data = hud_description == SMALL_CLIP_DESCRIPTION and small_clip_data or large_clip_data
+	local clip_gain = _pickup_gain(pickup_data, max_ammo_reserve, max_ammo_clip, ammo_modifier)
+
+	local max_ammo = max_ammo_reserve + max_ammo_clip
+	local current_ammo = ammo_clip + ammo_reserve
+	local missing_ammo = max_ammo - current_ammo
+	local ammo_gain = 0
+	local ammo_wasted = 0
+
+	if missing_ammo >= clip_gain then
+		ammo_gain = clip_gain
+	elseif missing_ammo > 0 then
+		ammo_gain = missing_ammo
+		ammo_wasted = clip_gain - missing_ammo
+	end
+
+	local show_ammo_gain = ammo_gain > 0
+	local show_ammo_wasted = ammo_wasted > 0
+
+	local desc_str = show_ammo_gain
+			and show_ammo_wasted
+			and "%s {#color(0,255,0,200);}(+%d) {#color(255,0,0,200);}(%d)"
+		or show_ammo_gain and not show_ammo_wasted and "%s {#color(0,255,0,200);}(+%d)"
+		or "%s"
+
+	local text = string_format(desc_str, base_text, ammo_gain, ammo_wasted)
+
+	if description_widget.content.text ~= text then
+		description_widget.content.text = text
+		description_widget.dirty = true
+	end
+end
+
+mod:hook_safe(
+	"HudElementInteraction",
+	"_setup_interaction_information",
+	function(self, _interactee_unit, _interactee_extension, interactor_extension, use_minimal_presentation)
+	self._numericui_pickup_base_text = nil
+	self._numericui_pickup_hud_description = nil
+
+	if use_minimal_presentation or not mod.setting("show_ammo_amount_from_packs") then
+		return
+	end
+
+	local hud_description = interactor_extension:hud_description()
+
+	if hud_description ~= SMALL_CLIP_DESCRIPTION and hud_description ~= LARGE_CLIP_DESCRIPTION then
+		return
+	end
+
+	local description_widget = self._widgets_by_name.description_text
+
+	self._numericui_pickup_hud_description = hud_description
+	self._numericui_pickup_base_text = description_widget and description_widget.content.text
+
+	_update_pickup_description(self, interactor_extension)
+	mod._pickup_preview_dirty = false
+end)
+
+mod:hook_safe("HudElementInteraction", "update", function(self)
+	if not mod._pickup_preview_dirty then
+		return
+	end
+
+	mod._pickup_preview_dirty = false
+
+	local active_presentation_data = self._active_presentation_data
+
+	if not active_presentation_data then
+		return
+	end
+
+	_update_pickup_description(self, active_presentation_data.interactor_extension)
 end)
