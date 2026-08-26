@@ -3,6 +3,10 @@
 -- Author: raindish
 local mod = get_mod("NumericUI")
 
+local table_find_by_key = table.find_by_key
+local table_insert = table.insert
+local ipairs = ipairs
+
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/utils")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/TeamPlayerPanel")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
@@ -41,8 +45,8 @@ end
 
 mod:hook("UIHud", "init", function(func, self, elements, visibility_groups, params)
 	for _, hud_element in ipairs(hud_elements) do
-		if not table.find_by_key(elements, "class_name", hud_element.class_name) then
-			table.insert(elements, {
+		if not table_find_by_key(elements, "class_name", hud_element.class_name) then
+			table_insert(elements, {
 				class_name = hud_element.class_name,
 				filename = hud_element.filename,
 				use_hud_scale = true,
@@ -80,22 +84,59 @@ local function recreate_hud()
 	return true
 end
 
+local live_applied_settings = {
+	dodge_count_x_offset = true,
+	dodge_count_y_offset = true,
+	dodge_timer_x_offset = true,
+	dodge_timer_y_offset = true,
+	dodge_timer_width = true,
+	dodge_timer_height = true,
+}
+
+local RECREATE_HUD_DELAY = 0.25
+
 local initialized = false
-mod.update = function()
+local recreate_hud_delay = 0
+mod.update = function(dt)
 	if initialized then
 		return
 	end
+
+	if recreate_hud_delay > 0 then
+		recreate_hud_delay = recreate_hud_delay - dt
+		return
+	end
+
 	initialized = recreate_hud()
 end
 
 mod.on_all_mods_loaded = function()
+	mod.flush_settings()
+
 	initialized = false
+	recreate_hud_delay = 0
 	if mod:get("show_medical_crate_radius") then
 		local package_name = "content/levels/training_grounds/missions/mission_tg_basic_combat_01"
 		Managers.package:load(package_name, "NumericUI")
 	end
 end
 
-mod.on_setting_changed = function()
+mod.on_setting_changed = function(setting_id)
+	mod.flush_settings()
+
+	if live_applied_settings[setting_id] then
+		mod._dodge_hud_dirty = true
+		return
+	end
+
 	initialized = false
+	recreate_hud_delay = RECREATE_HUD_DELAY
+end
+
+mod.on_game_state_changed = function(status, state)
+	if state == "GameplayStateRun" then
+		-- Mission-scoped caches (Havoc modifiers, ammo pickup preview) must not survive a mission.
+		mod._havoc_ammo_modifier = nil
+		mod._pickup_preview_dirty = false
+	end
 end
