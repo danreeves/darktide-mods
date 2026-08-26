@@ -283,6 +283,66 @@ return {
 				},
 			},
 			{
+				setting_id = "blitz_items",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "blitz_cooldown_format",
+						type = "dropdown",
+						default_value = "none",
+						options = {
+							{ text = "timer", value = "time" },
+							{ text = "percent", value = "percent" },
+							{ text = "none", value = "none" },
+						},
+					},
+					{
+						setting_id = "disable_blitz_background_progress",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
+						setting_id = "blitz_cooldown_font_size",
+						type = "numeric",
+						default_value = 30,
+						range = { 20, 50 },
+						step_size_value = 1,
+						change = function(new_value)
+							mod:set("blitz_cooldown_font_size", new_value)
+						end,
+						get = function()
+							return mod:get("blitz_cooldown_font_size") or 30
+						end,
+					},
+					{
+						setting_id = "blitz_cooldown_x_offset",
+						type = "numeric",
+						default_value = -80,
+						range = { -500, 500 },
+						step_size_value = 1,
+						change = function(new_value)
+							mod:set("blitz_cooldown_x_offset", new_value)
+						end,
+						get = function()
+							return mod:get("blitz_cooldown_x_offset") or -80
+						end,
+					},
+					{
+						setting_id = "blitz_cooldown_y_offset",
+						type = "numeric",
+						default_value = 0,
+						range = { -500, 500 },
+						step_size_value = 1,
+						change = function(new_value)
+							mod:set("blitz_cooldown_y_offset", new_value)
+						end,
+						get = function()
+							return mod:get("blitz_cooldown_y_offset") or 0
+						end,
+					},
+				},
+			},
+			{
 				setting_id = "mission_timer",
 				type = "group",
 				sub_widgets = {
