@@ -12,10 +12,16 @@ local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIHudSettings = require("scripts/settings/ui/ui_hud_settings")
 local HudElementTeamPlayerPanelSettings =
 	require("scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_settings")
+local HudElementPlayerWeaponHandlerSettings =
+	require("scripts/ui/hud/elements/player_weapon_handler/hud_element_player_weapon_handler_settings")
+local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
+local FixedFrame = require("scripts/utilities/fixed_frame")
 
 local math_abs = math.abs
 local math_floor = math.floor
+local math_huge = math.huge
 local math_min = math.min
+local math_round = math.round
 local string_format = string.format
 local table_clone = table.clone
 local table_insert = table.insert
@@ -42,12 +48,26 @@ local ammo_gained_widget_templates = {}
 -- "ammo_text_" .. i built once instead of every frame
 local _ammo_text_widget_names = {}
 
--- must match the default_value entries in NumericUI_data.lua; the offset settings
--- are applied as deltas from these defaults so that untouched (saved) defaults
--- keep the max ammo text at its original position next to the clip counter
 local AMMO_TEXT_FONT_SIZE_DEFAULT = 16
 local AMMO_TEXT_OFFSET_X_DEFAULT = 80
 local AMMO_TEXT_OFFSET_Y_DEFAULT = -16
+
+local BLITZ_COOLDOWN_FONT_SIZE_DEFAULT = 30
+local BLITZ_COOLDOWN_X_OFFSET_DEFAULT = -80
+local BLITZ_COOLDOWN_Y_OFFSET_DEFAULT = 0
+local BLITZ_BUFF_SCAN_INTERVAL = 0.5
+
+local blitz_icon_size = HudElementPlayerWeaponHandlerSettings.icon_size
+local blitz_cooldown_style = table_clone(UIFontSettings.hud_body)
+
+blitz_cooldown_style.horizontal_alignment = "right"
+blitz_cooldown_style.vertical_alignment = "center"
+blitz_cooldown_style.text_horizontal_alignment = "center"
+blitz_cooldown_style.text_vertical_alignment = "center"
+blitz_cooldown_style.size = { blitz_icon_size[1], blitz_icon_size[2] }
+blitz_cooldown_style.font_size = BLITZ_COOLDOWN_FONT_SIZE_DEFAULT
+-- drawn above the blitz icon (z 4) and the vanilla cooldown gradient (z 3)
+blitz_cooldown_style.offset = { 0, 0, 11 }
 
 local directional_magnitude = 200
 for i = 1, 4 do
@@ -184,6 +204,16 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 			},
 		},
 	}, "weapon")
+
+	instance.widget_definitions.blitz_cooldown = UIWidget.create_definition({
+		{
+			value_id = "blitz_cooldown",
+			style_id = "blitz_cooldown",
+			pass_type = "text",
+			value = "",
+			style = blitz_cooldown_style,
+		},
+	}, "background")
 
 	local spare_ammo_style = table_clone(backups.definitions.widget_definitions.ammo_text_1.style.ammo_spare_1)
 	local modifier = 0.8
@@ -612,6 +642,192 @@ local function _step_grenade_gained(self, dt)
 	display_grenade_gained(dt, widget, grenade)
 end
 
+local function _blitz_counter_extra_width(self)
+	local max_ammunition_clips = self._max_ammunition_clips
+	local max_charges = max_ammunition_clips and max_ammunition_clips[1]
+
+	if not max_charges or max_charges < 10 then
+		return 0
+	end
+
+	local ammo_text_widget = self._widgets_by_name[_ammo_text_widget_names[1]]
+	local amount_style = ammo_text_widget and ammo_text_widget.style.ammo_amount_1
+
+	if not amount_style then
+		return 0
+	end
+
+	local extra_digits = max_charges < 100 and 1 or 2
+	local digit_width = math_round(amount_style.font_size * 0.55)
+
+	return extra_digits * digit_width
+end
+
+local function _update_blitz_cooldown_style(self, widget)
+	local font_size = mod.setting("blitz_cooldown_font_size") or BLITZ_COOLDOWN_FONT_SIZE_DEFAULT
+	local x_offset = (mod.setting("blitz_cooldown_x_offset") or BLITZ_COOLDOWN_X_OFFSET_DEFAULT)
+		- _blitz_counter_extra_width(self)
+	local y_offset = mod.setting("blitz_cooldown_y_offset") or BLITZ_COOLDOWN_Y_OFFSET_DEFAULT
+	local height_offset = (self._height_offset or 0) + y_offset
+	local offset = widget.offset
+	local style = widget.style.blitz_cooldown
+
+	if style._numericui_font_size ~= font_size then
+		style._numericui_font_size = font_size
+		style.font_size = font_size
+		widget.dirty = true
+	end
+
+	if offset[1] ~= x_offset then
+		offset[1] = x_offset
+		widget.dirty = true
+	end
+
+	if offset[2] ~= height_offset then
+		offset[2] = height_offset
+		widget.dirty = true
+	end
+end
+
+local function _find_blitz_replenishment_buff(buff_extension)
+	local buffs = buff_extension:buffs()
+
+	for i = 1, #buffs do
+		local buff = buffs[i]
+		local template_data = buff._template_data
+
+		if template_data and template_data.missing_charges then
+			return buff
+		end
+	end
+end
+
+local function _blitz_replenishment_cooldown(self, dt)
+	local buff = self._numericui_blitz_buff
+	local scan_delay = (self._numericui_blitz_buff_scan or 0) - dt
+
+	if not buff or scan_delay <= 0 then
+		local buff_extension = self._parent:get_player_extension(self._data.player, "buff_system")
+
+		buff = buff_extension and _find_blitz_replenishment_buff(buff_extension)
+		scan_delay = BLITZ_BUFF_SCAN_INTERVAL
+		self._numericui_blitz_buff = buff
+	end
+
+	self._numericui_blitz_buff_scan = scan_delay
+
+	local template_data = buff and buff._template_data
+	local next_charge_t = template_data and (template_data.next_grenade_t or template_data.next_knife_t)
+
+	if not next_charge_t then
+		return
+	end
+
+	local remaining = next_charge_t - FixedFrame.get_latest_fixed_time()
+
+	if remaining <= 0 then
+		return
+	end
+
+	local total = template_data.grenade_replenishment_cooldown or template_data.cooldown
+
+	return remaining, total and total > 0 and remaining / total or nil
+end
+
+local function _blitz_remaining_cooldown(self, dt)
+	local ability_extension = self._ability_extension
+	local ability_type = self._ability.ability_type
+
+	if not ability_type or not ability_extension then
+		return
+	end
+
+	if
+		ability_extension:remaining_ability_charges(ability_type)
+		>= ability_extension:max_ability_charges(ability_type)
+	then
+		return
+	end
+
+	local remaining = ability_extension:remaining_ability_cooldown(ability_type)
+
+	if remaining and remaining > 0 and remaining ~= math_huge then
+		return remaining, self._cooldown_progress
+	end
+
+	return _blitz_replenishment_cooldown(self, dt)
+end
+
+local function _update_blitz_cooldown_text(self, dt)
+	local widget = self._widgets_by_name.blitz_cooldown
+
+	if not widget then
+		return
+	end
+
+	local content = widget.content
+	local cooldown_format = mod.setting("blitz_cooldown_format")
+	local new_text
+
+	if cooldown_format ~= "time" and cooldown_format ~= "percent" then
+		content._numericui_last_value = nil
+		new_text = " "
+	else
+		local remaining, progress = _blitz_remaining_cooldown(self, dt)
+
+		if not remaining then
+			content._numericui_last_value = nil
+			new_text = " "
+		else
+			_update_blitz_cooldown_style(self, widget)
+
+			if cooldown_format == "percent" then
+				if progress then
+					local percent = math_floor((1 - progress) * 100)
+
+					if content._numericui_last_value ~= percent then
+						content._numericui_last_value = percent
+						new_text = string_format("%d%%", percent)
+					end
+				else
+					content._numericui_last_value = nil
+					new_text = " "
+				end
+			elseif remaining <= 1 then
+				content._numericui_last_value = nil
+				new_text = string_format("%.1f", remaining)
+			else
+				local seconds = math_floor(remaining)
+
+				if content._numericui_last_value ~= seconds then
+					content._numericui_last_value = seconds
+					new_text = string_format("%d", seconds)
+				end
+			end
+		end
+	end
+
+	if new_text and content.blitz_cooldown ~= new_text then
+		content.blitz_cooldown = new_text
+		widget.dirty = true
+	end
+end
+
+local function _update_blitz_background_progress(self)
+	if not mod.setting("disable_blitz_background_progress") then
+		return
+	end
+
+	local background_widget = self._widgets_by_name.background
+	local glow_style = background_widget and background_widget.style.background_glow
+
+	if glow_style and glow_style.scale[2] ~= 0 then
+		glow_style.uvs[2][2] = 0
+		glow_style.scale[2] = 0
+		background_widget.dirty = true
+	end
+end
+
 mod:hook_safe("HudElementPlayerWeapon", "update", function(self, dt)
 	local cached_max_reserve = self._numericui_max_reserve
 
@@ -635,5 +851,10 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, dt)
 
 	if grenade and (grenade.pending or grenade.amount ~= 0) then
 		_step_grenade_gained(self, dt)
+	end
+
+	if self._ability then
+		_update_blitz_cooldown_text(self, dt)
+		_update_blitz_background_progress(self)
 	end
 end)
