@@ -1,5 +1,6 @@
 local mod = get_mod("ChatBlock")
 local WeaponTemplate = require("scripts/utilities/weapon/weapon_template")
+local PlayerUnitVisualLoadout = require("scripts/extension_systems/visual_loadout/utilities/player_unit_visual_loadout")
 
 mod.input_blocked = false
 
@@ -63,7 +64,25 @@ mod:hook("InputService", "_get", input_get_hook)
 mod:hook("InputService", "_get_simulate", input_get_hook)
 
 mod:hook("HumanGameplay", "_input_active", function(func, ...)
+	local was_input_blocked = mod.input_blocked
 	mod.input_blocked = not func(...)
+
+	if mod.input_blocked and not was_input_blocked and mod:get("auto_melee_swap") then
+		local player = Managers.player:local_player(1)
+		if player then
+			local unit = player.player_unit
+			if unit then
+				local unit_data = ScriptUnit.extension(unit, "unit_data_system")
+				local inventory_component = unit_data:read_component("inventory")
+				local wielded_slot = inventory_component.wielded_slot
+
+				if wielded_slot ~= "slot_primary" then
+					local t = Managers.time:time("gameplay")
+					PlayerUnitVisualLoadout.wield_slot("slot_primary", unit, t)
+				end
+			end
+		end
+	end
 
 	if Managers.state.cinematic:cinematic_active() then
 		return false
