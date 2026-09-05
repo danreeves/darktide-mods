@@ -2,7 +2,7 @@
 /**
  * Detect changed mods and upload them to Nexus Mods using the v3 API.
  *
- * Reads version and mod_id from each mod's .mod file. The file_group_id is
+ * Reads version from each mod's info.json and mod_id from its .mod file. The file_group_id is
  * resolved automatically from the API using the mod_id: the script fetches all
  * file update groups for the mod and uses the group if there is exactly one.
  *
@@ -76,19 +76,27 @@ async function apiRequest(method, urlPath, apiKey, body) {
 }
 
 function extractModInfo(filePath) {
-  let content;
+  let modContent;
   try {
-    content = fs.readFileSync(filePath, "utf8");
+    const modName = path.basename(path.dirname(filePath));
+    modContent = fs.readFileSync(path.join(path.dirname(filePath), modName + ".mod"), "utf8");
   } catch (e) {
-    console.error(`Warning: could not read ${filePath}: ${e.message}`);
+    console.error("Warning: could not read " + filePath + ": " + e.message);
     return null;
   }
 
-  const versionM = content.match(/\bversion\s*=\s*"([^"]+)"/);
-  const modIdM = content.match(/\bmod_id\s*=\s*"([^"]+)"/);
+  let metadata;
+  try {
+    metadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (e) {
+    console.error("Warning: could not parse " + filePath + ": " + e.message);
+    return null;
+  }
+
+  const modIdM = modContent.match(/\bmod_id\s*=\s*"([^"]+)"/);
 
   return {
-    version: versionM ? versionM[1] : null,
+    version: typeof metadata.version === "string" ? metadata.version : null,
     mod_id: modIdM ? modIdM[1] : null,
   };
 }
@@ -180,14 +188,18 @@ function getPrevVersion(filePath, before) {
   });
   const content = result.stdout || "";
   if (!content) return null;
-  const m = content.match(/\bversion\s*=\s*"([^"]+)"/);
-  return m ? m[1] : null;
+  try {
+    const metadata = JSON.parse(content);
+    return typeof metadata.version === "string" ? metadata.version : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 function getChangedModFiles(before, sha) {
   let output;
   if (!before || before === NULL_COMMIT) {
-    output = execCmd(["git", "ls-files", "*.mod"]);
+    output = execCmd(["git", "ls-files", "*/info.json"]);
   } else {
     output = execCmd([
       "git",
@@ -196,7 +208,7 @@ function getChangedModFiles(before, sha) {
       before,
       sha,
       "--",
-      "*.mod",
+      "*/info.json",
     ]);
   }
   return output
@@ -408,7 +420,7 @@ async function main() {
   const modFiles = getChangedModFiles(before, sha);
 
   if (modFiles.length === 0) {
-    console.log("No changed .mod files detected.");
+    console.log("No changed info.json files detected.");
     process.exit(0);
   }
 
@@ -417,12 +429,15 @@ async function main() {
 
   for (const filePath of modFiles) {
     const cur = extractModInfo(filePath);
-    if (!cur || !cur.version) continue;
+    if (!cur || !cur.version) {
+      console.log("Skipping " + filePath + ": version is not set in info.json");
+      continue;
+    }
 
     const prevVersion = getPrevVersion(filePath, before);
     if (cur.version === prevVersion) continue;
 
-    const modName = filePath.split("/")[0];
+    const modName = path.posix.dirname(filePath).split("/")[0];
 
     if (!cur.mod_id) {
       console.log(`Skipping ${modName}: mod_id is not set in .mod file`);

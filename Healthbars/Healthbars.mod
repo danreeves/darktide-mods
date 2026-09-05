@@ -18,6 +18,5 @@ return {
         "Alfs_DMF_Extensions",
         "animation_events",
     },
-	version = "26.08.25",
 	mod_id = "16",
 }
