@@ -9,5 +9,4 @@ return {
 		})
 	end,
 	packages = {},
-	mod_id = "11",
 }

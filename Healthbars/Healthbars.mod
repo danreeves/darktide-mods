@@ -18,5 +18,4 @@ return {
         "Alfs_DMF_Extensions",
         "animation_events",
     },
-	mod_id = "16",
 }
