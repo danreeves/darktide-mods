@@ -1,7 +1,7 @@
 {
   "name": "Numeric UI",
   "description": "Adds numbers to your HUD, including team health, toughness, ammo and peril values, dodge counts with a reset timer, ammo and ability cooldown readouts, boss health, enemy nameplates, pickup counts, ping markers, and a mission timer.",
-  "version": "26.08.26",
+  "version": "26.09.05",
   "author": "raindish & LucLeto",
   "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/14",
   "source": "https://github.com/danreeves/darktide-mods",

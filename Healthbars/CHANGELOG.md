@@ -1,5 +1,9 @@
 # Healthbars Changelog
 
+## 26.09.05
+
+Added info.json.
+
 ## 26.08.25
 
 Fixed DoT and debuff indicators no longer appearing on vanilla boss health bars when the matching enemy was disabled in the `Enemies` settings, by making that display independent from the per-enemy feature toggles again. The `Show DoT/debuff markers on vanilla boss health bars` setting is once again the only master switch for it, while the individual DoT and debuff settings decide which indicators appear.

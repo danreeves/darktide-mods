@@ -1,5 +1,9 @@
 # NumericUI Changelog
 
+## 26.09.05
+
+Added info.json.
+
 ## 26.08.26
 
 Cut the amount of work NumericUI does every frame. It previously re-derived your ammo, dodge count, ability cooldown, teammate ammo and boss health from scratch on every rendered frame, repeating work the game had already done. Ammo readouts now update from the game's own ammo events, the ammo pickup preview is worked out when you look at a new pickup instead of continuously, Havoc's reduced ammo pickup capacity is read once per mission instead of being re-parsed every frame, ability cooldowns come from the game's ability system rather than NumericUI's own bookkeeping, and the mission timer, dodge count and boss numbers only rebuild their text when the number on screen actually changes. Teammate ammo numbers now refresh ten times a second rather than every frame; everything else updates exactly as immediately as before. Measured over two full missions, NumericUI's own HUD work dropped from 39.4 to 14.2 microseconds per frame, a 64% reduction, with the ammo readout down 92% per call and the ammo pickup preview down 89%.
