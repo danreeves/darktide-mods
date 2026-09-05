@@ -80,6 +80,13 @@ function extractModInfo(filePath) {
   let metadata;
   try {
     metadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (
+      metadata === null ||
+      typeof metadata !== "object" ||
+      Array.isArray(metadata)
+    ) {
+      throw new Error("metadata must be a JSON object");
+    }
   } catch (e) {
     console.error("Warning: could not parse " + filePath + ": " + e.message);
     return null;
