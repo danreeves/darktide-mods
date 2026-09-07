@@ -5,6 +5,12 @@ local PlayerUnitVisualLoadout = require("scripts/extension_systems/visual_loadou
 mod.input_blocked = false
 mod.auto_melee_swap_blocked = false
 
+local function auto_melee_swap_allowed()
+	local game_mode_manager = Managers.state.game_mode
+
+	return game_mode_manager and game_mode_manager:default_player_orientation() ~= "HubPlayerOrientation"
+end
+
 local function auto_melee_swap_on_blocked(blocked)
 	if blocked and not mod.auto_melee_swap_blocked and mod:get("auto_melee_swap") then
 		local player = Managers.player:local_player(1)
@@ -89,7 +95,9 @@ mod:hook("InputService", "_get_simulate", input_get_hook)
 
 mod:hook("HumanGameplay", "_input_active", function(func, ...)
 	mod.input_blocked = not func(...)
-	if not mod:get("auto_melee_swap") then
+	local cinematic_active = Managers.state.cinematic:cinematic_active()
+
+	if not mod:get("auto_melee_swap") or not auto_melee_swap_allowed() or cinematic_active then
 		mod.auto_melee_swap_blocked = false
 	elseif mod.input_blocked then
 		-- Chat/menu block already implies the combined blocked state,
@@ -104,7 +112,7 @@ mod:hook("HumanGameplay", "_input_active", function(func, ...)
 		auto_melee_swap_on_blocked(alt_tabbed or steam_overlay_open)
 	end
 
-	if Managers.state.cinematic:cinematic_active() then
+	if cinematic_active then
 		return false
 	end
 
