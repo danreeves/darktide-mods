@@ -1,9 +1,5 @@
 # ProfilePictures Changelog
 
-## 26.09.05
-
-Added info.json.
-
 ## 26.08.24
 
 Fixed an error that could appear when inspecting a player from the Party Finder, by ignoring preview players the profile image loader cannot read a platform from.

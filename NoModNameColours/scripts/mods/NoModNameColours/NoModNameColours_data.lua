@@ -1,4 +1,4 @@
-local mod = get_mod("DiscordRichPresence")
+local mod = get_mod("NoModNameColours")
 
 return {
 	name = mod:localize("mod_name"),
