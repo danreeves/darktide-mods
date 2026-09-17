@@ -3,9 +3,9 @@
  * Detect changed mods and upload them to Nexus Mods using the v3 API.
  *
  * Reads version and the Nexus Mods homepage from each mod's info.json. The Nexus mod ID is
- * extracted from the homepage URL, and the file_group_id is resolved automatically from the API:
- * the script fetches all
- * file update groups for the mod and uses the group if there is exactly one.
+ * extracted from the homepage URL, and the file_group_id is resolved automatically from the API.
+ * The script selects the most recently updated active file group, falling back to all groups when
+ * none are active.
  *
  * Usage:
  *     node scripts/ci/publish_mods.js [--dry-run]
