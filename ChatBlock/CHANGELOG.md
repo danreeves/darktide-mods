@@ -1,6 +1,6 @@
 # ChatBlock Changelog
 
-## 26.09.05
+## 26.09.17
 
 Added info.json.
 
