@@ -56,6 +56,15 @@ return {
 				},
 			},
 			{
+				setting_id = "profile_picture_size",
+				type = "numeric",
+				title = "profile_picture_size",
+				tooltip = "profile_picture_size_tooltip",
+				default_value = 90,
+				range = { 50, 90 },
+				decimals_number = 0,
+			},
+			{
 				setting_id = "advanced",
 				type = "group",
 				title = "advanced",

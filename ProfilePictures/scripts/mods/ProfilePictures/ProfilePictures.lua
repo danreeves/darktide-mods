@@ -2,9 +2,11 @@ local mod = get_mod("ProfilePictures")
 
 local cache = mod:persistent_table("cache")
 
--- Profile requests in flight, keyed by url. Deliberately not persistent: a reload leaves the promises behind.
+-- Profile requests in flight, keyed like the texture cache. Deliberately not persistent: a reload leaves the promises behind.
 local pending_requests = {}
 
+local math_clamp = math.clamp
+local math_floor = math.floor
 local string_byte = string.byte
 local string_find = string.find
 local string_format = string.format
@@ -13,6 +15,29 @@ local string_match = string.match
 local string_sub = string.sub
 
 local DEFAULT_PROXY_PATH = "/avatar?url="
+
+-- The resize workers reject anything outside this range
+local PROFILE_PICTURE_SIZE_MIN = 50
+local PROFILE_PICTURE_SIZE_MAX = 90
+
+-- Part of the texture cache key, which every portrait load builds, so keep it out of the settings lookup path
+local profile_picture_size, profile_picture_size_cache_suffix
+
+local function _cache_profile_picture_size()
+	local size = mod:get("profile_picture_size")
+
+	if type(size) ~= "number" then
+		size = PROFILE_PICTURE_SIZE_MAX
+	end
+
+	size = math_floor(math_clamp(size, PROFILE_PICTURE_SIZE_MIN, PROFILE_PICTURE_SIZE_MAX) + 0.5)
+
+	-- A slider drag fires this every frame, so only build the suffix when the value actually moved
+	if size ~= profile_picture_size then
+		profile_picture_size = size
+		profile_picture_size_cache_suffix = "#profile_picture_size=" .. size
+	end
+end
 
 -- Steam serves the same avatar from several CDN aliases, but `load_texture` fails on the Akamai/Cloudflare ones for some players, so prefer the plain Valve host and keep the url the profile actually returned as a fallback.
 local function _steam_avatar_urls(avatar_url)
@@ -31,10 +56,19 @@ local function _encode_char(char)
 	return string_format("%%%02X", string_byte(char))
 end
 
-local function _proxied_url(proxy_url, image_url)
+local function _encoded_url(image_url)
 	local encoded_url = string_gsub(image_url, "([^%w%-%_%.%~])", _encode_char)
 
-	return proxy_url .. encoded_url
+	return encoded_url
+end
+
+local function _proxied_url(proxy_url, image_url)
+	return proxy_url .. _encoded_url(image_url)
+end
+
+-- The workers answer with a 90x100 transparent png that has the square picture centred at `size`, so it fills the portrait slot without being stretched
+local function _resize_url(resize_url, image_url, size)
+	return resize_url .. _encoded_url(image_url) .. "&size=" .. size
 end
 
 -- Turns whatever the user typed into a prefix the picture url can be appended to, so that "127.0.0.1:8123" and "http://127.0.0.1:8123/avatar?url=" both work.
@@ -116,7 +150,10 @@ local function _xbox_image_url(response)
 	return gamerpic
 end
 
-local function _load_texture(image_url, fallback_image_url, cache_key, callbacks)
+-- Tries each url in turn and keeps the first one that loads. The url loader remembers a failed url, so a fallback that is needed once is reached straight away afterwards.
+local function _load_texture(image_urls, index, cache_key, callbacks)
+	local image_url = image_urls[index]
+
 	-- Public urls on third party CDNs, so don't attach the backend auth token
 	Managers.url_loader
 		:load_texture(image_url, false)
@@ -130,8 +167,8 @@ local function _load_texture(image_url, fallback_image_url, cache_key, callbacks
 			end
 		end)
 		:catch(function(_error)
-			if fallback_image_url then
-				_load_texture(fallback_image_url, nil, cache_key, callbacks)
+			if image_urls[index + 1] then
+				_load_texture(image_urls, index + 1, cache_key, callbacks)
 
 				return
 			end
@@ -156,18 +193,20 @@ end
 local function _load_profile_image(player_info, cb, allow_retry)
 	local platform = player_info:platform()
 
-	local xuid, url, get_image_url
+	local xuid, url, get_image_url, resize_url
 
 	if platform == "steam" then
 		xuid = Application.hex64_to_dec(player_info:platform_user_id())
 		url = "https://steam-profile-xml-to-json.dnrvs.workers.dev/" .. xuid
 		get_image_url = _steam_image_url
+		resize_url = "https://steam-profile-xml-to-json.dnrvs.workers.dev/resize?url="
 	end
 
 	if platform == "xbox" then
 		xuid = Application.hex64_to_dec(player_info:platform_user_id())
 		url = "https://xboxapi-workers.dnrvs.workers.dev/profiles/" .. xuid
 		get_image_url = _xbox_image_url
+		resize_url = "https://xboxapi-workers.dnrvs.workers.dev/resize?url="
 	end
 
 	if not (url and get_image_url) then
@@ -189,12 +228,16 @@ local function _load_profile_image(player_info, cb, allow_retry)
 		return
 	end
 
-	if cache[url] then
-		cb(cache[url])
+	-- Captured together, so the texture that lands under this key is always the one resized to this size
+	local size = profile_picture_size
+	local cache_key = url .. profile_picture_size_cache_suffix
+
+	if cache[cache_key] then
+		cb(cache[cache_key])
 		return
 	end
 
-	local pending = pending_requests[url]
+	local pending = pending_requests[cache_key]
 
 	-- Several panels ask for the same player at once, so join a request that is already running. A cancelled promise never runs its handlers, so check that this one is still alive rather than waiting on it forever.
 	if pending and pending.promise and pending.promise:is_pending() then
@@ -211,11 +254,11 @@ local function _load_profile_image(player_info, cb, allow_retry)
 		},
 	}
 
-	pending_requests[url] = request
+	pending_requests[cache_key] = request
 	request.promise = Managers.backend
 		:url_request(url)
 		:next(function(profile_res)
-			pending_requests[url] = nil
+			pending_requests[cache_key] = nil
 
 			local image_url, fallback_image_url = get_image_url(profile_res)
 
@@ -225,18 +268,30 @@ local function _load_profile_image(player_info, cb, allow_retry)
 				return
 			end
 
+			-- The workers only resize pictures from the hosts the profile services hand out, so they get the url the profile actually returned rather than the rewritten Steam one
+			local resized_image_url = _resize_url(resize_url, fallback_image_url or image_url, size)
 			local proxy_url = _image_proxy_prefix()
+			local image_urls
 
-			-- With a proxy configured, try it first and fall back to loading directly
+			-- With a proxy configured, try it first and fall back to loading directly. The resized picture is an https url as well, so it goes through the proxy too.
 			if proxy_url then
-				fallback_image_url = image_url
-				image_url = _proxied_url(proxy_url, image_url)
+				image_urls = {
+					_proxied_url(proxy_url, resized_image_url),
+					_proxied_url(proxy_url, image_url),
+					image_url,
+				}
+			else
+				image_urls = {
+					resized_image_url,
+					image_url,
+					fallback_image_url,
+				}
 			end
 
-			_load_texture(image_url, fallback_image_url, url, request.callbacks)
+			_load_texture(image_urls, 1, cache_key, request.callbacks)
 		end)
 		:catch(function(_error)
-			pending_requests[url] = nil
+			pending_requests[cache_key] = nil
 
 			mod:info("Failed to request profile from '%s'", url)
 		end)
@@ -291,8 +346,13 @@ local function _cache_location_settings()
 end
 
 _cache_location_settings()
+_cache_profile_picture_size()
 
-mod.on_setting_changed = _cache_location_settings
+-- A new size only reaches portraits as their views reload them, the same as the location toggles
+mod.on_setting_changed = function()
+	_cache_location_settings()
+	_cache_profile_picture_size()
+end
 
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/PlayerPanel")
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/NotificationFeed")
