@@ -150,6 +150,17 @@ local function _xbox_image_url(response)
 	return gamerpic
 end
 
+local function _psn_image_url(response)
+	local body = response and response.body
+	local avatar = body and body.avatar
+
+	if type(avatar) ~= "string" or avatar == "" then
+		return nil
+	end
+
+	return avatar
+end
+
 -- Tries each url in turn and keeps the first one that loads. The url loader remembers a failed url, so a fallback that is needed once is reached straight away afterwards.
 local function _load_texture(image_urls, index, cache_key, callbacks)
 	local image_url = image_urls[index]
@@ -207,6 +218,18 @@ local function _load_profile_image(player_info, cb, allow_retry)
 		url = "https://xboxapi-workers.dnrvs.workers.dev/profiles/" .. xuid
 		get_image_url = _xbox_image_url
 		resize_url = "https://xboxapi-workers.dnrvs.workers.dev/resize?url="
+	end
+
+	-- Darktide keeps PSN ids in decimal, only Steam and Xbox ids are converted to hex. An id that is still empty, or isn't the 1-20 digits the worker accepts, would only come back as an error, so it sends no request.
+	if platform == "psn" then
+		local psn_account_id = player_info:platform_user_id()
+
+		if type(psn_account_id) == "string" and #psn_account_id <= 20 and string_match(psn_account_id, "^%d+$") then
+			-- Test deployment of PsnAPI-Workers until its host is decided
+			url = "https://psnapi-workers.lucleto.workers.dev/profiles/" .. psn_account_id
+			get_image_url = _psn_image_url
+			resize_url = "https://psnapi-workers.lucleto.workers.dev/resize?url="
+		end
 	end
 
 	if not (url and get_image_url) then
