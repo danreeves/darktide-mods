@@ -16,6 +16,11 @@ local string_sub = string.sub
 
 local DEFAULT_PROXY_PATH = "/avatar?url="
 
+local DEFAULT_STEAM_WORKER_URL = "https://steam-profile-xml-to-json.dnrvs.workers.dev"
+local DEFAULT_XBOX_WORKER_URL = "https://xboxapi-workers.dnrvs.workers.dev"
+-- Test deployment of PsnAPI-Workers until its host is decided. The psn_worker_url placeholder shows it too.
+local DEFAULT_PSN_WORKER_URL = "https://psnapi-workers.lucleto.workers.dev"
+
 -- The resize workers reject anything outside this range
 local PROFILE_PICTURE_SIZE_MIN = 50
 local PROFILE_PICTURE_SIZE_MAX = 90
@@ -127,6 +132,77 @@ local function _image_proxy_prefix()
 	return _proxy_url_prefix_cache
 end
 
+-- Turns whatever the user typed into a base the paths are appended to, so that "my-worker.workers.dev" and "https://my-worker.workers.dev/" both work. Nothing left after the scheme means the built-in deployment.
+local function _worker_base_url(setting)
+	local base_url = string_match(setting, "^%s*(.-)%s*$")
+
+	if base_url == "" then
+		return nil
+	end
+
+	local _, scheme_end = string_find(base_url, "://", 1, true)
+
+	if not scheme_end then
+		base_url = "https://" .. base_url
+		scheme_end = 8
+	end
+
+	-- The added paths start with "/", so a trailing one would double up
+	base_url = string_match(base_url, "^(.-)/*$")
+
+	if #base_url <= scheme_end then
+		return nil
+	end
+
+	return base_url
+end
+
+-- A platform's profile lookup and /resize both come from the same worker deployment
+local steam_worker = {
+	setting_id = "steam_worker_url",
+	default_url = DEFAULT_STEAM_WORKER_URL,
+	profile_path = "/",
+}
+
+local xbox_worker = {
+	setting_id = "xbox_worker_url",
+	default_url = DEFAULT_XBOX_WORKER_URL,
+	profile_path = "/profiles/",
+}
+
+local psn_worker = {
+	setting_id = "psn_worker_url",
+	default_url = DEFAULT_PSN_WORKER_URL,
+	profile_path = "/profiles/",
+}
+
+local WORKERS = {
+	steam_worker,
+	xbox_worker,
+	psn_worker,
+}
+
+-- Part of the texture cache key, which every portrait load builds, so resolve the urls here rather than on each load
+local function _cache_worker_urls()
+	for i = 1, #WORKERS do
+		local worker = WORKERS[i]
+		local setting = mod:get(worker.setting_id)
+
+		if type(setting) ~= "string" then
+			setting = ""
+		end
+
+		-- Only re-parse when the setting actually changed
+		if setting ~= worker.setting then
+			local base_url = _worker_base_url(setting) or worker.default_url
+
+			worker.setting = setting
+			worker.profile_url = base_url .. worker.profile_path
+			worker.resize_url = base_url .. "/resize?url="
+		end
+	end
+end
+
 local function _steam_image_url(response)
 	local body = response and response.body
 	local profile = body and body.profile
@@ -208,16 +284,16 @@ local function _load_profile_image(player_info, cb, allow_retry)
 
 	if platform == "steam" then
 		xuid = Application.hex64_to_dec(player_info:platform_user_id())
-		url = "https://steam-profile-xml-to-json.dnrvs.workers.dev/" .. xuid
+		url = steam_worker.profile_url .. xuid
 		get_image_url = _steam_image_url
-		resize_url = "https://steam-profile-xml-to-json.dnrvs.workers.dev/resize?url="
+		resize_url = steam_worker.resize_url
 	end
 
 	if platform == "xbox" then
 		xuid = Application.hex64_to_dec(player_info:platform_user_id())
-		url = "https://xboxapi-workers.dnrvs.workers.dev/profiles/" .. xuid
+		url = xbox_worker.profile_url .. xuid
 		get_image_url = _xbox_image_url
-		resize_url = "https://xboxapi-workers.dnrvs.workers.dev/resize?url="
+		resize_url = xbox_worker.resize_url
 	end
 
 	-- Darktide keeps PSN ids in decimal, only Steam and Xbox ids are converted to hex. An id that is still empty, or isn't the 1-20 digits the worker accepts, would only come back as an error, so it sends no request.
@@ -225,10 +301,9 @@ local function _load_profile_image(player_info, cb, allow_retry)
 		local psn_account_id = player_info:platform_user_id()
 
 		if type(psn_account_id) == "string" and #psn_account_id <= 20 and string_match(psn_account_id, "^%d+$") then
-			-- Test deployment of PsnAPI-Workers until its host is decided
-			url = "https://psnapi-workers.lucleto.workers.dev/profiles/" .. psn_account_id
+			url = psn_worker.profile_url .. psn_account_id
 			get_image_url = _psn_image_url
-			resize_url = "https://psnapi-workers.lucleto.workers.dev/resize?url="
+			resize_url = psn_worker.resize_url
 		end
 	end
 
@@ -370,11 +445,13 @@ end
 
 _cache_location_settings()
 _cache_profile_picture_size()
+_cache_worker_urls()
 
 -- A new size only reaches portraits as their views reload them, the same as the location toggles
 mod.on_setting_changed = function()
 	_cache_location_settings()
 	_cache_profile_picture_size()
+	_cache_worker_urls()
 end
 
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/PlayerPanel")
