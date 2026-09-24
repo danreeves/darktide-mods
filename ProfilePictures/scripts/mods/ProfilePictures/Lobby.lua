@@ -3,8 +3,11 @@ local mod = get_mod("ProfilePictures")
 local _apply_profile_image = mod.apply_profile_image
 local location_enabled = mod.location_enabled
 
-mod:hook_safe("LobbyView", "_assign_player_to_slot", function(_self, player, slot)
-	if not location_enabled.lobby then
+-- Runs for every portrait load: when a player takes a slot, and again whenever vanilla reloads the portrait, which a profile re-sync triggers because the loadout check compares items by table. The unload before it clears the picture, so it has to be loaded here each time; a reload is served from the texture cache.
+mod:hook_safe("LobbyView", "_load_portrait_icon", function(_self, slot)
+	local player = slot.player
+
+	if not (location_enabled.lobby and player) then
 		return
 	end
 
