@@ -87,6 +87,240 @@ return {
 		-- A literal address, so it reads the same in every language
 		en = "127.0.0.1:8123",
 	},
+	steam_worker_url = {
+		en = "Steam profile worker URL",
+		de = "Steam-Profil-Worker-URL",
+		it = "URL del worker dei profili Steam",
+		es = "URL del worker de perfiles de Steam",
+		pl = "Adres URL workera profili Steam",
+		["pt-br"] = "URL do worker de perfis da Steam",
+		ja = "Steamプロフィール用ワーカーのURL",
+		ko = "Steam 프로필 워커 URL",
+		["zh-cn"] = "Steam 资料 Worker URL",
+		["zh-tw"] = "Steam 個人檔案 Worker URL",
+		ru = "URL воркера профилей Steam",
+		fr = "URL du worker de profils Steam",
+	},
+	steam_worker_url_tooltip = {
+		en = "Optional. Base address of the worker that looks up Steam profiles, for example your own deployment of "
+			.. "danreeves/steam-profile-xml-to-json or a mirror of it. It must be a compatible deployment of that worker, "
+			.. "with the same response and the same /resize endpoint, so a Steam API address will not work. The mod adds "
+			.. "/<steamid64> and /resize?url= itself, and a missing https:// is filled in for you. "
+			.. "Leave empty to use the built-in deployment.",
+		de = "Optional. Basisadresse des Workers, der Steam-Profile abruft, zum Beispiel deine eigene Bereitstellung von "
+			.. "danreeves/steam-profile-xml-to-json oder ein Mirror davon. Es muss eine kompatible Bereitstellung dieses "
+			.. "Workers sein, mit derselben Antwort und demselben /resize-Endpunkt, eine Adresse der Steam-API funktioniert "
+			.. "daher nicht. Die Mod hängt /<steamid64> und /resize?url= selbst an, ein fehlendes https:// wird für dich "
+			.. "ergänzt. Leer lassen, um die integrierte Bereitstellung zu verwenden.",
+		it = "Facoltativo. Indirizzo base del worker che recupera i profili Steam, ad esempio una tua distribuzione di "
+			.. "danreeves/steam-profile-xml-to-json o un suo mirror. Deve essere una distribuzione compatibile di quel "
+			.. "worker, con la stessa risposta e lo stesso endpoint /resize, quindi un indirizzo dell'API di Steam non "
+			.. "funziona. La mod aggiunge da sola /<steamid64> e /resize?url=, e se manca, https:// viene aggiunto "
+			.. "automaticamente. Lascia vuoto per usare la distribuzione integrata.",
+		es = "Opcional. Dirección base del worker que consulta los perfiles de Steam, por ejemplo tu propio despliegue de "
+			.. "danreeves/steam-profile-xml-to-json o un espejo suyo. Debe ser un despliegue compatible de ese worker, con "
+			.. "la misma respuesta y el mismo endpoint /resize, así que una dirección de la API de Steam no funcionará. El "
+			.. "mod añade /<steamid64> y /resize?url= por su cuenta, y si falta, https:// se añade automáticamente. "
+			.. "Déjalo vacío para usar el despliegue integrado.",
+		pl = "Opcjonalne. Adres bazowy workera, który pobiera profile Steam, na przykład własne wdrożenie "
+			.. "danreeves/steam-profile-xml-to-json lub jego kopia lustrzana. Musi to być zgodne wdrożenie tego workera, z "
+			.. "taką samą odpowiedzią i takim samym punktem końcowym /resize, więc adres API Steam nie zadziała. Mod sam "
+			.. "dodaje /<steamid64> oraz /resize?url=, a brakujące https:// zostanie uzupełnione automatycznie. "
+			.. "Pozostaw puste, aby używać wbudowanego wdrożenia.",
+		["pt-br"] = "Opcional. Endereço base do worker que consulta os perfis da Steam, por exemplo sua própria implantação "
+			.. "de danreeves/steam-profile-xml-to-json ou um espelho dela. Precisa ser uma implantação compatível desse "
+			.. "worker, com a mesma resposta e o mesmo endpoint /resize, então um endereço da API da Steam não vai "
+			.. "funcionar. O mod adiciona /<steamid64> e /resize?url= por conta própria, e se faltar, https:// é "
+			.. "preenchido automaticamente. Deixe em branco para usar a implantação integrada.",
+		ja = "任意。Steamプロフィールを取得するワーカーのベースアドレスです。例えば自分でデプロイした danreeves/steam-profile-xml-to-json やそのミラーを指定します。"
+			.. "同じレスポンスと同じ /resize エンドポイントを持つ、このワーカーの互換デプロイである必要があるため、SteamのAPIのアドレスは使用できません。"
+			.. "/<steamid64> と /resize?url= はMODが自動的に付け加え、https:// が省略されている場合も補完されます。空欄にすると組み込みのデプロイを使用します。",
+		ko = "선택 사항입니다. Steam 프로필을 조회하는 워커의 기본 주소로, 예를 들어 직접 배포한 danreeves/steam-profile-xml-to-json 또는 그 미러를 입력합니다. "
+			.. "같은 응답과 같은 /resize 엔드포인트를 제공하는 해당 워커의 호환 배포여야 하므로 Steam API 주소는 작동하지 않습니다. "
+			.. "/<steamid64> 와 /resize?url= 는 모드가 직접 붙이며, 누락된 https:// 도 자동으로 채워집니다. 비워 두면 기본 제공 배포를 사용합니다.",
+		["zh-cn"] = "可选。用于查询 Steam 资料的 Worker 的基础地址，例如你自己部署的 danreeves/steam-profile-xml-to-json 或其镜像。"
+			.. "它必须是该 Worker 的兼容部署，返回相同的响应并提供相同的 /resize 接口，因此 Steam API 的地址无法使用。"
+			.. "/<steamid64> 和 /resize?url= 由模组自动添加，缺少的 https:// 也会自动补全。留空则使用内置部署。",
+		["zh-tw"] = "選填。用於查詢 Steam 個人檔案的 Worker 基礎位址，例如你自己部署的 danreeves/steam-profile-xml-to-json 或其鏡像。"
+			.. "它必須是該 Worker 的相容部署，回傳相同的回應並提供相同的 /resize 端點，因此 Steam API 的位址無法使用。"
+			.. "/<steamid64> 與 /resize?url= 由模組自動加上，缺少的 https:// 也會自動補上。留空則使用內建部署。",
+		ru = "Необязательно. Базовый адрес воркера, который запрашивает профили Steam, например ваше собственное "
+			.. "развёртывание danreeves/steam-profile-xml-to-json или его зеркало. Это должно быть совместимое развёртывание "
+			.. "этого воркера, с тем же ответом и той же конечной точкой /resize, поэтому адрес API Steam не подойдёт. Мод "
+			.. "сам добавляет /<steamid64> и /resize?url=, а отсутствующий https:// будет подставлен автоматически. "
+			.. "Оставьте поле пустым, чтобы использовать встроенное развёртывание.",
+		fr = "Facultatif. Adresse de base du worker qui récupère les profils Steam, par exemple votre propre déploiement de "
+			.. "danreeves/steam-profile-xml-to-json ou un miroir de celui-ci. Il doit s'agir d'un déploiement compatible de "
+			.. "ce worker, avec la même réponse et le même point de terminaison /resize, une adresse de l'API Steam ne "
+			.. "fonctionnera donc pas. Le mod ajoute lui-même /<steamid64> et /resize?url=, et le https:// manquant est "
+			.. "ajouté automatiquement. Laissez vide pour utiliser le déploiement intégré.",
+	},
+	steam_worker_url_placeholder = {
+		-- The built-in deployment, a literal address so it reads the same in every language
+		en = "steam-profile-xml-to-json.dnrvs.workers.dev",
+	},
+	xbox_worker_url = {
+		en = "Xbox profile worker URL",
+		de = "Xbox-Profil-Worker-URL",
+		it = "URL del worker dei profili Xbox",
+		es = "URL del worker de perfiles de Xbox",
+		pl = "Adres URL workera profili Xbox",
+		["pt-br"] = "URL do worker de perfis do Xbox",
+		ja = "Xboxプロフィール用ワーカーのURL",
+		ko = "Xbox 프로필 워커 URL",
+		["zh-cn"] = "Xbox 资料 Worker URL",
+		["zh-tw"] = "Xbox 個人檔案 Worker URL",
+		ru = "URL воркера профилей Xbox",
+		fr = "URL du worker de profils Xbox",
+	},
+	xbox_worker_url_tooltip = {
+		en = "Optional. Base address of the worker that looks up Xbox profiles, for example your own deployment of "
+			.. "danreeves/XboxAPI-Workers or a mirror of it. It must be a compatible deployment of that worker, with the "
+			.. "same response and the same /resize endpoint, so an Xbox API address will not work. The mod adds "
+			.. "/profiles/<xuid> and /resize?url= itself, and a missing https:// is filled in for you. "
+			.. "Leave empty to use the built-in deployment.",
+		de = "Optional. Basisadresse des Workers, der Xbox-Profile abruft, zum Beispiel deine eigene Bereitstellung von "
+			.. "danreeves/XboxAPI-Workers oder ein Mirror davon. Es muss eine kompatible Bereitstellung dieses Workers "
+			.. "sein, mit derselben Antwort und demselben /resize-Endpunkt, eine Adresse der Xbox-API funktioniert daher "
+			.. "nicht. Die Mod hängt /profiles/<xuid> und /resize?url= selbst an, ein fehlendes https:// wird für dich "
+			.. "ergänzt. Leer lassen, um die integrierte Bereitstellung zu verwenden.",
+		it = "Facoltativo. Indirizzo base del worker che recupera i profili Xbox, ad esempio una tua distribuzione di "
+			.. "danreeves/XboxAPI-Workers o un suo mirror. Deve essere una distribuzione compatibile di quel worker, con la "
+			.. "stessa risposta e lo stesso endpoint /resize, quindi un indirizzo dell'API di Xbox non funziona. La mod "
+			.. "aggiunge da sola /profiles/<xuid> e /resize?url=, e se manca, https:// viene aggiunto automaticamente. "
+			.. "Lascia vuoto per usare la distribuzione integrata.",
+		es = "Opcional. Dirección base del worker que consulta los perfiles de Xbox, por ejemplo tu propio despliegue de "
+			.. "danreeves/XboxAPI-Workers o un espejo suyo. Debe ser un despliegue compatible de ese worker, con la misma "
+			.. "respuesta y el mismo endpoint /resize, así que una dirección de la API de Xbox no funcionará. El mod añade "
+			.. "/profiles/<xuid> y /resize?url= por su cuenta, y si falta, https:// se añade automáticamente. "
+			.. "Déjalo vacío para usar el despliegue integrado.",
+		pl = "Opcjonalne. Adres bazowy workera, który pobiera profile Xbox, na przykład własne wdrożenie "
+			.. "danreeves/XboxAPI-Workers lub jego kopia lustrzana. Musi to być zgodne wdrożenie tego workera, z taką samą "
+			.. "odpowiedzią i takim samym punktem końcowym /resize, więc adres API Xbox nie zadziała. Mod sam dodaje "
+			.. "/profiles/<xuid> oraz /resize?url=, a brakujące https:// zostanie uzupełnione automatycznie. "
+			.. "Pozostaw puste, aby używać wbudowanego wdrożenia.",
+		["pt-br"] = "Opcional. Endereço base do worker que consulta os perfis do Xbox, por exemplo sua própria implantação "
+			.. "de danreeves/XboxAPI-Workers ou um espelho dela. Precisa ser uma implantação compatível desse worker, com a "
+			.. "mesma resposta e o mesmo endpoint /resize, então um endereço da API do Xbox não vai funcionar. O mod "
+			.. "adiciona /profiles/<xuid> e /resize?url= por conta própria, e se faltar, https:// é preenchido "
+			.. "automaticamente. Deixe em branco para usar a implantação integrada.",
+		ja = "任意。Xboxプロフィールを取得するワーカーのベースアドレスです。例えば自分でデプロイした danreeves/XboxAPI-Workers やそのミラーを指定します。"
+			.. "同じレスポンスと同じ /resize エンドポイントを持つ、このワーカーの互換デプロイである必要があるため、XboxのAPIのアドレスは使用できません。"
+			.. "/profiles/<xuid> と /resize?url= はMODが自動的に付け加え、https:// が省略されている場合も補完されます。空欄にすると組み込みのデプロイを使用します。",
+		ko = "선택 사항입니다. Xbox 프로필을 조회하는 워커의 기본 주소로, 예를 들어 직접 배포한 danreeves/XboxAPI-Workers 또는 그 미러를 입력합니다. "
+			.. "같은 응답과 같은 /resize 엔드포인트를 제공하는 해당 워커의 호환 배포여야 하므로 Xbox API 주소는 작동하지 않습니다. "
+			.. "/profiles/<xuid> 와 /resize?url= 는 모드가 직접 붙이며, 누락된 https:// 도 자동으로 채워집니다. 비워 두면 기본 제공 배포를 사용합니다.",
+		["zh-cn"] = "可选。用于查询 Xbox 资料的 Worker 的基础地址，例如你自己部署的 danreeves/XboxAPI-Workers 或其镜像。"
+			.. "它必须是该 Worker 的兼容部署，返回相同的响应并提供相同的 /resize 接口，因此 Xbox API 的地址无法使用。"
+			.. "/profiles/<xuid> 和 /resize?url= 由模组自动添加，缺少的 https:// 也会自动补全。留空则使用内置部署。",
+		["zh-tw"] = "選填。用於查詢 Xbox 個人檔案的 Worker 基礎位址，例如你自己部署的 danreeves/XboxAPI-Workers 或其鏡像。"
+			.. "它必須是該 Worker 的相容部署，回傳相同的回應並提供相同的 /resize 端點，因此 Xbox API 的位址無法使用。"
+			.. "/profiles/<xuid> 與 /resize?url= 由模組自動加上，缺少的 https:// 也會自動補上。留空則使用內建部署。",
+		ru = "Необязательно. Базовый адрес воркера, который запрашивает профили Xbox, например ваше собственное "
+			.. "развёртывание danreeves/XboxAPI-Workers или его зеркало. Это должно быть совместимое развёртывание этого "
+			.. "воркера, с тем же ответом и той же конечной точкой /resize, поэтому адрес API Xbox не подойдёт. Мод сам "
+			.. "добавляет /profiles/<xuid> и /resize?url=, а отсутствующий https:// будет подставлен автоматически. "
+			.. "Оставьте поле пустым, чтобы использовать встроенное развёртывание.",
+		fr = "Facultatif. Adresse de base du worker qui récupère les profils Xbox, par exemple votre propre déploiement de "
+			.. "danreeves/XboxAPI-Workers ou un miroir de celui-ci. Il doit s'agir d'un déploiement compatible de ce "
+			.. "worker, avec la même réponse et le même point de terminaison /resize, une adresse de l'API Xbox ne "
+			.. "fonctionnera donc pas. Le mod ajoute lui-même /profiles/<xuid> et /resize?url=, et le https:// manquant est "
+			.. "ajouté automatiquement. Laissez vide pour utiliser le déploiement intégré.",
+	},
+	xbox_worker_url_placeholder = {
+		-- The built-in deployment, a literal address so it reads the same in every language
+		en = "xboxapi-workers.dnrvs.workers.dev",
+	},
+	psn_worker_url = {
+		en = "PlayStation profile worker URL",
+		de = "PlayStation-Profil-Worker-URL",
+		it = "URL del worker dei profili PlayStation",
+		es = "URL del worker de perfiles de PlayStation",
+		pl = "Adres URL workera profili PlayStation",
+		["pt-br"] = "URL do worker de perfis do PlayStation",
+		ja = "PlayStationプロフィール用ワーカーのURL",
+		ko = "PlayStation 프로필 워커 URL",
+		["zh-cn"] = "PlayStation 资料 Worker URL",
+		["zh-tw"] = "PlayStation 個人檔案 Worker URL",
+		ru = "URL воркера профилей PlayStation",
+		fr = "URL du worker de profils PlayStation",
+	},
+	psn_worker_url_tooltip = {
+		en = "Optional. Base address of the worker that looks up PlayStation profiles, for example your own deployment "
+			.. "of LucLeto/PsnAPI-Workers or a mirror of it. It must be a compatible deployment of that worker, with the "
+			.. "same response and the same /resize endpoint, so a PlayStation API address will not work. The mod adds "
+			.. "/profiles/<accountId> and /resize?url= itself, and a missing https:// is filled in for you. Hosting your "
+			.. "own copy needs its own dedicated PSN account, whose sign-in has to be renewed about every 60 days, see the "
+			.. "worker's README. Leave empty to use the built-in deployment.",
+		de = "Optional. Basisadresse des Workers, der PlayStation-Profile abruft, zum Beispiel deine eigene Bereitstellung "
+			.. "von LucLeto/PsnAPI-Workers oder ein Mirror davon. Es muss eine kompatible Bereitstellung dieses Workers "
+			.. "sein, mit derselben Antwort und demselben /resize-Endpunkt, eine Adresse der PlayStation-API funktioniert "
+			.. "daher nicht. Die Mod hängt /profiles/<accountId> und /resize?url= selbst an, ein fehlendes https:// wird "
+			.. "für dich ergänzt. Eine eigene Kopie braucht ein eigenes, dafür vorgesehenes PSN-Konto, dessen Anmeldung "
+			.. "etwa alle 60 Tage erneuert werden muss, siehe die README des Workers. Leer lassen, um die integrierte "
+			.. "Bereitstellung zu verwenden.",
+		it = "Facoltativo. Indirizzo base del worker che recupera i profili PlayStation, ad esempio una tua distribuzione "
+			.. "di LucLeto/PsnAPI-Workers o un suo mirror. Deve essere una distribuzione compatibile di quel worker, con la "
+			.. "stessa risposta e lo stesso endpoint /resize, quindi un indirizzo dell'API di PlayStation non funziona. La "
+			.. "mod aggiunge da sola /profiles/<accountId> e /resize?url=, e se manca, https:// viene aggiunto "
+			.. "automaticamente. Ospitare una tua copia richiede un account PSN dedicato, il cui accesso va rinnovato circa "
+			.. "ogni 60 giorni, vedi il README del worker. Lascia vuoto per usare la distribuzione integrata.",
+		es = "Opcional. Dirección base del worker que consulta los perfiles de PlayStation, por ejemplo tu propio "
+			.. "despliegue de LucLeto/PsnAPI-Workers o un espejo suyo. Debe ser un despliegue compatible de ese worker, con "
+			.. "la misma respuesta y el mismo endpoint /resize, así que una dirección de la API de PlayStation no "
+			.. "funcionará. El mod añade /profiles/<accountId> y /resize?url= por su cuenta, y si falta, https:// se añade "
+			.. "automáticamente. Alojar tu propia copia requiere una cuenta de PSN dedicada, cuyo inicio de sesión hay que "
+			.. "renovar aproximadamente cada 60 días; consulta el README del worker. Déjalo vacío para usar el despliegue "
+			.. "integrado.",
+		pl = "Opcjonalne. Adres bazowy workera, który pobiera profile PlayStation, na przykład własne wdrożenie "
+			.. "LucLeto/PsnAPI-Workers lub jego kopia lustrzana. Musi to być zgodne wdrożenie tego workera, z taką samą "
+			.. "odpowiedzią i takim samym punktem końcowym /resize, więc adres API PlayStation nie zadziała. Mod sam dodaje "
+			.. "/profiles/<accountId> oraz /resize?url=, a brakujące https:// zostanie uzupełnione automatycznie. "
+			.. "Hostowanie własnej kopii wymaga osobnego konta PSN, którego logowanie trzeba odnawiać mniej więcej co 60 "
+			.. "dni, zobacz README workera. Pozostaw puste, aby używać wbudowanego wdrożenia.",
+		["pt-br"] = "Opcional. Endereço base do worker que consulta os perfis do PlayStation, por exemplo sua própria "
+			.. "implantação de LucLeto/PsnAPI-Workers ou um espelho dela. Precisa ser uma implantação compatível desse "
+			.. "worker, com a mesma resposta e o mesmo endpoint /resize, então um endereço da API do PlayStation não vai "
+			.. "funcionar. O mod adiciona /profiles/<accountId> e /resize?url= por conta própria, e se faltar, https:// é "
+			.. "preenchido automaticamente. Hospedar sua própria cópia exige uma conta PSN dedicada, cujo login precisa ser "
+			.. "renovado aproximadamente a cada 60 dias; veja o README do worker. Deixe em branco para usar a implantação "
+			.. "integrada.",
+		ja = "任意。PlayStationプロフィールを取得するワーカーのベースアドレスです。例えば自分でデプロイした LucLeto/PsnAPI-Workers やそのミラーを指定します。"
+			.. "同じレスポンスと同じ /resize エンドポイントを持つ、このワーカーの互換デプロイである必要があるため、PlayStationのAPIのアドレスは使用できません。"
+			.. "/profiles/<accountId> と /resize?url= はMODが自動的に付け加え、https:// が省略されている場合も補完されます。"
+			.. "自分でホストする場合は専用のPSNアカウントが必要で、そのサインインを約60日ごとに更新しなければなりません。詳しくはワーカーのREADMEを参照してください。"
+			.. "空欄にすると組み込みのデプロイを使用します。",
+		ko = "선택 사항입니다. PlayStation 프로필을 조회하는 워커의 기본 주소로, 예를 들어 직접 배포한 LucLeto/PsnAPI-Workers 또는 그 미러를 입력합니다. "
+			.. "같은 응답과 같은 /resize 엔드포인트를 제공하는 해당 워커의 호환 배포여야 하므로 PlayStation API 주소는 작동하지 않습니다. "
+			.. "/profiles/<accountId> 와 /resize?url= 는 모드가 직접 붙이며, 누락된 https:// 도 자동으로 채워집니다. "
+			.. "직접 호스팅하려면 전용 PSN 계정이 필요하며, 그 로그인은 약 60일마다 갱신해야 합니다. 자세한 내용은 워커의 README를 참고하세요. "
+			.. "비워 두면 기본 제공 배포를 사용합니다.",
+		["zh-cn"] = "可选。用于查询 PlayStation 资料的 Worker 的基础地址，例如你自己部署的 LucLeto/PsnAPI-Workers 或其镜像。"
+			.. "它必须是该 Worker 的兼容部署，返回相同的响应并提供相同的 /resize 接口，因此 PlayStation API 的地址无法使用。"
+			.. "/profiles/<accountId> 和 /resize?url= 由模组自动添加，缺少的 https:// 也会自动补全。"
+			.. "自行托管需要一个专用的 PSN 账号，其登录状态大约每 60 天需要续期一次，详见该 Worker 的 README。留空则使用内置部署。",
+		["zh-tw"] = "選填。用於查詢 PlayStation 個人檔案的 Worker 基礎位址，例如你自己部署的 LucLeto/PsnAPI-Workers 或其鏡像。"
+			.. "它必須是該 Worker 的相容部署，回傳相同的回應並提供相同的 /resize 端點，因此 PlayStation API 的位址無法使用。"
+			.. "/profiles/<accountId> 與 /resize?url= 由模組自動加上，缺少的 https:// 也會自動補上。"
+			.. "自行架設需要一個專用的 PSN 帳號，其登入狀態大約每 60 天需要更新一次，詳見該 Worker 的 README。留空則使用內建部署。",
+		ru = "Необязательно. Базовый адрес воркера, который запрашивает профили PlayStation, например ваше собственное "
+			.. "развёртывание LucLeto/PsnAPI-Workers или его зеркало. Это должно быть совместимое развёртывание этого "
+			.. "воркера, с тем же ответом и той же конечной точкой /resize, поэтому адрес API PlayStation не подойдёт. Мод "
+			.. "сам добавляет /profiles/<accountId> и /resize?url=, а отсутствующий https:// будет подставлен автоматически. "
+			.. "Для собственной копии нужна отдельная учётная запись PSN, вход в которую приходится обновлять примерно раз в "
+			.. "60 дней, подробнее в README воркера. Оставьте поле пустым, чтобы использовать встроенное развёртывание.",
+		fr = "Facultatif. Adresse de base du worker qui récupère les profils PlayStation, par exemple votre propre "
+			.. "déploiement de LucLeto/PsnAPI-Workers ou un miroir de celui-ci. Il doit s'agir d'un déploiement compatible "
+			.. "de ce worker, avec la même réponse et le même point de terminaison /resize, une adresse de l'API "
+			.. "PlayStation ne fonctionnera donc pas. Le mod ajoute lui-même /profiles/<accountId> et /resize?url=, et le "
+			.. "https:// manquant est ajouté automatiquement. Héberger votre propre copie nécessite un compte PSN dédié, dont "
+			.. "la connexion doit être renouvelée environ tous les 60 jours, voir le README du worker. Laissez vide pour "
+			.. "utiliser le déploiement intégré.",
+	},
+	psn_worker_url_placeholder = {
+		-- The built-in deployment, a literal address so it reads the same in every language. Update it with DEFAULT_PSN_WORKER_URL.
+		en = "psnapi-workers.lucleto.workers.dev",
+	},
 	locations = {
 		en = "Show profile pictures in",
 		de = "Profilbilder anzeigen in",
