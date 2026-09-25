@@ -1,6 +1,7 @@
 local mod = get_mod("ProfilePictures")
 
-local cache = mod:persistent_table("cache")
+-- Every picture the mod holds a url loader reference for, keyed by profile url and size. The loader refcounts by image url instead, so each entry keeps the url that actually loaded to give its reference back with.
+local cache = mod:persistent_table("texture_cache")
 
 -- Profile requests in flight, keyed like the texture cache. Deliberately not persistent: a reload leaves the promises behind.
 local pending_requests = {}
@@ -245,9 +246,23 @@ local function _load_texture(image_urls, index, cache_key, callbacks)
 	Managers.url_loader
 		:load_texture(image_url, false)
 		:next(function(data)
-			local texture = data.texture
+			local entry = cache[cache_key]
 
-			cache[cache_key] = texture
+			-- A joined profile request ends when the profile answers, not when its picture lands, so a second load for the same picture can finish while this one downloads. Keep the texture that landed first and give this reference back.
+			if entry then
+				Managers.url_loader:unload_texture(image_url)
+			else
+				entry = {
+					texture = data.texture,
+					image_url = image_url,
+				}
+
+				cache[cache_key] = entry
+			end
+
+			entry.requested = true
+
+			local texture = entry.texture
 
 			for i = 1, #callbacks do
 				callbacks[i](texture)
@@ -330,8 +345,13 @@ local function _load_profile_image(player_info, cb, allow_retry)
 	local size = profile_picture_size
 	local cache_key = url .. profile_picture_size_cache_suffix
 
-	if cache[cache_key] then
-		cb(cache[cache_key])
+	local entry = cache[cache_key]
+
+	if entry then
+		entry.requested = true
+
+		cb(entry.texture)
+
 		return
 	end
 
@@ -452,6 +472,66 @@ mod.on_setting_changed = function()
 	_cache_location_settings()
 	_cache_profile_picture_size()
 	_cache_worker_urls()
+end
+
+-- Constant elements outlive the game state, and the feed only counts a notification down while it is drawn, which it isn't on the loading screen. A portrait notification can so sit out a loading screen and draw its picture again afterwards.
+local function _notification_textures()
+	local textures = {}
+	local ui_manager = Managers.ui
+	local constant_elements = ui_manager and ui_manager:ui_constant_elements()
+	local notification_feed = constant_elements and constant_elements:element("ConstantElementNotificationFeed")
+	local notifications = notification_feed and notification_feed._notifications
+
+	if not notifications then
+		return textures
+	end
+
+	for i = 1, #notifications do
+		local notification = notifications[i]
+		local texture = notification and notification.profile_picture_texture
+
+		if texture then
+			textures[texture] = true
+		end
+	end
+
+	return textures
+end
+
+-- Releasing the last reference destroys a texture there and then, even with a widget still drawing it. So a picture is only released once nothing asked for it through a whole game state, by when the views and panels of the state it was shown in are gone, including an end screen still fading out under the loading screen.
+local function _release_unrequested_textures()
+	local url_loader = Managers.url_loader
+
+	if not url_loader then
+		return
+	end
+
+	local notification_textures = _notification_textures()
+	local num_released = 0
+	local num_kept = 0
+
+	for cache_key, entry in pairs(cache) do
+		if entry.requested or notification_textures[entry.texture] then
+			entry.requested = false
+			num_kept = num_kept + 1
+		else
+			-- Dropped before the release, so neither a reload nor an error part way through can give the same reference back twice
+			cache[cache_key] = nil
+
+			url_loader:unload_texture(entry.image_url)
+
+			num_released = num_released + 1
+		end
+	end
+
+	mod:info("Released %d unused profile pictures, kept %d", num_released, num_kept)
+end
+
+-- Every trip between the hub and a mission goes through loading, and the pre-mission lobby only opens once it has started
+mod.on_game_state_changed = function(status, state_name)
+	if status == "enter" and state_name == "StateLoading" then
+		_release_unrequested_textures()
+	end
 end
 
 mod:io_dofile("ProfilePictures/scripts/mods/ProfilePictures/PlayerPanel")
