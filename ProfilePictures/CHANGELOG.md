@@ -1,5 +1,14 @@
 # ProfilePictures Changelog
 
+## 26.09.25
+
+Added profile pictures for PlayStation players.
+Added a Profile picture size setting to make profile pictures smaller inside the portrait frame.
+Added a Profile picture background setting to choose the colour around smaller profile pictures and behind transparent avatars.
+Added advanced settings to point the Steam, Xbox and PlayStation profile lookups at your own copy or a mirror of their worker, so pictures keep working if a built-in worker goes down.
+Fixed profile pictures being stretched to fit the portrait.
+Fixed profile pictures sometimes disappearing in the pre-mission lobby, most often your own.
+
 ## 26.08.24
 
 Fixed an error that could appear when inspecting a player from the Party Finder, by ignoring preview players the profile image loader cannot read a platform from.
