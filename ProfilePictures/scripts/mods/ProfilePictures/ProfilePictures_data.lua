@@ -65,6 +65,14 @@ return {
 				decimals_number = 0,
 			},
 			{
+				setting_id = "profile_picture_background",
+				type = "color",
+				title = "profile_picture_background",
+				tooltip = "profile_picture_background_tooltip",
+				default_value = { 255, 0, 0, 0 }, -- ARGB, black
+				has_alpha = false,
+			},
+			{
 				setting_id = "advanced",
 				type = "group",
 				title = "advanced",
