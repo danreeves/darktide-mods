@@ -1,6 +1,6 @@
 local mod = get_mod("ProfilePictures")
 
--- Every picture the mod holds a url loader reference for, keyed by profile url and size. The loader refcounts by image url instead, so each entry keeps the url that actually loaded to give its reference back with.
+-- Every picture the mod holds a url loader reference for, keyed by profile url, size and background colour. The loader refcounts by image url instead, so each entry keeps the url that actually loaded to give its reference back with.
 local cache = mod:persistent_table("texture_cache")
 
 -- Profile requests in flight, keyed like the texture cache. Deliberately not persistent: a reload leaves the promises behind.
@@ -45,6 +45,38 @@ local function _cache_profile_picture_size()
 	end
 end
 
+-- Part of the /resize url and the texture cache key, which every portrait load builds, so keep it out of the settings lookup path
+local profile_picture_background_rgb, profile_picture_background, profile_picture_background_cache_suffix
+
+local function _color_channel(value)
+	if type(value) ~= "number" then
+		return 0
+	end
+
+	return math_floor(math_clamp(value, 0, 255) + 0.5)
+end
+
+local function _cache_profile_picture_background()
+	local color = mod:get("profile_picture_background")
+	local red, green, blue = 0, 0, 0
+
+	-- The widget stores ARGB, anything else falls back to black
+	if type(color) == "table" then
+		red = _color_channel(color[2])
+		green = _color_channel(color[3])
+		blue = _color_channel(color[4])
+	end
+
+	local rgb = red * 65536 + green * 256 + blue
+
+	-- A colour drag fires this every frame, so only build the strings when the colour actually moved
+	if rgb ~= profile_picture_background_rgb then
+		profile_picture_background_rgb = rgb
+		profile_picture_background = string_format("%02x%02x%02x", red, green, blue)
+		profile_picture_background_cache_suffix = "#profile_picture_background=" .. profile_picture_background
+	end
+end
+
 -- Steam serves the same avatar from several CDN aliases, but `load_texture` fails on the Akamai/Cloudflare ones for some players, so prefer the plain Valve host and keep the url the profile actually returned as a fallback.
 local function _steam_avatar_urls(avatar_url)
 	local preferred_url = string_gsub(avatar_url, "%.cloudflare%.steamstatic%.com", ".steamstatic.com")
@@ -72,9 +104,9 @@ local function _proxied_url(proxy_url, image_url)
 	return proxy_url .. _encoded_url(image_url)
 end
 
--- The workers answer with a 90x100 transparent png that has the square picture centred at `size`, so it fills the portrait slot without being stretched
-local function _resize_url(resize_url, image_url, size)
-	return resize_url .. _encoded_url(image_url) .. "&size=" .. size
+-- The workers answer with a 90x100 png that has the square picture centred at `size` on `background`, so it fills the portrait slot without being stretched. The frame material draws transparent pixels in whatever colour they store, so the colour is always sent rather than left to each worker's default.
+local function _resize_url(resize_url, image_url, size, background)
+	return resize_url .. _encoded_url(image_url) .. "&size=" .. size .. "&background=" .. background
 end
 
 -- Turns whatever the user typed into a prefix the picture url can be appended to, so that "127.0.0.1:8123" and "http://127.0.0.1:8123/avatar?url=" both work.
@@ -341,9 +373,10 @@ local function _load_profile_image(player_info, cb, allow_retry)
 		return
 	end
 
-	-- Captured together, so the texture that lands under this key is always the one resized to this size
+	-- Captured together, so the texture that lands under this key is always the one resized to this size and background
 	local size = profile_picture_size
-	local cache_key = url .. profile_picture_size_cache_suffix
+	local background = profile_picture_background
+	local cache_key = url .. profile_picture_size_cache_suffix .. profile_picture_background_cache_suffix
 
 	local entry = cache[cache_key]
 
@@ -387,7 +420,7 @@ local function _load_profile_image(player_info, cb, allow_retry)
 			end
 
 			-- The workers only resize pictures from the hosts the profile services hand out, so they get the url the profile actually returned rather than the rewritten Steam one
-			local resized_image_url = _resize_url(resize_url, fallback_image_url or image_url, size)
+			local resized_image_url = _resize_url(resize_url, fallback_image_url or image_url, size, background)
 			local proxy_url = _image_proxy_prefix()
 			local image_urls
 
@@ -465,12 +498,14 @@ end
 
 _cache_location_settings()
 _cache_profile_picture_size()
+_cache_profile_picture_background()
 _cache_worker_urls()
 
--- A new size only reaches portraits as their views reload them, the same as the location toggles
+-- A new size or background colour only reaches portraits as their views reload them, the same as the location toggles
 mod.on_setting_changed = function()
 	_cache_location_settings()
 	_cache_profile_picture_size()
+	_cache_profile_picture_background()
 	_cache_worker_urls()
 end
 
