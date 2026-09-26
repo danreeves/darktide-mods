@@ -8,6 +8,7 @@ Added a Profile picture background setting to choose the colour around smaller p
 Added advanced settings to point the Steam, Xbox and PlayStation profile lookups at your own copy or a mirror of their worker, so pictures keep working if a built-in worker goes down.
 Fixed profile pictures being stretched to fit the portrait.
 Fixed profile pictures sometimes disappearing in the pre-mission lobby, most often your own.
+Fixed profile pictures taking up more memory with every player seen during a session.
 
 ## 26.08.24
 
