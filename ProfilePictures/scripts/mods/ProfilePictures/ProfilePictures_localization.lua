@@ -1,17 +1,17 @@
 return {
 	mod_description = {
-		en = "Shows the Steam or Xbox profile picture of each player instead of their character portrait",
-		de = "Zeigt statt des Charakterporträts das Steam- oder Xbox-Profilbild jedes Spielers an",
-		it = "Mostra l'immagine del profilo Steam o Xbox di ogni giocatore al posto del ritratto del personaggio",
-		es = "Muestra la imagen de perfil de Steam o Xbox de cada jugador en lugar del retrato del personaje",
-		pl = "Wyświetla zdjęcie profilowe Steam lub Xbox każdego gracza zamiast portretu postaci",
-		["pt-br"] = "Exibe a imagem de perfil da Steam ou Xbox de cada jogador no lugar do retrato do personagem",
-		ja = "キャラクターのポートレートの代わりに、各プレイヤーのSteamまたはXboxのプロフィール画像を表示します",
-		ko = "캐릭터 초상화 대신 각 플레이어의 Steam 또는 Xbox 프로필 사진을 표시합니다",
-		["zh-cn"] = "以每位玩家的 Steam 或 Xbox 头像替代角色肖像",
-		["zh-tw"] = "以每位玩家的 Steam 或 Xbox 大頭貼取代角色肖像",
-		ru = "Показывает изображение профиля Steam или Xbox каждого игрока вместо портрета персонажа",
-		fr = "Affiche l'image de profil Steam ou Xbox de chaque joueur à la place du portrait du personnage",
+		en = "Shows the Steam, Xbox or PlayStation profile picture of each player instead of their character portrait",
+		de = "Zeigt statt des Charakterporträts das Steam-, Xbox- oder PlayStation-Profilbild jedes Spielers an",
+		it = "Mostra l'immagine del profilo Steam, Xbox o PlayStation di ogni giocatore al posto del ritratto del personaggio",
+		es = "Muestra la imagen de perfil de Steam, Xbox o PlayStation de cada jugador en lugar del retrato del personaje",
+		pl = "Wyświetla zdjęcie profilowe Steam, Xbox lub PlayStation każdego gracza zamiast portretu postaci",
+		["pt-br"] = "Exibe a imagem de perfil da Steam, do Xbox ou do PlayStation de cada jogador no lugar do retrato do personagem",
+		ja = "キャラクターのポートレートの代わりに、各プレイヤーのSteam、Xbox、またはPlayStationのプロフィール画像を表示します",
+		ko = "캐릭터 초상화 대신 각 플레이어의 Steam, Xbox 또는 PlayStation 프로필 사진을 표시합니다",
+		["zh-cn"] = "以每位玩家的 Steam、Xbox 或 PlayStation 头像替代角色肖像",
+		["zh-tw"] = "以每位玩家的 Steam、Xbox 或 PlayStation 大頭貼取代角色肖像",
+		ru = "Показывает изображение профиля Steam, Xbox или PlayStation каждого игрока вместо портрета персонажа",
+		fr = "Affiche l'image de profil Steam, Xbox ou PlayStation de chaque joueur à la place du portrait du personnage",
 	},
 	advanced = {
 		en = "Advanced",
@@ -86,6 +86,240 @@ return {
 	image_proxy_url_placeholder = {
 		-- A literal address, so it reads the same in every language
 		en = "127.0.0.1:8123",
+	},
+	steam_worker_url = {
+		en = "Steam profile worker URL",
+		de = "Steam-Profil-Worker-URL",
+		it = "URL del worker dei profili Steam",
+		es = "URL del worker de perfiles de Steam",
+		pl = "Adres URL workera profili Steam",
+		["pt-br"] = "URL do worker de perfis da Steam",
+		ja = "Steamプロフィール用ワーカーのURL",
+		ko = "Steam 프로필 워커 URL",
+		["zh-cn"] = "Steam 资料 Worker URL",
+		["zh-tw"] = "Steam 個人檔案 Worker URL",
+		ru = "URL воркера профилей Steam",
+		fr = "URL du worker de profils Steam",
+	},
+	steam_worker_url_tooltip = {
+		en = "Optional. Base address of the worker that looks up Steam profiles, for example your own deployment of "
+			.. "danreeves/steam-profile-xml-to-json or a mirror of it. It must be a compatible deployment of that worker, "
+			.. "with the same response and the same /resize endpoint, so a Steam API address will not work. The mod adds "
+			.. "/<steamid64> and /resize?url= itself, and a missing https:// is filled in for you. "
+			.. "Leave empty to use the built-in deployment.",
+		de = "Optional. Basisadresse des Workers, der Steam-Profile abruft, zum Beispiel deine eigene Bereitstellung von "
+			.. "danreeves/steam-profile-xml-to-json oder ein Mirror davon. Es muss eine kompatible Bereitstellung dieses "
+			.. "Workers sein, mit derselben Antwort und demselben /resize-Endpunkt, eine Adresse der Steam-API funktioniert "
+			.. "daher nicht. Die Mod hängt /<steamid64> und /resize?url= selbst an, ein fehlendes https:// wird für dich "
+			.. "ergänzt. Leer lassen, um die integrierte Bereitstellung zu verwenden.",
+		it = "Facoltativo. Indirizzo base del worker che recupera i profili Steam, ad esempio una tua distribuzione di "
+			.. "danreeves/steam-profile-xml-to-json o un suo mirror. Deve essere una distribuzione compatibile di quel "
+			.. "worker, con la stessa risposta e lo stesso endpoint /resize, quindi un indirizzo dell'API di Steam non "
+			.. "funziona. La mod aggiunge da sola /<steamid64> e /resize?url=, e se manca, https:// viene aggiunto "
+			.. "automaticamente. Lascia vuoto per usare la distribuzione integrata.",
+		es = "Opcional. Dirección base del worker que consulta los perfiles de Steam, por ejemplo tu propio despliegue de "
+			.. "danreeves/steam-profile-xml-to-json o un espejo suyo. Debe ser un despliegue compatible de ese worker, con "
+			.. "la misma respuesta y el mismo endpoint /resize, así que una dirección de la API de Steam no funcionará. El "
+			.. "mod añade /<steamid64> y /resize?url= por su cuenta, y si falta, https:// se añade automáticamente. "
+			.. "Déjalo vacío para usar el despliegue integrado.",
+		pl = "Opcjonalne. Adres bazowy workera, który pobiera profile Steam, na przykład własne wdrożenie "
+			.. "danreeves/steam-profile-xml-to-json lub jego kopia lustrzana. Musi to być zgodne wdrożenie tego workera, z "
+			.. "taką samą odpowiedzią i takim samym punktem końcowym /resize, więc adres API Steam nie zadziała. Mod sam "
+			.. "dodaje /<steamid64> oraz /resize?url=, a brakujące https:// zostanie uzupełnione automatycznie. "
+			.. "Pozostaw puste, aby używać wbudowanego wdrożenia.",
+		["pt-br"] = "Opcional. Endereço base do worker que consulta os perfis da Steam, por exemplo sua própria implantação "
+			.. "de danreeves/steam-profile-xml-to-json ou um espelho dela. Precisa ser uma implantação compatível desse "
+			.. "worker, com a mesma resposta e o mesmo endpoint /resize, então um endereço da API da Steam não vai "
+			.. "funcionar. O mod adiciona /<steamid64> e /resize?url= por conta própria, e se faltar, https:// é "
+			.. "preenchido automaticamente. Deixe em branco para usar a implantação integrada.",
+		ja = "任意。Steamプロフィールを取得するワーカーのベースアドレスです。例えば自分でデプロイした danreeves/steam-profile-xml-to-json やそのミラーを指定します。"
+			.. "同じレスポンスと同じ /resize エンドポイントを持つ、このワーカーの互換デプロイである必要があるため、SteamのAPIのアドレスは使用できません。"
+			.. "/<steamid64> と /resize?url= はMODが自動的に付け加え、https:// が省略されている場合も補完されます。空欄にすると組み込みのデプロイを使用します。",
+		ko = "선택 사항입니다. Steam 프로필을 조회하는 워커의 기본 주소로, 예를 들어 직접 배포한 danreeves/steam-profile-xml-to-json 또는 그 미러를 입력합니다. "
+			.. "같은 응답과 같은 /resize 엔드포인트를 제공하는 해당 워커의 호환 배포여야 하므로 Steam API 주소는 작동하지 않습니다. "
+			.. "/<steamid64> 와 /resize?url= 는 모드가 직접 붙이며, 누락된 https:// 도 자동으로 채워집니다. 비워 두면 기본 제공 배포를 사용합니다.",
+		["zh-cn"] = "可选。用于查询 Steam 资料的 Worker 的基础地址，例如你自己部署的 danreeves/steam-profile-xml-to-json 或其镜像。"
+			.. "它必须是该 Worker 的兼容部署，返回相同的响应并提供相同的 /resize 接口，因此 Steam API 的地址无法使用。"
+			.. "/<steamid64> 和 /resize?url= 由模组自动添加，缺少的 https:// 也会自动补全。留空则使用内置部署。",
+		["zh-tw"] = "選填。用於查詢 Steam 個人檔案的 Worker 基礎位址，例如你自己部署的 danreeves/steam-profile-xml-to-json 或其鏡像。"
+			.. "它必須是該 Worker 的相容部署，回傳相同的回應並提供相同的 /resize 端點，因此 Steam API 的位址無法使用。"
+			.. "/<steamid64> 與 /resize?url= 由模組自動加上，缺少的 https:// 也會自動補上。留空則使用內建部署。",
+		ru = "Необязательно. Базовый адрес воркера, который запрашивает профили Steam, например ваше собственное "
+			.. "развёртывание danreeves/steam-profile-xml-to-json или его зеркало. Это должно быть совместимое развёртывание "
+			.. "этого воркера, с тем же ответом и той же конечной точкой /resize, поэтому адрес API Steam не подойдёт. Мод "
+			.. "сам добавляет /<steamid64> и /resize?url=, а отсутствующий https:// будет подставлен автоматически. "
+			.. "Оставьте поле пустым, чтобы использовать встроенное развёртывание.",
+		fr = "Facultatif. Adresse de base du worker qui récupère les profils Steam, par exemple votre propre déploiement de "
+			.. "danreeves/steam-profile-xml-to-json ou un miroir de celui-ci. Il doit s'agir d'un déploiement compatible de "
+			.. "ce worker, avec la même réponse et le même point de terminaison /resize, une adresse de l'API Steam ne "
+			.. "fonctionnera donc pas. Le mod ajoute lui-même /<steamid64> et /resize?url=, et le https:// manquant est "
+			.. "ajouté automatiquement. Laissez vide pour utiliser le déploiement intégré.",
+	},
+	steam_worker_url_placeholder = {
+		-- The built-in deployment, a literal address so it reads the same in every language
+		en = "steam-profile-xml-to-json.dnrvs.workers.dev",
+	},
+	xbox_worker_url = {
+		en = "Xbox profile worker URL",
+		de = "Xbox-Profil-Worker-URL",
+		it = "URL del worker dei profili Xbox",
+		es = "URL del worker de perfiles de Xbox",
+		pl = "Adres URL workera profili Xbox",
+		["pt-br"] = "URL do worker de perfis do Xbox",
+		ja = "Xboxプロフィール用ワーカーのURL",
+		ko = "Xbox 프로필 워커 URL",
+		["zh-cn"] = "Xbox 资料 Worker URL",
+		["zh-tw"] = "Xbox 個人檔案 Worker URL",
+		ru = "URL воркера профилей Xbox",
+		fr = "URL du worker de profils Xbox",
+	},
+	xbox_worker_url_tooltip = {
+		en = "Optional. Base address of the worker that looks up Xbox profiles, for example your own deployment of "
+			.. "danreeves/XboxAPI-Workers or a mirror of it. It must be a compatible deployment of that worker, with the "
+			.. "same response and the same /resize endpoint, so an Xbox API address will not work. The mod adds "
+			.. "/profiles/<xuid> and /resize?url= itself, and a missing https:// is filled in for you. "
+			.. "Leave empty to use the built-in deployment.",
+		de = "Optional. Basisadresse des Workers, der Xbox-Profile abruft, zum Beispiel deine eigene Bereitstellung von "
+			.. "danreeves/XboxAPI-Workers oder ein Mirror davon. Es muss eine kompatible Bereitstellung dieses Workers "
+			.. "sein, mit derselben Antwort und demselben /resize-Endpunkt, eine Adresse der Xbox-API funktioniert daher "
+			.. "nicht. Die Mod hängt /profiles/<xuid> und /resize?url= selbst an, ein fehlendes https:// wird für dich "
+			.. "ergänzt. Leer lassen, um die integrierte Bereitstellung zu verwenden.",
+		it = "Facoltativo. Indirizzo base del worker che recupera i profili Xbox, ad esempio una tua distribuzione di "
+			.. "danreeves/XboxAPI-Workers o un suo mirror. Deve essere una distribuzione compatibile di quel worker, con la "
+			.. "stessa risposta e lo stesso endpoint /resize, quindi un indirizzo dell'API di Xbox non funziona. La mod "
+			.. "aggiunge da sola /profiles/<xuid> e /resize?url=, e se manca, https:// viene aggiunto automaticamente. "
+			.. "Lascia vuoto per usare la distribuzione integrata.",
+		es = "Opcional. Dirección base del worker que consulta los perfiles de Xbox, por ejemplo tu propio despliegue de "
+			.. "danreeves/XboxAPI-Workers o un espejo suyo. Debe ser un despliegue compatible de ese worker, con la misma "
+			.. "respuesta y el mismo endpoint /resize, así que una dirección de la API de Xbox no funcionará. El mod añade "
+			.. "/profiles/<xuid> y /resize?url= por su cuenta, y si falta, https:// se añade automáticamente. "
+			.. "Déjalo vacío para usar el despliegue integrado.",
+		pl = "Opcjonalne. Adres bazowy workera, który pobiera profile Xbox, na przykład własne wdrożenie "
+			.. "danreeves/XboxAPI-Workers lub jego kopia lustrzana. Musi to być zgodne wdrożenie tego workera, z taką samą "
+			.. "odpowiedzią i takim samym punktem końcowym /resize, więc adres API Xbox nie zadziała. Mod sam dodaje "
+			.. "/profiles/<xuid> oraz /resize?url=, a brakujące https:// zostanie uzupełnione automatycznie. "
+			.. "Pozostaw puste, aby używać wbudowanego wdrożenia.",
+		["pt-br"] = "Opcional. Endereço base do worker que consulta os perfis do Xbox, por exemplo sua própria implantação "
+			.. "de danreeves/XboxAPI-Workers ou um espelho dela. Precisa ser uma implantação compatível desse worker, com a "
+			.. "mesma resposta e o mesmo endpoint /resize, então um endereço da API do Xbox não vai funcionar. O mod "
+			.. "adiciona /profiles/<xuid> e /resize?url= por conta própria, e se faltar, https:// é preenchido "
+			.. "automaticamente. Deixe em branco para usar a implantação integrada.",
+		ja = "任意。Xboxプロフィールを取得するワーカーのベースアドレスです。例えば自分でデプロイした danreeves/XboxAPI-Workers やそのミラーを指定します。"
+			.. "同じレスポンスと同じ /resize エンドポイントを持つ、このワーカーの互換デプロイである必要があるため、XboxのAPIのアドレスは使用できません。"
+			.. "/profiles/<xuid> と /resize?url= はMODが自動的に付け加え、https:// が省略されている場合も補完されます。空欄にすると組み込みのデプロイを使用します。",
+		ko = "선택 사항입니다. Xbox 프로필을 조회하는 워커의 기본 주소로, 예를 들어 직접 배포한 danreeves/XboxAPI-Workers 또는 그 미러를 입력합니다. "
+			.. "같은 응답과 같은 /resize 엔드포인트를 제공하는 해당 워커의 호환 배포여야 하므로 Xbox API 주소는 작동하지 않습니다. "
+			.. "/profiles/<xuid> 와 /resize?url= 는 모드가 직접 붙이며, 누락된 https:// 도 자동으로 채워집니다. 비워 두면 기본 제공 배포를 사용합니다.",
+		["zh-cn"] = "可选。用于查询 Xbox 资料的 Worker 的基础地址，例如你自己部署的 danreeves/XboxAPI-Workers 或其镜像。"
+			.. "它必须是该 Worker 的兼容部署，返回相同的响应并提供相同的 /resize 接口，因此 Xbox API 的地址无法使用。"
+			.. "/profiles/<xuid> 和 /resize?url= 由模组自动添加，缺少的 https:// 也会自动补全。留空则使用内置部署。",
+		["zh-tw"] = "選填。用於查詢 Xbox 個人檔案的 Worker 基礎位址，例如你自己部署的 danreeves/XboxAPI-Workers 或其鏡像。"
+			.. "它必須是該 Worker 的相容部署，回傳相同的回應並提供相同的 /resize 端點，因此 Xbox API 的位址無法使用。"
+			.. "/profiles/<xuid> 與 /resize?url= 由模組自動加上，缺少的 https:// 也會自動補上。留空則使用內建部署。",
+		ru = "Необязательно. Базовый адрес воркера, который запрашивает профили Xbox, например ваше собственное "
+			.. "развёртывание danreeves/XboxAPI-Workers или его зеркало. Это должно быть совместимое развёртывание этого "
+			.. "воркера, с тем же ответом и той же конечной точкой /resize, поэтому адрес API Xbox не подойдёт. Мод сам "
+			.. "добавляет /profiles/<xuid> и /resize?url=, а отсутствующий https:// будет подставлен автоматически. "
+			.. "Оставьте поле пустым, чтобы использовать встроенное развёртывание.",
+		fr = "Facultatif. Adresse de base du worker qui récupère les profils Xbox, par exemple votre propre déploiement de "
+			.. "danreeves/XboxAPI-Workers ou un miroir de celui-ci. Il doit s'agir d'un déploiement compatible de ce "
+			.. "worker, avec la même réponse et le même point de terminaison /resize, une adresse de l'API Xbox ne "
+			.. "fonctionnera donc pas. Le mod ajoute lui-même /profiles/<xuid> et /resize?url=, et le https:// manquant est "
+			.. "ajouté automatiquement. Laissez vide pour utiliser le déploiement intégré.",
+	},
+	xbox_worker_url_placeholder = {
+		-- The built-in deployment, a literal address so it reads the same in every language
+		en = "xboxapi-workers.dnrvs.workers.dev",
+	},
+	psn_worker_url = {
+		en = "PlayStation profile worker URL",
+		de = "PlayStation-Profil-Worker-URL",
+		it = "URL del worker dei profili PlayStation",
+		es = "URL del worker de perfiles de PlayStation",
+		pl = "Adres URL workera profili PlayStation",
+		["pt-br"] = "URL do worker de perfis do PlayStation",
+		ja = "PlayStationプロフィール用ワーカーのURL",
+		ko = "PlayStation 프로필 워커 URL",
+		["zh-cn"] = "PlayStation 资料 Worker URL",
+		["zh-tw"] = "PlayStation 個人檔案 Worker URL",
+		ru = "URL воркера профилей PlayStation",
+		fr = "URL du worker de profils PlayStation",
+	},
+	psn_worker_url_tooltip = {
+		en = "Optional. Base address of the worker that looks up PlayStation profiles, for example your own deployment "
+			.. "of LucLeto/PsnAPI-Workers or a mirror of it. It must be a compatible deployment of that worker, with the "
+			.. "same response and the same /resize endpoint, so a PlayStation API address will not work. The mod adds "
+			.. "/profiles/<accountId> and /resize?url= itself, and a missing https:// is filled in for you. Hosting your "
+			.. "own copy needs its own dedicated PSN account, whose sign-in has to be renewed about every 60 days, see the "
+			.. "worker's README. Leave empty to use the built-in deployment.",
+		de = "Optional. Basisadresse des Workers, der PlayStation-Profile abruft, zum Beispiel deine eigene Bereitstellung "
+			.. "von LucLeto/PsnAPI-Workers oder ein Mirror davon. Es muss eine kompatible Bereitstellung dieses Workers "
+			.. "sein, mit derselben Antwort und demselben /resize-Endpunkt, eine Adresse der PlayStation-API funktioniert "
+			.. "daher nicht. Die Mod hängt /profiles/<accountId> und /resize?url= selbst an, ein fehlendes https:// wird "
+			.. "für dich ergänzt. Eine eigene Kopie braucht ein eigenes, dafür vorgesehenes PSN-Konto, dessen Anmeldung "
+			.. "etwa alle 60 Tage erneuert werden muss, siehe die README des Workers. Leer lassen, um die integrierte "
+			.. "Bereitstellung zu verwenden.",
+		it = "Facoltativo. Indirizzo base del worker che recupera i profili PlayStation, ad esempio una tua distribuzione "
+			.. "di LucLeto/PsnAPI-Workers o un suo mirror. Deve essere una distribuzione compatibile di quel worker, con la "
+			.. "stessa risposta e lo stesso endpoint /resize, quindi un indirizzo dell'API di PlayStation non funziona. La "
+			.. "mod aggiunge da sola /profiles/<accountId> e /resize?url=, e se manca, https:// viene aggiunto "
+			.. "automaticamente. Ospitare una tua copia richiede un account PSN dedicato, il cui accesso va rinnovato circa "
+			.. "ogni 60 giorni, vedi il README del worker. Lascia vuoto per usare la distribuzione integrata.",
+		es = "Opcional. Dirección base del worker que consulta los perfiles de PlayStation, por ejemplo tu propio "
+			.. "despliegue de LucLeto/PsnAPI-Workers o un espejo suyo. Debe ser un despliegue compatible de ese worker, con "
+			.. "la misma respuesta y el mismo endpoint /resize, así que una dirección de la API de PlayStation no "
+			.. "funcionará. El mod añade /profiles/<accountId> y /resize?url= por su cuenta, y si falta, https:// se añade "
+			.. "automáticamente. Alojar tu propia copia requiere una cuenta de PSN dedicada, cuyo inicio de sesión hay que "
+			.. "renovar aproximadamente cada 60 días; consulta el README del worker. Déjalo vacío para usar el despliegue "
+			.. "integrado.",
+		pl = "Opcjonalne. Adres bazowy workera, który pobiera profile PlayStation, na przykład własne wdrożenie "
+			.. "LucLeto/PsnAPI-Workers lub jego kopia lustrzana. Musi to być zgodne wdrożenie tego workera, z taką samą "
+			.. "odpowiedzią i takim samym punktem końcowym /resize, więc adres API PlayStation nie zadziała. Mod sam dodaje "
+			.. "/profiles/<accountId> oraz /resize?url=, a brakujące https:// zostanie uzupełnione automatycznie. "
+			.. "Hostowanie własnej kopii wymaga osobnego konta PSN, którego logowanie trzeba odnawiać mniej więcej co 60 "
+			.. "dni, zobacz README workera. Pozostaw puste, aby używać wbudowanego wdrożenia.",
+		["pt-br"] = "Opcional. Endereço base do worker que consulta os perfis do PlayStation, por exemplo sua própria "
+			.. "implantação de LucLeto/PsnAPI-Workers ou um espelho dela. Precisa ser uma implantação compatível desse "
+			.. "worker, com a mesma resposta e o mesmo endpoint /resize, então um endereço da API do PlayStation não vai "
+			.. "funcionar. O mod adiciona /profiles/<accountId> e /resize?url= por conta própria, e se faltar, https:// é "
+			.. "preenchido automaticamente. Hospedar sua própria cópia exige uma conta PSN dedicada, cujo login precisa ser "
+			.. "renovado aproximadamente a cada 60 dias; veja o README do worker. Deixe em branco para usar a implantação "
+			.. "integrada.",
+		ja = "任意。PlayStationプロフィールを取得するワーカーのベースアドレスです。例えば自分でデプロイした LucLeto/PsnAPI-Workers やそのミラーを指定します。"
+			.. "同じレスポンスと同じ /resize エンドポイントを持つ、このワーカーの互換デプロイである必要があるため、PlayStationのAPIのアドレスは使用できません。"
+			.. "/profiles/<accountId> と /resize?url= はMODが自動的に付け加え、https:// が省略されている場合も補完されます。"
+			.. "自分でホストする場合は専用のPSNアカウントが必要で、そのサインインを約60日ごとに更新しなければなりません。詳しくはワーカーのREADMEを参照してください。"
+			.. "空欄にすると組み込みのデプロイを使用します。",
+		ko = "선택 사항입니다. PlayStation 프로필을 조회하는 워커의 기본 주소로, 예를 들어 직접 배포한 LucLeto/PsnAPI-Workers 또는 그 미러를 입력합니다. "
+			.. "같은 응답과 같은 /resize 엔드포인트를 제공하는 해당 워커의 호환 배포여야 하므로 PlayStation API 주소는 작동하지 않습니다. "
+			.. "/profiles/<accountId> 와 /resize?url= 는 모드가 직접 붙이며, 누락된 https:// 도 자동으로 채워집니다. "
+			.. "직접 호스팅하려면 전용 PSN 계정이 필요하며, 그 로그인은 약 60일마다 갱신해야 합니다. 자세한 내용은 워커의 README를 참고하세요. "
+			.. "비워 두면 기본 제공 배포를 사용합니다.",
+		["zh-cn"] = "可选。用于查询 PlayStation 资料的 Worker 的基础地址，例如你自己部署的 LucLeto/PsnAPI-Workers 或其镜像。"
+			.. "它必须是该 Worker 的兼容部署，返回相同的响应并提供相同的 /resize 接口，因此 PlayStation API 的地址无法使用。"
+			.. "/profiles/<accountId> 和 /resize?url= 由模组自动添加，缺少的 https:// 也会自动补全。"
+			.. "自行托管需要一个专用的 PSN 账号，其登录状态大约每 60 天需要续期一次，详见该 Worker 的 README。留空则使用内置部署。",
+		["zh-tw"] = "選填。用於查詢 PlayStation 個人檔案的 Worker 基礎位址，例如你自己部署的 LucLeto/PsnAPI-Workers 或其鏡像。"
+			.. "它必須是該 Worker 的相容部署，回傳相同的回應並提供相同的 /resize 端點，因此 PlayStation API 的位址無法使用。"
+			.. "/profiles/<accountId> 與 /resize?url= 由模組自動加上，缺少的 https:// 也會自動補上。"
+			.. "自行架設需要一個專用的 PSN 帳號，其登入狀態大約每 60 天需要更新一次，詳見該 Worker 的 README。留空則使用內建部署。",
+		ru = "Необязательно. Базовый адрес воркера, который запрашивает профили PlayStation, например ваше собственное "
+			.. "развёртывание LucLeto/PsnAPI-Workers или его зеркало. Это должно быть совместимое развёртывание этого "
+			.. "воркера, с тем же ответом и той же конечной точкой /resize, поэтому адрес API PlayStation не подойдёт. Мод "
+			.. "сам добавляет /profiles/<accountId> и /resize?url=, а отсутствующий https:// будет подставлен автоматически. "
+			.. "Для собственной копии нужна отдельная учётная запись PSN, вход в которую приходится обновлять примерно раз в "
+			.. "60 дней, подробнее в README воркера. Оставьте поле пустым, чтобы использовать встроенное развёртывание.",
+		fr = "Facultatif. Adresse de base du worker qui récupère les profils PlayStation, par exemple votre propre "
+			.. "déploiement de LucLeto/PsnAPI-Workers ou un miroir de celui-ci. Il doit s'agir d'un déploiement compatible "
+			.. "de ce worker, avec la même réponse et le même point de terminaison /resize, une adresse de l'API "
+			.. "PlayStation ne fonctionnera donc pas. Le mod ajoute lui-même /profiles/<accountId> et /resize?url=, et le "
+			.. "https:// manquant est ajouté automatiquement. Héberger votre propre copie nécessite un compte PSN dédié, dont "
+			.. "la connexion doit être renouvelée environ tous les 60 jours, voir le README du worker. Laissez vide pour "
+			.. "utiliser le déploiement intégré.",
+	},
+	psn_worker_url_placeholder = {
+		-- The built-in deployment, a literal address so it reads the same in every language. Update it with DEFAULT_PSN_WORKER_URL.
+		en = "psnapi-workers.lucleto.workers.dev",
 	},
 	locations = {
 		en = "Show profile pictures in",
@@ -268,5 +502,61 @@ return {
 		["zh-tw"] = "物品欄與角色畫面中的角色肖像。",
 		ru = "Портрет персонажа в окне инвентаря и персонажа.",
 		fr = "Le portrait du personnage dans l'inventaire et la vue du personnage.",
+	},
+	profile_picture_size = {
+		en = "Profile picture size",
+		de = "Profilbildgröße",
+		it = "Dimensione dell'immagine del profilo",
+		es = "Tamaño de la imagen de perfil",
+		pl = "Rozmiar zdjęcia profilowego",
+		["pt-br"] = "Tamanho da imagem de perfil",
+		ja = "プロフィール画像のサイズ",
+		ko = "프로필 사진 크기",
+		["zh-cn"] = "头像大小",
+		["zh-tw"] = "大頭貼大小",
+		ru = "Размер изображения профиля",
+		fr = "Taille de l'image de profil",
+	},
+	profile_picture_size_tooltip = {
+		en = "Sets the size of Steam, Xbox and PlayStation profile pictures inside the 90x100 portrait texture. Lower values add more padding in the chosen background colour, keeping the picture farther away from portrait frame edges.",
+		de = "Legt die Größe der Steam-, Xbox- und PlayStation-Profilbilder innerhalb der 90x100 großen Porträttextur fest. Niedrigere Werte fügen mehr Rand in der gewählten Hintergrundfarbe hinzu, sodass das Bild weiter vom Rand des Porträtrahmens entfernt bleibt.",
+		it = "Imposta la dimensione delle immagini del profilo Steam, Xbox e PlayStation all'interno della texture del ritratto da 90x100. Valori più bassi aggiungono più margine nel colore di sfondo scelto, mantenendo l'immagine più lontana dai bordi della cornice del ritratto.",
+		es = "Establece el tamaño de las imágenes de perfil de Steam, Xbox y PlayStation dentro de la textura de retrato de 90x100. Los valores más bajos añaden más margen en el color de fondo elegido y mantienen la imagen más alejada de los bordes del marco del retrato.",
+		pl = "Ustawia rozmiar zdjęć profilowych Steam, Xbox i PlayStation w teksturze portretu o wymiarach 90x100. Niższe wartości dodają więcej marginesu w wybranym kolorze tła, dzięki czemu zdjęcie znajduje się dalej od krawędzi ramki portretu.",
+		["pt-br"] = "Define o tamanho das imagens de perfil da Steam, do Xbox e do PlayStation dentro da textura de retrato de 90x100. Valores menores adicionam mais margem na cor de fundo escolhida, mantendo a imagem mais afastada das bordas da moldura do retrato.",
+		ja = "90x100のポートレートテクスチャ内でのSteam、Xbox、およびPlayStationのプロフィール画像のサイズを設定します。値を小さくすると選択した背景色の余白が増え、画像がポートレートフレームの縁から離れます。",
+		ko = "90x100 초상화 텍스처 안에 표시되는 Steam, Xbox 및 PlayStation 프로필 사진의 크기를 설정합니다. 값이 낮을수록 선택한 배경색의 여백이 늘어나 사진이 초상화 테두리 가장자리에서 더 멀어집니다.",
+		["zh-cn"] = "设置 Steam、Xbox 和 PlayStation 头像在 90x100 肖像纹理中的大小。数值越小，所选背景色的边距越大，头像离肖像边框边缘越远。",
+		["zh-tw"] = "設定 Steam、Xbox 與 PlayStation 大頭貼在 90x100 肖像紋理中的大小。數值越小，所選背景色的邊距越大，大頭貼離肖像邊框邊緣越遠。",
+		ru = "Задаёт размер изображений профиля Steam, Xbox и PlayStation внутри текстуры портрета 90x100. Чем меньше значение, тем больше отступ выбранного цвета фона и тем дальше изображение от краёв рамки портрета.",
+		fr = "Définit la taille des images de profil Steam, Xbox et PlayStation dans la texture de portrait de 90x100. Des valeurs plus basses ajoutent davantage de marge dans la couleur d'arrière-plan choisie et éloignent l'image des bords du cadre du portrait.",
+	},
+	profile_picture_background = {
+		en = "Profile picture background",
+		de = "Profilbildhintergrund",
+		it = "Sfondo dell'immagine del profilo",
+		es = "Fondo de la imagen de perfil",
+		pl = "Tło zdjęcia profilowego",
+		["pt-br"] = "Fundo da imagem de perfil",
+		ja = "プロフィール画像の背景",
+		ko = "프로필 사진 배경",
+		["zh-cn"] = "头像背景",
+		["zh-tw"] = "大頭貼背景",
+		ru = "Фон изображения профиля",
+		fr = "Arrière-plan de l'image de profil",
+	},
+	profile_picture_background_tooltip = {
+		en = "Sets the colour of the padding around Steam, Xbox and PlayStation profile pictures at a Profile picture size below 90, and of transparent parts of the pictures.",
+		de = "Legt die Farbe des Rands um Steam-, Xbox- und PlayStation-Profilbilder bei einer Profilbildgröße unter 90 sowie die Farbe transparenter Bereiche der Bilder fest.",
+		it = "Imposta il colore del margine attorno alle immagini del profilo Steam, Xbox e PlayStation quando la dimensione dell'immagine del profilo è inferiore a 90, e delle parti trasparenti delle immagini.",
+		es = "Establece el color del margen alrededor de las imágenes de perfil de Steam, Xbox y PlayStation cuando el tamaño de la imagen de perfil es inferior a 90, y de las partes transparentes de las imágenes.",
+		pl = "Ustawia kolor marginesu wokół zdjęć profilowych Steam, Xbox i PlayStation przy rozmiarze zdjęcia profilowego poniżej 90 oraz przezroczystych części zdjęć.",
+		["pt-br"] = "Define a cor da margem ao redor das imagens de perfil da Steam, do Xbox e do PlayStation quando o tamanho da imagem de perfil é menor que 90, e das partes transparentes das imagens.",
+		ja = "プロフィール画像のサイズが90未満のときにSteam、Xbox、およびPlayStationのプロフィール画像の周りにできる余白と、画像の透明な部分の色を設定します。",
+		ko = "프로필 사진 크기가 90 미만일 때 Steam, Xbox 및 PlayStation 프로필 사진 주위에 생기는 여백과 사진의 투명한 부분의 색상을 설정합니다.",
+		["zh-cn"] = "设置头像大小低于 90 时 Steam、Xbox 和 PlayStation 头像周围边距的颜色，以及头像透明部分的颜色。",
+		["zh-tw"] = "設定大頭貼大小低於 90 時 Steam、Xbox 與 PlayStation 大頭貼周圍邊距的顏色，以及大頭貼透明部分的顏色。",
+		ru = "Задаёт цвет отступа вокруг изображений профиля Steam, Xbox и PlayStation при размере изображения профиля меньше 90, а также цвет прозрачных частей изображений.",
+		fr = "Définit la couleur de la marge autour des images de profil Steam, Xbox et PlayStation lorsque la taille de l'image de profil est inférieure à 90, ainsi que celle des parties transparentes des images.",
 	},
 }
