@@ -26,6 +26,21 @@ local DEFAULT_PSN_WORKER_URL = "https://psnapi-workers.lucleto.workers.dev"
 local PROFILE_PICTURE_SIZE_MIN = 50
 local PROFILE_PICTURE_SIZE_MAX = 90
 
+-- The HUD panels draw the avatar as it is in a square layer of their own, so their pictures skip /resize and are cached apart from the resized ones
+local RAW_CACHE_SUFFIX = "#raw"
+
+-- Xbox serves gamerpics at up to 1080x1080 but scales them on request, so the HUD asks for one close to the size it draws them at
+local XBOX_HUD_GAMERPIC_QUERY = "w=208&h=208"
+
+-- Read whenever a HUD panel lays out its portrait, so keep them out of the settings lookup path. Mutated in place, so PlayerPanel can hold a local reference to it.
+local player_panel_settings = {
+	portrait_frames = true,
+	picture_scale = 1,
+	background_color = { 255, 0, 0, 0 },
+}
+
+mod.player_panel_settings = player_panel_settings
+
 -- Part of the texture cache key, which every portrait load builds, so keep it out of the settings lookup path
 local profile_picture_size, profile_picture_size_cache_suffix
 
@@ -42,6 +57,7 @@ local function _cache_profile_picture_size()
 	if size ~= profile_picture_size then
 		profile_picture_size = size
 		profile_picture_size_cache_suffix = "#profile_picture_size=" .. size
+		player_panel_settings.picture_scale = size / PROFILE_PICTURE_SIZE_MAX
 	end
 end
 
@@ -71,10 +87,20 @@ local function _cache_profile_picture_background()
 
 	-- A colour drag fires this every frame, so only build the strings when the colour actually moved
 	if rgb ~= profile_picture_background_rgb then
+		local background_color = player_panel_settings.background_color
+
 		profile_picture_background_rgb = rgb
 		profile_picture_background = string_format("%02x%02x%02x", red, green, blue)
 		profile_picture_background_cache_suffix = "#profile_picture_background=" .. profile_picture_background
+		background_color[2] = red
+		background_color[3] = green
+		background_color[4] = blue
 	end
+end
+
+local function _cache_portrait_frames()
+	-- A setting that was never written stays enabled, so an update keeps the frames
+	player_panel_settings.portrait_frames = mod:get("portrait_frames") ~= false
 end
 
 -- Steam serves the same avatar from several CDN aliases, but `load_texture` fails on the Akamai/Cloudflare ones for some players, so prefer the plain Valve host and keep the url the profile actually returned as a fallback.
@@ -107,6 +133,12 @@ end
 -- The workers answer with a 90x100 png that has the square picture centred at `size` on `background`, so it fills the portrait slot without being stretched. The frame material draws transparent pixels in whatever colour they store, so the colour is always sent rather than left to each worker's default.
 local function _resize_url(resize_url, image_url, size, background)
 	return resize_url .. _encoded_url(image_url) .. "&size=" .. size .. "&background=" .. background
+end
+
+local function _xbox_sized_image_url(image_url)
+	local separator = string_find(image_url, "?", 1, true) and "&" or "?"
+
+	return image_url .. separator .. XBOX_HUD_GAMERPIC_QUERY
 end
 
 -- Turns whatever the user typed into a prefix the picture url can be appended to, so that "127.0.0.1:8123" and "http://127.0.0.1:8123/avatar?url=" both work.
@@ -163,6 +195,40 @@ local function _image_proxy_prefix()
 	end
 
 	return _proxy_url_prefix_cache
+end
+
+-- The urls to try in turn: the preferred one if there is one, then the picture itself
+local function _image_urls(preferred_image_url, image_url, fallback_image_url)
+	local proxy_url = _image_proxy_prefix()
+
+	-- With a proxy configured, try it first and fall back to loading directly. The preferred picture is an https url as well, so it goes through the proxy too.
+	if proxy_url then
+		if preferred_image_url then
+			return {
+				_proxied_url(proxy_url, preferred_image_url),
+				_proxied_url(proxy_url, image_url),
+				image_url,
+			}
+		end
+
+		return {
+			_proxied_url(proxy_url, image_url),
+			image_url,
+		}
+	end
+
+	if preferred_image_url then
+		return {
+			preferred_image_url,
+			image_url,
+			fallback_image_url,
+		}
+	end
+
+	return {
+		image_url,
+		fallback_image_url,
+	}
 end
 
 -- Turns whatever the user typed into a base the paths are appended to, so that "my-worker.workers.dev" and "https://my-worker.workers.dev/" both work. Nothing left after the scheme means the built-in deployment.
@@ -324,7 +390,7 @@ function mod.player_info_for_player(player)
 end
 
 -- The platform is resolved lazily through presence, so an account we are the first to ask about reports "" until the stream delivers. Retry once when the first update lands.
-local function _load_profile_image(player_info, cb, allow_retry)
+local function _load_profile_image(player_info, cb, allow_retry, raw)
 	local platform = player_info:platform()
 
 	local xuid, url, get_image_url, resize_url
@@ -359,7 +425,7 @@ local function _load_profile_image(player_info, cb, allow_retry)
 			player_info
 				:first_update_promise()
 				:next(function()
-					_load_profile_image(player_info, cb, false)
+					_load_profile_image(player_info, cb, false, raw)
 				end)
 				:catch(function(_error)
 					mod:info("Presence lookup failed, no profile image")
@@ -376,7 +442,13 @@ local function _load_profile_image(player_info, cb, allow_retry)
 	-- Captured together, so the texture that lands under this key is always the one resized to this size and background
 	local size = profile_picture_size
 	local background = profile_picture_background
-	local cache_key = url .. profile_picture_size_cache_suffix .. profile_picture_background_cache_suffix
+	local cache_key
+
+	if raw then
+		cache_key = url .. RAW_CACHE_SUFFIX
+	else
+		cache_key = url .. profile_picture_size_cache_suffix .. profile_picture_background_cache_suffix
+	end
 
 	local entry = cache[cache_key]
 
@@ -419,27 +491,16 @@ local function _load_profile_image(player_info, cb, allow_retry)
 				return
 			end
 
-			-- The workers only resize pictures from the hosts the profile services hand out, so they get the url the profile actually returned rather than the rewritten Steam one
-			local resized_image_url = _resize_url(resize_url, fallback_image_url or image_url, size, background)
-			local proxy_url = _image_proxy_prefix()
-			local image_urls
+			local preferred_image_url
 
-			-- With a proxy configured, try it first and fall back to loading directly. The resized picture is an https url as well, so it goes through the proxy too.
-			if proxy_url then
-				image_urls = {
-					_proxied_url(proxy_url, resized_image_url),
-					_proxied_url(proxy_url, image_url),
-					image_url,
-				}
-			else
-				image_urls = {
-					resized_image_url,
-					image_url,
-					fallback_image_url,
-				}
+			if not raw then
+				-- The workers only resize pictures from the hosts the profile services hand out, so they get the url the profile actually returned rather than the rewritten Steam one
+				preferred_image_url = _resize_url(resize_url, fallback_image_url or image_url, size, background)
+			elseif platform == "xbox" then
+				preferred_image_url = _xbox_sized_image_url(image_url)
 			end
 
-			_load_texture(image_urls, 1, cache_key, request.callbacks)
+			_load_texture(_image_urls(preferred_image_url, image_url, fallback_image_url), 1, cache_key, request.callbacks)
 		end)
 		:catch(function(_error)
 			pending_requests[cache_key] = nil
@@ -448,13 +509,13 @@ local function _load_profile_image(player_info, cb, allow_retry)
 		end)
 end
 
--- Called with whatever the surface holds, and the loader goes straight on to PlayerInfo methods, so anything that is not one has to stop here rather than error inside a hook
-function mod.load_profile_image(player_info, cb)
+-- Called with whatever the surface holds, and the loader goes straight on to PlayerInfo methods, so anything that is not one has to stop here rather than error inside a hook. `raw` loads the avatar as it is instead of resized into the 90x100 portrait slot.
+function mod.load_profile_image(player_info, cb, raw)
 	if not player_info or type(player_info.platform) ~= "function" then
 		return
 	end
 
-	_load_profile_image(player_info, cb, true)
+	_load_profile_image(player_info, cb, true, raw)
 end
 
 -- The portrait is a render target fed into the frame material's icon slot, so the picture goes into that same slot instead of being drawn over the panel. The equipped frame keeps rendering around it, and each panel's own tint, shadowing and fades still apply.
@@ -499,14 +560,32 @@ end
 _cache_location_settings()
 _cache_profile_picture_size()
 _cache_profile_picture_background()
+_cache_portrait_frames()
 _cache_worker_urls()
 
--- A new size or background colour only reaches portraits as their views reload them, the same as the location toggles
-mod.on_setting_changed = function()
+-- The settings PlayerPanel lays out the HUD portraits with
+local PLAYER_PANEL_SETTING_IDS = {
+	portrait_frames = true,
+	profile_picture_size = true,
+	profile_picture_background = true,
+}
+
+-- A new size or background colour only reaches the other views' portraits as they reload them, the same as the location toggles. On the HUD panels they are plain style values, so the panels on screen take them straight away.
+mod.on_setting_changed = function(setting_id)
 	_cache_location_settings()
 	_cache_profile_picture_size()
 	_cache_profile_picture_background()
+	_cache_portrait_frames()
 	_cache_worker_urls()
+
+	if PLAYER_PANEL_SETTING_IDS[setting_id] then
+		mod.refresh_player_panels()
+	end
+end
+
+-- The hooks that keep the two HUD portrait layers in step stop with the mod
+mod.on_disabled = function()
+	mod.merge_player_panel_layers()
 end
 
 -- Constant elements outlive the game state, and the feed only counts a notification down while it is drawn, which it isn't on the loading screen. A portrait notification can so sit out a loading screen and draw its picture again afterwards.

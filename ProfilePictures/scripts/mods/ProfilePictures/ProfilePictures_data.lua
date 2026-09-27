@@ -73,6 +73,13 @@ return {
 				has_alpha = false,
 			},
 			{
+				setting_id = "portrait_frames",
+				type = "checkbox",
+				title = "portrait_frames",
+				tooltip = "portrait_frames_tooltip",
+				default_value = true,
+			},
+			{
 				setting_id = "advanced",
 				type = "group",
 				title = "advanced",
