@@ -9,7 +9,7 @@ Changed `Profile picture size` and `Profile picture background` to apply to the 
 Fixed profile pictures being tinted green on your own player panel during missions.
 Fixed profile pictures in the player HUD being stretched when the resized picture couldn't be loaded.
 
-## 26.09.29
+## 26.09.25
 
 Added profile pictures for PlayStation players.
 Added a Profile picture size setting to make profile pictures smaller inside the portrait frame.
