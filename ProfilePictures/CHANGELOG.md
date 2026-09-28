@@ -1,5 +1,14 @@
 # ProfilePictures Changelog
 
+## 26.09.29
+
+Added a `Portrait frames` setting to hide the portrait frames in the player HUD, for square, borderless profile pictures.
+Added support for hiding the portrait frame and moving or resizing the profile picture separately with HUD Tweaker.
+Changed profile pictures in the player HUD to fill the portrait frame, so they appear slightly larger.
+Changed `Profile picture size` and `Profile picture background` to apply to the player HUD straight away.
+Fixed profile pictures being tinted green on your own player panel during missions.
+Fixed profile pictures in the player HUD being stretched when the resized picture couldn't be loaded.
+
 ## 26.09.25
 
 Added profile pictures for PlayStation players.
