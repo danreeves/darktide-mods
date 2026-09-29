@@ -1,5 +1,11 @@
 # NumericUI Changelog
 
+## 26.09.29.1
+
+Fixed `Ability cooldown format` showing nothing while the second charge of Fury of the Faithful, or of any other ability with more than one charge, recharges.
+Changed the teammate ability cooldown progress bar to split into one segment per ability charge, so you can see how many charges a teammate has left and how far the next one has recharged.
+Changed the teammate ability cooldown counter to also count down to a teammate's next charge while they still have one left, shown dimmed until they have none.
+
 ## 26.09.29
 
 Fixed a crash after the Darktide 1.13.0 update when your combat ability went on cooldown.
