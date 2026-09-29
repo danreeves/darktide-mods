@@ -837,7 +837,7 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- Total damage taken debuff (various talents/blessings)
 -- ---------------------------------------------------------------------------
 -- Values taken from the game templates (see provided Darktide source):
--- - ogryn_recieve_damage_taken_increase_debuff: damage_taken_modifier = 0.1 (5s)
+-- - ogryn_recieve_damage_taken_increase_debuff: damage_taken_modifier = 0.15 (5s)
 -- - ogryn_taunt_increased_damage_taken_buff: damage_taken_multiplier = 1.2 (15s)
 -- - increase_damage_taken (weapon special debuff): damage_taken_modifier = 0.1 per stack (5s, max 8)
 -- - adamant_drone_enemy_debuff: damage_taken_multiplier = 1.15
@@ -849,7 +849,7 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- - hordes_buff_broker_flash_grenade_increase_damage_taken_effect: damage_taken_modifier = 2.0 (30s, max 6)
 -- - cryptic_servo_skull_debuff: damage_taken_modifier = 0.15 (5s)
 local DAMAGE_TAKEN_MODIFIER_BUFFS = {
-	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.10, cap = 1 }, -- Soften them up
+	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.15, cap = 1 }, -- Soften them up
 	{ name = "increase_damage_taken",                                              per_stack = 0.10, cap = 8 }, -- Pickaxe weapon special
 	{ name = "broker_passive_toxin_infected_enemies_take_increased_damage_debuff", per_stack = 0.10, cap = 1 }, -- Virulent Strain
 	{ name = "hordes_buff_broker_flash_grenade_increase_damage_taken_effect",      per_stack = 2.00, cap = 6 }, -- Blinding Weakness
@@ -1001,7 +1001,8 @@ end
 local function _damage_taken_color(percent)
 	-- Suggested model:
 	-- 0..14.9 white, 15..29.9 yellow, 30..44.9 orange, 45..59.9 red, >=60 magenta
-	percent = percent or 0
+	-- Tolerance absorbs float error, e.g. (1 + 0.15 - 1) * 100 = 14.999999999999991
+	percent = (percent or 0) + 1e-6
 	if percent >= 60 then
 		return COLOR_MAGENTA -- magenta
 	elseif percent >= 45 then
