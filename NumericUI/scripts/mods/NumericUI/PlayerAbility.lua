@@ -5,7 +5,6 @@ local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 
 local math_floor = math.floor
-local math_huge = math.huge
 local string_format = string.format
 local table_clone = table.clone
 
@@ -56,13 +55,9 @@ local function _remaining_cooldown(self)
 		return
 	end
 
-	local remaining = ability_extension:remaining_ability_cooldown(self._ability_id)
+	local buff_extension = parent:get_player_extension(player, "buff_system")
 
-	if not remaining or remaining == math_huge then
-		return
-	end
-
-	return remaining
+	return mod.ability_charge_time_remaining(ability_extension, buff_extension, self._ability_type)
 end
 
 local function _update_cooldown_text(self)

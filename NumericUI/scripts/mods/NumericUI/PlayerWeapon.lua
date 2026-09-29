@@ -19,7 +19,6 @@ local FixedFrame = require("scripts/utilities/fixed_frame")
 
 local math_abs = math.abs
 local math_floor = math.floor
-local math_huge = math.huge
 local math_min = math.min
 local math_round = math.round
 local string_format = string.format
@@ -493,7 +492,7 @@ mod:hook_safe("HudElementPlayerWeapon", "_set_ammo_amount", function(self, amoun
 
 	local show_munitions_gained = mod.setting("show_munitions_gained")
 
-	if self._ability and self._ability.ability_type then
+	if self._ability and self._ability_type then
 		-- grenades and other ability charges
 		local prev_charges = self._numericui_prev_grenade or amount
 
@@ -729,14 +728,16 @@ local function _blitz_replenishment_cooldown(self, dt)
 		return
 	end
 
-	local total = template_data.grenade_replenishment_cooldown or template_data.cooldown
+	local total = template_data.grenade_replenishment_cooldown
+		or template_data.ability_charge_regen_time
+		or template_data.cooldown
 
 	return remaining, total and total > 0 and remaining / total or nil
 end
 
 local function _blitz_remaining_cooldown(self, dt)
 	local ability_extension = self._ability_extension
-	local ability_type = self._ability.ability_type
+	local ability_type = self._ability_type
 
 	if not ability_type or not ability_extension then
 		return
@@ -749,10 +750,11 @@ local function _blitz_remaining_cooldown(self, dt)
 		return
 	end
 
-	local remaining = ability_extension:remaining_ability_cooldown(ability_type)
+	local buff_extension = self._parent:get_player_extension(self._data.player, "buff_system")
+	local remaining = mod.ability_charge_time_remaining(ability_extension, buff_extension, ability_type)
 
-	if remaining and remaining > 0 and remaining ~= math_huge then
-		return remaining, self._cooldown_progress
+	if remaining then
+		return remaining, self._charge_regen_progress
 	end
 
 	return _blitz_replenishment_cooldown(self, dt)
