@@ -109,6 +109,9 @@ local LABEL_DISPLAY_MODE_ENEMY_NAME = "enemy_name"
 local DEFAULT_POST_KILL_DISPLAY_DURATION = 1
 local MIN_POST_KILL_DISPLAY_DURATION = 0
 local MAX_POST_KILL_DISPLAY_DURATION = 10
+local DEFAULT_DPS_REPORT_DURATION = 3
+local MIN_DPS_REPORT_DURATION = 0
+local MAX_DPS_REPORT_DURATION = 10
 
 local function _feature_enabled(setting_id)
 	return mod._psykhanium_full_debug_display == true or mod:get(setting_id) == true
@@ -152,24 +155,27 @@ local function _localized_breed_name(breed)
 	return _localize_or_fallback(breed.display_name, "")
 end
 
-local function _damage_label_enabled()
-	return _feature_enabled("show_armour_type")
+local function _damage_label_enabled(ui_content)
+	return ui_content and ui_content.healthbars_show_info_label == true or false
 end
 
-local function _damage_label_display_mode()
+local function _damage_label_display_mode(ui_content)
 	if mod._psykhanium_full_debug_display then
 		return LABEL_DISPLAY_MODE_ARMOUR_TYPE
 	end
 
-	return mod:get("show_armour_type_display") or LABEL_DISPLAY_MODE_ARMOUR_TYPE
+	return ui_content and ui_content.healthbars_info_label_content or LABEL_DISPLAY_MODE_ARMOUR_TYPE
 end
 
-local function _damage_label_uses_hit_zone()
-	return _damage_label_enabled() and _damage_label_display_mode() == LABEL_DISPLAY_MODE_ARMOUR_TYPE
+local function _damage_label_uses_hit_zone(ui_content)
+	return _damage_label_enabled(ui_content) and
+		_damage_label_display_mode(ui_content) == LABEL_DISPLAY_MODE_ARMOUR_TYPE
 end
 
 local function _damage_label_visible(ui_content)
-	return ui_content.damage_has_started or ui_content.has_active_debuff or ui_content.visibility_delay or ui_content.fade_delay
+	return ui_content.post_kill_ui_visible ~= false and
+		(ui_content.damage_has_started or ui_content.has_active_debuff or ui_content.visibility_delay or
+			ui_content.fade_delay)
 end
 
 local function _post_kill_display_duration()
@@ -178,8 +184,14 @@ local function _post_kill_display_duration()
 	return math_clamp(duration, MIN_POST_KILL_DISPLAY_DURATION, MAX_POST_KILL_DISPLAY_DURATION)
 end
 
+local function _dps_report_duration()
+	local duration = mod:get("dps_report_duration") or DEFAULT_DPS_REPORT_DURATION
+
+	return math_clamp(duration, MIN_DPS_REPORT_DURATION, MAX_DPS_REPORT_DURATION)
+end
+
 local function _damage_label_text(ui_content)
-	local display_mode = _damage_label_display_mode()
+	local display_mode = _damage_label_display_mode(ui_content)
 
 	if display_mode == LABEL_DISPLAY_MODE_ENEMY_NAME then
 		return ui_content.enemy_name_text or _localized_breed_name(ui_content.breed)
@@ -256,6 +268,29 @@ local function _slot_pos(slot_index, use_armour_offset)
 	return slot.x, use_armour_offset and slot.y_armour or slot.y
 end
 
+local function _hide_post_kill_ui(content, style, marker)
+	content.post_kill_ui_visible = false
+	content.has_active_debuff = false
+	content.fade_delay = nil
+	marker._had_active_debuff = false
+
+	table_clear(content.damage_numbers)
+	table_clear(marker.debuffs)
+
+	for i = 1, MAX_DEBUFF_SLOTS_ALLOC do
+		local slot = SLOT_CACHE[i]
+		content[slot.icon_id] = nil
+		content[slot.stacks_id] = ""
+	end
+
+	style.bar.visible = false
+	style.ghost_bar.visible = false
+	style.health_max.visible = false
+	style.bar_end.visible = false
+	style.background.visible = false
+	style.shield_bar.visible = false
+end
+
 local function _debuff_signature(debuffs)
 	local parts = {}
 	for i = 1, #debuffs do
@@ -305,7 +340,7 @@ end
 -- ---------------------------------------------------------------------------
 
 local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
-	if not _damage_label_enabled() or not _damage_label_visible(ui_content) then
+	if not _damage_label_enabled(ui_content) or not _damage_label_visible(ui_content) then
 		return
 	end
 
@@ -327,15 +362,13 @@ local function _draw_damage_label(template, ui_renderer, ui_style, ui_content, p
 	UIRenderer_draw_text(ui_renderer, label_text, font_size, font_type, label_pos, ui_style.size, ui_style.text_color, {})
 end
 
-local function _draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
-	if not _feature_enabled("show_damage_numbers") then
-		return
-	end
-
+local function _draw_damage_numbers(template, ui_renderer, ui_style, ui_content, position)
 	local settings = template.damage_number_settings
 	local damage_numbers = ui_content.damage_numbers
-	local num = #damage_numbers
-	local show_dps = ui_content.damage_has_started and _feature_enabled("show_dps")
+	local num = ui_content.post_kill_ui_visible ~= false and ui_content.healthbars_show_damage_numbers == true and
+		#damage_numbers or 0
+	local show_dps = ui_content.damage_has_started and ui_content.healthbars_show_dps == true and
+		(not ui_content.dead or (ui_content.dps_report_timer or 0) > 0)
 	if num == 0 and not show_dps then
 		return
 	end
@@ -563,7 +596,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 		{
 			pass_type = "logic",
 			value = function(pass, ui_renderer, ui_style, ui_content, position, size)
-				_draw_damage_numbers(template, mod, ui_renderer, ui_style, ui_content, position)
+				_draw_damage_numbers(template, ui_renderer, ui_style, ui_content, position)
 				_draw_damage_label(template, ui_renderer, ui_style, ui_content, position)
 			end,
 			style = {
@@ -658,7 +691,7 @@ template.create_widget_defintion = function(template, scenegraph_id)
 		local slot = SLOT_CACHE[i]
 		local icon_id = slot.icon_id
 		local stacks_id = slot.stacks_id
-		local x, y = _slot_pos(i, _damage_label_enabled())
+		local x, y = _slot_pos(i, false)
 
 		passes[#passes + 1] = {
 			pass_type = "texture",
@@ -715,6 +748,9 @@ template.on_enter = function(widget, marker, template)
 	content.damage_numbers = {}
 	content.has_active_debuff = false
 	content.shield_health = nil
+	content.post_kill_display_timer = nil
+	content.dps_report_timer = nil
+	content.post_kill_ui_visible = true
 
 	local bar_settings = template.bar_settings
 	marker.bar_logic = HudHealthBarLogic:new(bar_settings)
@@ -801,7 +837,7 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- Total damage taken debuff (various talents/blessings)
 -- ---------------------------------------------------------------------------
 -- Values taken from the game templates (see provided Darktide source):
--- - ogryn_recieve_damage_taken_increase_debuff: damage_taken_modifier = 0.1 (5s)
+-- - ogryn_recieve_damage_taken_increase_debuff: damage_taken_modifier = 0.15 (5s)
 -- - ogryn_taunt_increased_damage_taken_buff: damage_taken_multiplier = 1.2 (15s)
 -- - increase_damage_taken (weapon special debuff): damage_taken_modifier = 0.1 per stack (5s, max 8)
 -- - adamant_drone_enemy_debuff: damage_taken_multiplier = 1.15
@@ -813,7 +849,7 @@ local MELEE_DAMAGE_TAKEN_BUFFS = {
 -- - hordes_buff_broker_flash_grenade_increase_damage_taken_effect: damage_taken_modifier = 2.0 (30s, max 6)
 -- - cryptic_servo_skull_debuff: damage_taken_modifier = 0.15 (5s)
 local DAMAGE_TAKEN_MODIFIER_BUFFS = {
-	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.10, cap = 1 }, -- Soften them up
+	{ name = "ogryn_recieve_damage_taken_increase_debuff",                         per_stack = 0.15, cap = 1 }, -- Soften them up
 	{ name = "increase_damage_taken",                                              per_stack = 0.10, cap = 8 }, -- Pickaxe weapon special
 	{ name = "broker_passive_toxin_infected_enemies_take_increased_damage_debuff", per_stack = 0.10, cap = 1 }, -- Virulent Strain
 	{ name = "hordes_buff_broker_flash_grenade_increase_damage_taken_effect",      per_stack = 2.00, cap = 6 }, -- Blinding Weakness
@@ -965,7 +1001,8 @@ end
 local function _damage_taken_color(percent)
 	-- Suggested model:
 	-- 0..14.9 white, 15..29.9 yellow, 30..44.9 orange, 45..59.9 red, >=60 magenta
-	percent = percent or 0
+	-- Tolerance absorbs float error, e.g. (1 + 0.15 - 1) * 100 = 14.999999999999991
+	percent = (percent or 0) + 1e-6
 	if percent >= 60 then
 		return COLOR_MAGENTA -- magenta
 	elseif percent >= 45 then
@@ -1845,7 +1882,7 @@ local function _poll_status_indicators(debuffs, poll_content, buff_extension, un
 	end
 end
 
-local function _pack_indicator_placements(state)
+local function _pack_indicator_placements(state, single_row)
 	local active_by_type = state._active_by_type
 	local active_debuffs = state._active_debuffs
 	local active_dots = state._active_dots
@@ -1882,6 +1919,36 @@ local function _pack_indicator_placements(state)
 		if debuff then
 			active_dots[#active_dots + 1] = debuff
 		end
+	end
+
+	if single_row then
+		-- Third-party mods can stack the boss bars in rows too close together for the
+		-- upper indicator row. Pack everything into the row nearest the bar instead
+		-- (slots GRID_COLS + 1 .. GRID_COLS * 2), DoTs first, then debuffs.
+		local last_slot = GRID_COLS * 2
+		local slot = GRID_COLS
+
+		for i = 1, #active_dots do
+			if slot >= last_slot then
+				break
+			end
+
+			slot = slot + 1
+			placement_slots[#placement_slots + 1] = slot
+			placement_debuffs[#placement_debuffs + 1] = active_dots[i]
+		end
+
+		for i = 1, #active_debuffs do
+			if slot >= last_slot then
+				break
+			end
+
+			slot = slot + 1
+			placement_slots[#placement_slots + 1] = slot
+			placement_debuffs[#placement_debuffs + 1] = active_debuffs[i]
+		end
+
+		return
 	end
 
 	-- Vanilla boss bars keep rows type-stable when both are present:
@@ -2028,12 +2095,17 @@ template.update_vanilla_boss_indicator = function(widget, target, dt)
 	if state.debuff_check_timer >= 0.1 then
 		state.debuff_check_timer = 0
 
-		-- Vanilla boss indicators ignore the Boss enemy display mode; only this
-        -- setting and the individual DoT/debuff toggles gate what appears here.
+		-- Vanilla boss indicators ignore the per-enemy Healthbars feature settings; only
+		-- `show_vanilla_boss_bar_indicators` and the individual DoT/debuff toggles gate
+		-- what appears here.
 		_poll_status_indicators(state.debuffs, state.content, buff_extension, unit, true, true)
 	end
 
-	_pack_indicator_placements(state)
+	-- A non-zero widget Y offset means another mod moved this bar into a lower row, where
+	-- only the indicator row nearest the bar fits without covering the bar above it.
+	local widget_offset = widget.offset
+
+	_pack_indicator_placements(state, widget_offset ~= nil and widget_offset[2] ~= 0)
 	_apply_boss_indicator_placements(widget, state)
 
 	widget.visible = #state._placement_slots > 0
@@ -2046,14 +2118,12 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	local content = widget.content
 	local style = widget.style
 	local unit = marker.unit
-	local psykhanium_behavior = mod._active_psykhanium_healthbar_behavior
-	local display_modes = mod._healthbar_breed_display_modes
+	local breed_features = mod._healthbar_breed_features
 	local breed = content.breed
-	local display_mode = display_modes and breed and display_modes[breed.name]
+	local features = breed_features and breed and breed_features[breed.name]
 
 	if mod._inactive_outside_psykhanium or mod._psykhanium_vanilla_only or
-		(psykhanium_behavior == "normal" and
-			(not display_mode or display_mode.show_healthbar ~= true)) then
+		not features or features.enabled ~= true then
 		local custom_marker_units = mod._custom_marker_units
 		if custom_marker_units then
 			custom_marker_units[unit] = nil
@@ -2065,11 +2135,29 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 	end
 
 	local full_debug_display = mod._psykhanium_full_debug_display == true
-	local show_dots = full_debug_display or display_mode and display_mode.show_dots == true
-	local show_debuffs = full_debug_display or display_mode and display_mode.show_debuffs == true
-	local show_damage_numbers = _feature_enabled("show_damage_numbers")
-	local use_armour_slot_offset = _damage_label_enabled()
-	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone()
+	local post_kill_ui_visible = content.post_kill_ui_visible ~= false
+	local show_healthbar = post_kill_ui_visible and (full_debug_display or features.show_healthbar == true)
+	local show_dots = post_kill_ui_visible and (full_debug_display or features.show_dots == true)
+	local show_debuffs = post_kill_ui_visible and (full_debug_display or features.show_debuffs == true)
+	local global_damage_numbers_enabled = _feature_enabled("show_damage_numbers")
+	local show_damage_numbers = post_kill_ui_visible and (full_debug_display or
+		global_damage_numbers_enabled and features.show_damage_numbers == true)
+	local show_dps = full_debug_display or features.show_dps == true and _feature_enabled("show_dps")
+	local show_info_label = post_kill_ui_visible and (full_debug_display or features.show_info_label == true and
+		_feature_enabled("show_armour_type"))
+	local info_label_content = full_debug_display and LABEL_DISPLAY_MODE_ARMOUR_TYPE or features.info_label_content
+
+	if not show_damage_numbers and content.healthbars_show_damage_numbers ~= false then
+		table_clear(content.damage_numbers)
+	end
+
+	content.healthbars_show_damage_numbers = show_damage_numbers
+	content.healthbars_show_dps = show_dps
+	content.healthbars_show_info_label = show_info_label
+	content.healthbars_info_label_content = info_label_content
+
+	local use_armour_slot_offset = show_info_label
+	local needs_last_hit_zone = show_damage_numbers or _damage_label_uses_hit_zone(content)
 	local needs_hit_reaction_data = show_damage_numbers
 	local dot_text_font_size = mod:get("dot_text_font_size") or DEFAULT_DOT_TEXT_FONT_SIZE
 	local debuff_text_font_size = mod:get("debuff_text_font_size") or DEFAULT_DEBUFF_TEXT_FONT_SIZE
@@ -2412,7 +2500,7 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 		marker.health_fraction = health_fraction
 	end
 
-	local show_bar = _feature_enabled("show_bar")
+	local show_bar = show_healthbar and _feature_enabled("show_bar")
 	local show_shield_bar = show_bar and shield_fraction ~= nil and shield_fraction > 0 or false
 
 	if show_shield_bar then
@@ -2448,14 +2536,45 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 			if content.damage_has_started then
 				local post_kill_display_duration = _post_kill_display_duration()
+				local dps_report_duration = show_dps and _dps_report_duration() or 0
+				local remove_duration = math_max(post_kill_display_duration, dps_report_duration)
 
-				content.remove_timer = post_kill_display_duration
-				content.visibility_delay = math_max(content.visibility_delay or 0, post_kill_display_duration)
+				content.post_kill_display_timer = post_kill_display_duration
+				content.dps_report_timer = dps_report_duration
+				content.remove_timer = remove_duration
+				content.visibility_delay = math_max(content.visibility_delay or 0, remove_duration)
+
+				if post_kill_display_duration <= 0 and dps_report_duration > 0 then
+					_hide_post_kill_ui(content, style, marker)
+				end
 			else
 				content.remove_timer = template.remove_on_death_duration
 			end
 		else
-			content.remove_timer = content.remove_timer - dt
+			local post_kill_display_timer = content.post_kill_display_timer
+
+			if post_kill_display_timer ~= nil then
+				post_kill_display_timer = math_max(post_kill_display_timer - dt, 0)
+				content.post_kill_display_timer = post_kill_display_timer
+
+				local dps_report_timer = content.dps_report_timer
+				if show_dps and dps_report_timer > 0 then
+					dps_report_timer = math_max(dps_report_timer - dt, 0)
+				else
+					dps_report_timer = 0
+				end
+
+				content.dps_report_timer = dps_report_timer
+				content.remove_timer = math_max(post_kill_display_timer, dps_report_timer)
+
+				if post_kill_display_timer <= 0 and dps_report_timer > 0 and
+					content.post_kill_ui_visible ~= false then
+					_hide_post_kill_ui(content, style, marker)
+				end
+			else
+				content.remove_timer = content.remove_timer - dt
+			end
+
 			if content.remove_timer <= 0 and (not marker.health_fraction or marker.health_fraction == 0) then
 				marker.remove = true
 			end
@@ -2472,8 +2591,14 @@ template.update_function = function(parent, ui_renderer, widget, marker, templat
 
 	local has_active_debuff = marker.debuffs and #marker.debuffs > 0
 	content.has_active_debuff = has_active_debuff
+	local dps_report_visible = (content.dps_report_timer or 0) > 0
+	local post_kill_display_active = (content.post_kill_display_timer or 0) > 0
 
-	if has_active_debuff then
+	if post_kill_display_active or dps_report_visible then
+		-- The widget-wide alpha must remain visible while either post-kill timer is active.
+		content.fade_delay = nil
+		marker._had_active_debuff = has_active_debuff
+	elseif has_active_debuff then
 		-- Hard-visible as long as any debuff is active
 		content.fade_delay = nil
 		-- keep visibility_delay untouched (damage numbers may use it), but it doesn't matter for alpha now

@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 set source=%~dp0.
 set target=E:\SteamLibrary\steamapps\common\Warhammer 40,000 DARKTIDE\mods
-set excludes=.git scripts types
+set excludes=.git scripts types doc
 
 forfiles /P "%source%" /C "cmd /c if @isdir==TRUE echo @file" > "%temp%\dirs.txt"
 for /f "delims=" %%D in (%temp%\dirs.txt) do (

@@ -1,5 +1,7 @@
 local mod = get_mod("Healthbars")
 local Breeds = require("scripts/settings/breed/breeds")
+local EnemyFeatures = mod:io_dofile("Healthbars/scripts/mods/Healthbars/HealthbarsEnemyFeatures")
+local enemy_feature_setting_id = EnemyFeatures.setting_id
 
 local horde_and_roamers = {}
 local elites = {}
@@ -15,15 +17,6 @@ local VANGUARD_BREEDS = {
 local TAB_GENERAL = mod:localize("tab_general")
 local TAB_DOT_DEBUFFS = mod:localize("tab_dot_debuffs")
 local TAB_ENEMIES = mod:localize("tab_enemies")
-
-local REQUIRED_ICON_PACKAGES = {
-	"packages/ui/hud/player_weapon/player_weapon",
-	"packages/ui/views/inventory_background_view/inventory_background_view",
-	"packages/ui/views/character_appearance_view/character_appearance_view",
-	"packages/ui/material_sets/circumstances",
-}
-
-mod.required_icon_packages = REQUIRED_ICON_PACKAGES
 
 local ICON_WARPFIRE = "content/ui/materials/icons/circumstances/havoc/havoc_mutator_ember"
 local ICON_BLEED = "content/ui/materials/icons/presets/preset_13"
@@ -58,26 +51,75 @@ local function dropdown_option(text, value, icon, icon_colour)
 		value = value,
 		icon = icon,
 		icon_colour = icon_colour,
+		icon_style = {
+			color = icon_colour,
+			default_color = icon_colour,
+			hover_color = icon_colour,
+			selected_color = icon_colour,
+		},
 	}
 end
 
-local function enemy_display_mode_options()
-	return {
-		{ text = "enemy_display_mode_full", value = "full" },
-		{ text = "enemy_display_mode_disabled", value = "disabled" },
-		{ text = "enemy_display_mode_healthbar_only", value = "healthbar_only" },
-		{ text = "enemy_display_mode_healthbar_dots", value = "healthbar_dots" },
-		{ text = "enemy_display_mode_healthbar_debuffs", value = "healthbar_debuffs" },
-	}
-end
-
-local function add(tbl, breed_name, default_value)
+local function add(tbl, breed_name, default_enabled)
 	tbl[#tbl + 1] = {
-		setting_id = breed_name,
-		type = "dropdown",
-		default_value = default_value and "full" or "disabled",
-		tooltip = "enemy_display_mode_tooltip",
-		options = enemy_display_mode_options(),
+		setting_id = enemy_feature_setting_id(breed_name, "enabled"),
+		title = breed_name,
+		type = "checkbox",
+		default_value = default_enabled,
+		sub_widgets = {
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_healthbar"),
+				title = "show_bar",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_damage_numbers"),
+				title = "show_damage_numbers",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_dps"),
+				title = "show_dps",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_info_label"),
+				title = "show_armour_type",
+				tooltip = "enemy_feature_global_setting_tooltip",
+				type = "checkbox",
+				default_value = true,
+				sub_widgets = {
+					{
+						setting_id = enemy_feature_setting_id(breed_name, "info_label_content"),
+						title = "show_armour_type_display",
+						type = "dropdown",
+						default_value = "armour_type",
+						options = {
+							{ text = "display_armour_type", value = "armour_type" },
+							{ text = "display_enemy_name", value = "enemy_name" },
+						},
+					},
+				},
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_dots"),
+				title = "show_dots",
+				type = "checkbox",
+				default_value = true,
+			},
+			{
+				setting_id = enemy_feature_setting_id(breed_name, "show_debuffs"),
+				title = "show_debuffs",
+				type = "checkbox",
+				default_value = true,
+			},
+		},
 	}
 end
 
@@ -104,79 +146,82 @@ end
 
 local widgets = {
 	{
-		setting_id = "feature_toggles",
+		setting_id = "general_settings",
+		title = "tab_general",
 		type = "group",
 		tab = TAB_GENERAL,
 		sub_widgets = {
 			{
-				setting_id = "only_active_in_psykhanium",
-				type = "checkbox",
-				default_value = false,
-			},
-			{
-				setting_id = "psykhanium_healthbar_behavior",
-				type = "dropdown",
-				default_value = "normal",
-				tooltip = "psykhanium_healthbar_behavior_tooltip",
-				options = {
-					{ text = "psykhanium_healthbar_behavior_normal", value = "normal" },
-					{ text = "psykhanium_healthbar_behavior_vanilla_only", value = "vanilla_only" },
-					{ text = "psykhanium_healthbar_behavior_full_debug", value = "full_debug" },
+				setting_id = "feature_toggles",
+				type = "group",
+				tab = TAB_GENERAL,
+				sub_widgets = {
+					{
+						setting_id = "only_active_in_psykhanium",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
+						setting_id = "psykhanium_healthbar_behavior",
+						type = "dropdown",
+						default_value = "normal",
+						tooltip = "psykhanium_healthbar_behavior_tooltip",
+						options = {
+							{ text = "psykhanium_healthbar_behavior_normal", value = "normal" },
+							{ text = "psykhanium_healthbar_behavior_vanilla_only", value = "vanilla_only" },
+							{ text = "psykhanium_healthbar_behavior_full_debug", value = "full_debug" },
+						},
+					},
+					{
+						setting_id = "show_bar",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "show_vanilla_boss_bar_indicators",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "post_kill_display_duration",
+						type = "numeric",
+						default_value = 0,
+						range = { 0, 10 },
+						decimals_number = 1,
+						step_size_value = 0.2,
+						tooltip = "post_kill_display_duration_tooltip",
+					},
 				},
 			},
 			{
-				setting_id = "show_bar",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "show_vanilla_boss_bar_indicators",
-				type = "checkbox",
-				default_value = true,
-			},
-			{
-				setting_id = "post_kill_display_duration",
-				type = "numeric",
-				default_value = 0,
-				range = { 0, 10 },
-				decimals_number = 1,
-				step_size_value = 0.2,
-				tooltip = "post_kill_display_duration_tooltip",
-			},
-		},
-	},
-	{
-		setting_id = "damage_number_settings",
-		type = "group",
-		tab = TAB_GENERAL,
-		sub_widgets = {
-			{
-				setting_id = "show_damage_numbers",
-				type = "checkbox",
-				default_value = true,
-
+				setting_id = "damage_number_settings",
+				type = "group",
+				tab = TAB_GENERAL,
 				sub_widgets = {
+					{
+						setting_id = "show_damage_numbers",
+						type = "checkbox",
+						default_value = true,
+					},
 					{
 						setting_id = "show_dps",
 						type = "checkbox",
 						default_value = true,
+						sub_widgets = {
+							{
+								setting_id = "dps_report_duration",
+								type = "numeric",
+								default_value = 3.0,
+								range = { 0, 10 },
+								decimals_number = 1,
+								step_size_value = 0.2,
+							},
+						},
 					},
 					{
 						setting_id = "show_armour_type",
 						type = "checkbox",
 						default_value = true,
-
-						sub_widgets = {
-							{
-								setting_id = "show_armour_type_display",
-								type = "dropdown",
-								default_value = "armour_type",
-								options = {
-									{ text = "display_armour_type", value = "armour_type" },
-									{ text = "display_enemy_name", value = "enemy_name" },
-								},
-							},
-						},
 					},
 				},
 			},
@@ -460,34 +505,42 @@ local widgets = {
 		},
 	},
 	{
-		setting_id = "horde_breeds",
+		setting_id = "enemy_settings",
+		title = "tab_enemies",
 		type = "group",
 		tab = TAB_ENEMIES,
-		sub_widgets = horde_and_roamers,
-	},
-	{
-		setting_id = "elite_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = elites,
-	},
-	{
-		setting_id = "special_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = specials,
-	},
-	{
-		setting_id = "monster_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = monsters,
-	},
-	{
-		setting_id = "ritualist_breeds",
-		type = "group",
-		tab = TAB_ENEMIES,
-		sub_widgets = ritualists,
+		sub_widgets = {
+			{
+				setting_id = "horde_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = horde_and_roamers,
+			},
+			{
+				setting_id = "elite_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = elites,
+			},
+			{
+				setting_id = "special_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = specials,
+			},
+			{
+				setting_id = "monster_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = monsters,
+			},
+			{
+				setting_id = "ritualist_breeds",
+				type = "group",
+				tab = TAB_ENEMIES,
+				sub_widgets = ritualists,
+			},
+		},
 	},
 }
 
@@ -495,7 +548,6 @@ return {
 	name = mod:localize("mod_name"),
 	description = mod:localize("mod_description"),
 	is_togglable = true,
-	required_icon_packages = REQUIRED_ICON_PACKAGES,
 	options = {
 		widgets = widgets,
 	},

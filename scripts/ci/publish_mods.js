@@ -2,9 +2,10 @@
 /**
  * Detect changed mods and upload them to Nexus Mods using the v3 API.
  *
- * Reads version and mod_id from each mod's .mod file. The file_group_id is
- * resolved automatically from the API using the mod_id: the script fetches all
- * file update groups for the mod and uses the group if there is exactly one.
+ * Reads version and the Nexus Mods homepage from each mod's info.json. The Nexus mod ID is
+ * extracted from the homepage URL, and the file_group_id is resolved automatically from the API.
+ * The script selects the most recently updated active file group, falling back to all groups when
+ * none are active.
  *
  * Usage:
  *     node scripts/ci/publish_mods.js [--dry-run]
@@ -76,20 +77,29 @@ async function apiRequest(method, urlPath, apiKey, body) {
 }
 
 function extractModInfo(filePath) {
-  let content;
+  let metadata;
   try {
-    content = fs.readFileSync(filePath, "utf8");
+    metadata = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (
+      metadata === null ||
+      typeof metadata !== "object" ||
+      Array.isArray(metadata)
+    ) {
+      throw new Error("metadata must be a JSON object");
+    }
   } catch (e) {
-    console.error(`Warning: could not read ${filePath}: ${e.message}`);
+    console.error("Warning: could not parse " + filePath + ": " + e.message);
     return null;
   }
 
-  const versionM = content.match(/\bversion\s*=\s*"([^"]+)"/);
-  const modIdM = content.match(/\bmod_id\s*=\s*"([^"]+)"/);
+  const homepageM =
+    typeof metadata.homepage === "string"
+      ? metadata.homepage.match(/\/mods\/(\d+)(?:[/?#]|$)/)
+      : null;
 
   return {
-    version: versionM ? versionM[1] : null,
-    mod_id: modIdM ? modIdM[1] : null,
+    version: typeof metadata.version === "string" ? metadata.version : null,
+    mod_id: homepageM ? homepageM[1] : null,
   };
 }
 
@@ -139,7 +149,38 @@ async function resolveFileGroupId(modId, apiKey) {
       `Unexpected response from API: no 'id' in mod file for mod ${modId}`,
     );
   }
-  return fileId;
+  return { fileId, nexusModId: modUuid };
+}
+
+function getChangelogText(modName, version) {
+  const changelogPath = `${modName}/CHANGELOG.md`;
+  if (!fs.existsSync(changelogPath)) return null;
+
+  const lines = fs
+    .readFileSync(changelogPath, "utf8")
+    .split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) => {
+    const match = line.match(/^#{1,6}\s+(.+?)\s*#*$/);
+    return match && match[1] === version;
+  });
+  if (headingIndex === -1) return null;
+
+  const section = [];
+  for (let i = headingIndex + 1; i < lines.length; i += 1) {
+    if (/^#{1,6}\s+/.test(lines[i])) break;
+    section.push(lines[i]);
+  }
+
+  const changelogText = section.join("\n").trim();
+  return changelogText || null;
+}
+
+async function publishChangelog(nexusModId, version, changelogText, apiKey) {
+  await apiRequest("POST", `/mods/${nexusModId}/changelogs`, apiKey, {
+    version,
+    changelog: changelogText,
+  });
+  console.log(`  Changelog published for ${version}`);
 }
 
 function getPrevVersion(filePath, before) {
@@ -149,14 +190,18 @@ function getPrevVersion(filePath, before) {
   });
   const content = result.stdout || "";
   if (!content) return null;
-  const m = content.match(/\bversion\s*=\s*"([^"]+)"/);
-  return m ? m[1] : null;
+  try {
+    const metadata = JSON.parse(content);
+    return typeof metadata.version === "string" ? metadata.version : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 function getChangedModFiles(before, sha) {
   let output;
   if (!before || before === NULL_COMMIT) {
-    output = execCmd(["git", "ls-files", "*.mod"]);
+    output = execCmd(["git", "ls-files", "*/info.json"]);
   } else {
     output = execCmd([
       "git",
@@ -165,7 +210,7 @@ function getChangedModFiles(before, sha) {
       before,
       sha,
       "--",
-      "*.mod",
+      "*/info.json",
     ]);
   }
   return output
@@ -377,7 +422,7 @@ async function main() {
   const modFiles = getChangedModFiles(before, sha);
 
   if (modFiles.length === 0) {
-    console.log("No changed .mod files detected.");
+    console.log("No changed info.json files detected.");
     process.exit(0);
   }
 
@@ -386,34 +431,52 @@ async function main() {
 
   for (const filePath of modFiles) {
     const cur = extractModInfo(filePath);
-    if (!cur || !cur.version) continue;
+    if (!cur || !cur.version) {
+      console.log("Skipping " + filePath + ": version is not set in info.json");
+      continue;
+    }
 
     const prevVersion = getPrevVersion(filePath, before);
     if (cur.version === prevVersion) continue;
 
-    const modName = filePath.split("/")[0];
+    const modName = path.posix.dirname(filePath).split("/")[0];
 
     if (!cur.mod_id) {
-      console.log(`Skipping ${modName}: mod_id is not set in .mod file`);
+      console.log(`Skipping ${modName}: Nexus Mods homepage is not set in info.json`);
       skipped.push(modName);
       continue;
     }
 
     if (dryRun) {
+      const changelogText = getChangelogText(modName, cur.version);
       console.log(
         `  Dry run: would resolve file_group_id from API for mod_id=${cur.mod_id}`,
       );
+      if (changelogText) {
+        console.log(`  Dry run: would publish changelog for ${cur.version}:`);
+        console.log(changelogText);
+      } else {
+        console.warn(
+          `  Dry run: no changelog found for ${modName} v${cur.version}`,
+        );
+      }
       uploaded.push(modName);
       continue;
     }
 
     let fileGroupId;
+    let nexusModId;
+    let changelogText;
     try {
       console.log(
         `  Resolving file_group_id from API for mod_id=${cur.mod_id}...`,
       );
-      fileGroupId = await resolveFileGroupId(cur.mod_id, apiKey);
+      ({ fileId: fileGroupId, nexusModId } = await resolveFileGroupId(
+        cur.mod_id,
+        apiKey,
+      ));
       console.log(`  Resolved file_group_id: ${fileGroupId}`);
+      changelogText = getChangelogText(modName, cur.version);
     } catch (e) {
       console.error(`Skipping ${modName}: ${e.message}`);
       skipped.push(modName);
@@ -444,6 +507,15 @@ async function main() {
         apiKey,
       );
       uploaded.push(modName);
+      if (changelogText) {
+        try {
+          await publishChangelog(nexusModId, cur.version, changelogText, apiKey);
+        } catch (e) {
+          console.error(
+            `Warning: failed to publish ${modName} changelog: ${e.message}`,
+          );
+        }
+      }
     } catch (e) {
       console.error(`Error uploading ${modName}: ${e.message}`);
     }

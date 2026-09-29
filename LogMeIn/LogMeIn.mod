@@ -13,6 +13,4 @@ return {
  		"ErrorTracker",
  	},
 	packages = {},
-	version = "26.06.08",
-	mod_id = "15",
 }

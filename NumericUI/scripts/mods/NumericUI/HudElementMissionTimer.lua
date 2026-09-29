@@ -3,6 +3,10 @@ local mod = get_mod("NumericUI")
 local UIWorkspaceSettings = require("scripts/settings/ui/ui_workspace_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 
+local math_floor = math.floor
+local math_fmod = math.fmod
+local string_format = string.format
+
 local font_size = 24
 local size = { 60, font_size }
 local scenegraph_definition = {
@@ -51,16 +55,18 @@ HudElementMissionTimer.init = function(self, parent, draw_layer, start_scale)
 end
 
 HudElementMissionTimer._disp_time = function(time)
-	local minutes = math.floor(math.fmod(time, 3600) / 60)
-	local seconds = math.floor(math.fmod(time, 60))
-	return string.format("%02d:%02d", minutes, seconds)
+	local minutes = math_floor(math_fmod(time, 3600) / 60)
+	local seconds = math_floor(math_fmod(time, 60))
+	return string_format("%02d:%02d", minutes, seconds)
 end
 
 HudElementMissionTimer.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 	HudElementMissionTimer.super.update(self, dt, t, ui_renderer, render_settings, input_service)
-	local enabled = mod:get("show_mission_timer")
-	local active = not mod:get("mission_timer_in_overlay")
-	local content = self._widgets_by_name.timer.content
+
+	local widget = self._widgets_by_name.timer
+	local enabled = mod.setting("show_mission_timer")
+	local active = not mod.setting("mission_timer_in_overlay")
+
 	local gameplay_input_service = Managers.input:get_input_service("Ingame")
 
 	if gameplay_input_service:get("tactical_overlay_hold") then
@@ -68,9 +74,17 @@ HudElementMissionTimer.update = function(self, dt, t, ui_renderer, render_settin
 	end
 
 	if enabled and active and not self._is_in_hub then
-		content.text = self._disp_time(Managers.time:time("gameplay"))
-	else
-		content.text = ""
+		local second = math_floor(Managers.time:time("gameplay"))
+
+		if second ~= self._displayed_second then
+			self._displayed_second = second
+			widget.content.text = self._disp_time(second)
+			widget.dirty = true
+		end
+	elseif widget.content.text ~= "" then
+		self._displayed_second = nil
+		widget.content.text = ""
+		widget.dirty = true
 	end
 end
 
