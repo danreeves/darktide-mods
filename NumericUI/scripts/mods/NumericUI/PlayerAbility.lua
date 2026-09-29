@@ -5,7 +5,6 @@ local UIWidget = require("scripts/managers/ui/ui_widget")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 
 local math_floor = math.floor
-local math_huge = math.huge
 local string_format = string.format
 local table_clone = table.clone
 
@@ -42,7 +41,7 @@ mod:hook(_G, "dofile", function(func, path)
 	return instance
 end)
 
-local function _remaining_cooldown(self)
+local function _player_extension(self, system_name)
 	local parent = self._parent
 	local player = self._data and self._data.player
 
@@ -50,19 +49,32 @@ local function _remaining_cooldown(self)
 		return
 	end
 
-	local ability_extension = parent:get_player_extension(player, "ability_system")
+	return parent:get_player_extension(player, system_name)
+end
+
+local function _remaining_cooldown(self)
+	local ability_extension = _player_extension(self, "ability_system")
 
 	if not ability_extension then
 		return
 	end
 
-	local remaining = ability_extension:remaining_ability_cooldown(self._ability_id)
+	local buff_extension = _player_extension(self, "buff_system")
 
-	if not remaining or remaining == math_huge then
+	return mod.ability_charge_time_remaining(ability_extension, buff_extension, self._ability_type)
+end
+
+-- regen progress of the next charge, or nil while regen is paused
+local function _recharging_charge_progress(self)
+	local ability_extension = _player_extension(self, "ability_system")
+	local regen_progress_func = ability_extension and ability_extension.get_ability_resource_regen_progress
+	local ability_type = self._ability_type
+
+	if not regen_progress_func or ability_extension:is_ability_resource_regen_paused(ability_type) then
 		return
 	end
 
-	return remaining
+	return regen_progress_func(ability_extension, ability_type)
 end
 
 local function _update_cooldown_text(self)
@@ -78,6 +90,13 @@ local function _update_cooldown_text(self)
 	-- new_text stays nil while the displayed value is unchanged, so the
 	-- retained widget is only re-rendered when the text actually changes
 	local new_text
+
+	-- since Darktide 1.13.0 vanilla reports a multi-charge ability as ready while it has a
+	-- charge left, so read the progress of the recharging charge from the ability itself
+	if not on_cooldown and self._has_more_than_one_charge and self._has_charges_left then
+		progress = _recharging_charge_progress(self)
+		on_cooldown = progress ~= nil
+	end
 
 	if not on_cooldown or not progress or progress >= 1 then
 		content._numericui_last_value = nil

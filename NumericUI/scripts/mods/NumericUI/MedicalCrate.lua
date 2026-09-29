@@ -27,7 +27,7 @@ local function unit_spawned(unit, dont_load_package)
 	local decal_unit = World.spawn_unit_ex(world, decal_unit_name, nil, position + Vector3(0, 0, 0.1))
 
 	-- Set size of unit
-	local diameter = medical_crate_config.proximity_radius * 2 + 1.5
+	local diameter = medical_crate_config.proximity_check_params.proximity_radius * 2 + 1.5
 	Unit.set_local_scale(decal_unit, 1, Vector3(diameter, diameter, 1))
 
 	-- Set color of unit

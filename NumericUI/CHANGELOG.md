@@ -1,5 +1,20 @@
 # NumericUI Changelog
 
+## 26.09.29.1
+
+Fixed `Ability cooldown format` showing nothing while the second charge of Fury of the Faithful, or of any other ability with more than one charge, recharges.
+Changed the teammate ability cooldown progress bar to split into one segment per ability charge, so you can see how many charges a teammate has left and how far the next one has recharged.
+Changed the teammate ability cooldown counter to also count down to a teammate's next charge while they still have one left, shown dimmed until they have none.
+
+## 26.09.29
+
+Fixed a crash after the Darktide 1.13.0 update when your combat ability went on cooldown.
+Fixed the teammate ability cooldown counter and progress bar, the "timer" option of `Ability cooldown format`, and `Blitz cooldown format` not working after the Darktide 1.13.0 update.
+Fixed `Show amount of ammo and grenades gained` not showing picked-up grenades after the Darktide 1.13.0 update.
+Fixed an error when placing a medical crate after the Darktide 1.13.0 update, which stopped `Show medical crate radius` from drawing the radius correctly.
+Changed teammate ability cooldown timers to count down faster while something speeds up their ability recharge. They still reach zero exactly when the ability is ready.
+Changed the teammate ability cooldown bar to show empty while a teammate's cooldown is paused, as the game's own ability icon does.
+
 ## 26.08.26
 
 Cut the amount of work NumericUI does every frame. It previously re-derived your ammo, dodge count, ability cooldown, teammate ammo and boss health from scratch on every rendered frame, repeating work the game had already done. Ammo readouts now update from the game's own ammo events, the ammo pickup preview is worked out when you look at a new pickup instead of continuously, Havoc's reduced ammo pickup capacity is read once per mission instead of being re-parsed every frame, ability cooldowns come from the game's ability system rather than NumericUI's own bookkeeping, and the mission timer, dodge count and boss numbers only rebuild their text when the number on screen actually changes. Teammate ammo numbers now refresh ten times a second rather than every frame; everything else updates exactly as immediately as before. Measured over two full missions, NumericUI's own HUD work dropped from 39.4 to 14.2 microseconds per frame, a 64% reduction, with the ammo readout down 92% per call and the ammo pickup preview down 89%.
