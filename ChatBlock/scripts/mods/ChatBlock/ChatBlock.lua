@@ -34,7 +34,10 @@ local function holding_block_weapon(unit)
 end
 
 local function auto_melee_swap_on_blocked(blocked)
-	if blocked and not mod.auto_melee_swap_blocked and mod:get("auto_melee_swap") then
+	if not blocked then
+		-- The block ended before the swap went through, so don't swap afterwards
+		mod.auto_melee_swap_requested = false
+	elseif not mod.auto_melee_swap_blocked and mod:get("auto_melee_swap") then
 		local player = Managers.player:local_player(1)
 		if player then
 			local unit = player.player_unit
@@ -104,8 +107,17 @@ mod:hook_safe("HumanInputHandler", "_parse_input", function(self, input_cache, _
 	local action_lookup = self._action_lookup
 
 	if mod.auto_melee_swap_requested then
-		mod.auto_melee_swap_requested = false
-		input_cache[action_lookup[MELEE_WIELD_INPUT]][index] = true
+		-- A single press is dropped when the current action doesn't allow a
+		-- weapon switch at that moment, e.g. while shooting or sprinting, so
+		-- keep pressing until the melee weapon is out.
+		local unit = self._player.player_unit
+		local unit_data = unit and ScriptUnit.has_extension(unit, "unit_data_system")
+
+		if unit_data and unit_data:read_component("inventory").wielded_slot ~= "slot_primary" then
+			input_cache[action_lookup[MELEE_WIELD_INPUT]][index] = true
+		else
+			mod.auto_melee_swap_requested = false
+		end
 	end
 
 	if mod.cinematic_active then
