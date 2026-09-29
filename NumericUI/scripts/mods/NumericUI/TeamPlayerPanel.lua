@@ -50,8 +50,10 @@ local tough_text_style = {
 local ability_bar_cooldown_color = Color.terminal_background_gradient_selected(255, true)
 local ABILITY_TYPE = "combat_ability"
 
--- the ability bar is split into one segment per charge, spaced like vanilla's health bar wound segments
-local ABILITY_BAR_MAX_SEGMENTS = 5
+-- the ability bar is split into one segment per charge, spaced like vanilla's health bar wound segments and
+-- budgeted like them: vanilla pre-creates 10 wound segments. Mortis Trials' Empowered perk alone takes a
+-- 5 charge Skitarius to 7
+local ABILITY_BAR_MAX_SEGMENTS = 10
 local ABILITY_BAR_SEGMENT_SPACING = 4
 
 -- segment style ids built once instead of every frame
