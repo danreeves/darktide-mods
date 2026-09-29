@@ -13,7 +13,6 @@ local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 
 local math_clamp = math.clamp
 local math_floor = math.floor
-local math_huge = math.huge
 local math_round = math.round
 local string_format = string.format
 local table_clone = table.clone
@@ -276,21 +275,30 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	end
 end)
 
+local function hide_numericui_ability_cd(ability_bar_widget, ability_text_widget, show_ability_text, show_ability_bar)
+	if show_ability_text then
+		ability_text_widget.dirty = ability_text_widget.visible
+		ability_text_widget.visible = false
+	end
+
+	if show_ability_bar then
+		ability_bar_widget.dirty = ability_bar_widget.visible
+		ability_bar_widget.visible = false
+	end
+end
+
 local function update_numericui_ability_cd(self, ability_extension, ability_bar_widget, ability_text_widget)
 	local hide_widgets = (self._show_as_dead or self._dead or self._hogtied)
 	local show_ability_text = (mod.setting("ability_cd_text") and ability_text_widget)
 	local show_ability_bar = (mod.setting("ability_cd_bar") and ability_bar_widget)
 
-	if hide_widgets then
-		if show_ability_text then
-			ability_text_widget.dirty = ability_text_widget.visible
-			ability_text_widget.visible = false
-		end
+	-- the personal panel has no cooldown widgets, so there is nothing to update
+	if not show_ability_text and not show_ability_bar then
+		return
+	end
 
-		if show_ability_bar then
-			ability_bar_widget.dirty = ability_bar_widget.visible
-			ability_bar_widget.visible = false
-		end
+	if hide_widgets then
+		hide_numericui_ability_cd(ability_bar_widget, ability_text_widget, show_ability_text, show_ability_bar)
 
 		return
 	end
@@ -322,13 +330,20 @@ local function update_numericui_ability_cd(self, ability_extension, ability_bar_
 		return
 	end
 
-	local time_remaining = ability_extension:remaining_ability_cooldown(ABILITY_TYPE)
+	-- Darktide 1.13.0 regenerates abilities as a resource instead of counting down a cooldown
+	local regen_progress_func = ability_extension.get_ability_resource_regen_progress
+	local max_regen_time_func = ability_extension.max_regen_time_for_ability_charge
 
-	if not time_remaining or time_remaining == math_huge then
-		time_remaining = 0
+	if not regen_progress_func or not max_regen_time_func then
+		hide_numericui_ability_cd(ability_bar_widget, ability_text_widget, show_ability_text, show_ability_bar)
+
+		return
 	end
 
-	local max_cooldown = ability_extension:max_ability_cooldown(ABILITY_TYPE) or 0
+	local regen_progress = math_clamp(regen_progress_func(ability_extension, ABILITY_TYPE) or 0, 0, 1)
+	-- the base-rate charge time is the only regen timing synced for teammates, so under regen
+	-- buffs this counts down faster than the clock, but it always reaches zero as the bar fills
+	local time_remaining = (1 - regen_progress) * (max_regen_time_func(ability_extension, ABILITY_TYPE) or 0)
 
 	if show_ability_text then
 		local content = ability_text_widget.content
@@ -354,7 +369,8 @@ local function update_numericui_ability_cd(self, ability_extension, ability_bar_
 
 	if show_ability_bar then
 		local texture_style = ability_bar_widget.style.texture
-		local cd_progress = max_cooldown > 0 and math_clamp((max_cooldown - time_remaining) / max_cooldown, 0, 1) or 1
+		-- matches vanilla's ability HUD, which shows paused regen as an empty bar
+		local cd_progress = ability_extension:is_ability_resource_regen_paused(ABILITY_TYPE) and 0 or regen_progress
 		-- quantize to whole pixels so the retained bar only re-renders when it visibly grows
 		local bar_width = math_floor(bar_size[1] * cd_progress + 0.5)
 
