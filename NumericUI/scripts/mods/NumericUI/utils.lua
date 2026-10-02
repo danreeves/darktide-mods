@@ -4,6 +4,9 @@ local FixedFrame = require("scripts/utilities/fixed_frame")
 
 local pcall = pcall
 local table_clear = table.clear
+local table_contains = table.contains
+
+local SYRINGE_KEYWORD = BuffSettings.keywords.syringe
 
 mod._is_in_hub = function()
 	local game_mode_name = Managers.state.game_mode:game_mode_name()
@@ -44,13 +47,22 @@ local timed_modified_stats = {}
 -- that share. Weakly keyed so a respawned player's old buff extension can still be collected.
 local timed_regen_shares = setmetatable({}, { __mode = "k" })
 
--- Buffs with a duration, and proc buffs whose proc stats touch regen, only speed up recharge for a while.
+-- Buffs with a duration, stimms, and proc buffs whose proc stats touch regen only speed up recharge for a while.
+-- Stimms are matched by keyword because the copies a Hive Scum's Stimm Field applies have no duration: they
+-- last for as long as you stand in the field.
 local function _is_timed_regen_buff(buff, flat_regen_stat_buff, regen_modifier_stat_buff)
 	if buff:duration() then
 		return true
 	end
 
-	local proc_stat_buffs = buff:template().proc_stat_buffs
+	local template = buff:template()
+	local keywords = template.keywords
+
+	if keywords and table_contains(keywords, SYRINGE_KEYWORD) then
+		return true
+	end
+
+	local proc_stat_buffs = template.proc_stat_buffs
 
 	return proc_stat_buffs ~= nil
 		and (proc_stat_buffs[flat_regen_stat_buff] ~= nil or proc_stat_buffs[regen_modifier_stat_buff] ~= nil)
@@ -113,8 +125,9 @@ end
 -- PlayerUnitAbilityExtension._update_ability_resources at the recharge speed of permanent buffs only. Timed
 -- buffs are left out, so the countdown never assumes they last until the charge is ready and never jumps back
 -- up when they end; while one is active the countdown runs slightly faster than the clock instead. Returns nil
--- when no charge is regenerating, regen is paused, or it is not progressing. Only pass the local player's
--- ability extension: husk extensions error on get_ability_resource_cost_per_second.
+-- when no charge is regenerating, regen is paused, the active ability is draining its own resource, or regen is
+-- not progressing. Only pass the local player's ability extension: husk extensions error on
+-- get_ability_resource_cost_per_second.
 mod.ability_charge_time_remaining = function(ability_extension, buff_extension, ability_type)
 	local missing_resource_func = ability_extension.missing_ability_resource_until_next_charge
 
@@ -165,7 +178,15 @@ mod.ability_charge_time_remaining = function(ability_extension, buff_extension, 
 			* ((stat_buffs[regen_modifier_stat_buff] or 1) - timed_regen_modifier)
 	end
 
-	regen_per_second = regen_per_second - ability_extension:get_ability_resource_cost_per_second(ability_type)
+	local resource_cost_per_second = ability_extension:get_ability_resource_cost_per_second(ability_type)
+
+	-- an active ability draining its own resource, like the Skitarius' Precision Stance, is spending its charge
+	-- rather than recharging it, so there is nothing to count down, just as while regen is paused
+	if resource_cost_per_second > 0 and ability_extension:is_ability_active(ability_type) then
+		return
+	end
+
+	regen_per_second = regen_per_second - resource_cost_per_second
 
 	if regen_per_second <= 0 then
 		return
