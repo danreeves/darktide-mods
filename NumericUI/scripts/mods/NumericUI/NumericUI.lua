@@ -8,6 +8,7 @@ local table_insert = table.insert
 local ipairs = ipairs
 
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/utils")
+mod.text_style = mod:io_dofile("NumericUI/scripts/mods/NumericUI/TextStyle")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/TeamPlayerPanel")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerWeapon")
@@ -126,6 +127,12 @@ mod.on_setting_changed = function(setting_id)
 
 	if live_applied_settings[setting_id] then
 		mod._dodge_hud_dirty = true
+		return
+	end
+
+	-- text colour and backplate settings are applied straight to the existing widgets
+	if mod.text_style.is_setting(setting_id) then
+		mod.text_style.invalidate()
 		return
 	end
 

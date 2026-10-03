@@ -51,6 +51,16 @@ local AMMO_TEXT_FONT_SIZE_DEFAULT = 16
 local AMMO_TEXT_OFFSET_X_DEFAULT = 80
 local AMMO_TEXT_OFFSET_Y_DEFAULT = -16
 
+local TextStyle = mod.text_style
+local MAX_AMMO_TEXT_STYLE_PREFIX = "ammo_text"
+local MAX_AMMO_BACKPLATE_STYLE_ID = "max_ammo_backplate"
+-- above the weapon panel background (z 3), below the ammo digits (z 6) and the max ammo text (z 7)
+local MAX_AMMO_BACKPLATE_LAYER = 5
+-- the widest percentage, so the plate does not resize while the percentage drops
+local MAX_AMMO_PERCENT_SAMPLE = "100%"
+
+TextStyle.register(MAX_AMMO_TEXT_STYLE_PREFIX)
+
 local BLITZ_COOLDOWN_FONT_SIZE_DEFAULT = 30
 local BLITZ_COOLDOWN_X_OFFSET_DEFAULT = -80
 local BLITZ_COOLDOWN_Y_OFFSET_DEFAULT = 0
@@ -223,17 +233,28 @@ mod:hook_require(PLAYER_WEAPON_HUD_DEF_PATH, function(instance)
 		local ammo_text_widget_orig = backups.definitions.widget_definitions["ammo_text_" .. i]
 		if ammo_text_widget_orig then
 			local ammo_text_widget = table_clone(ammo_text_widget_orig)
+			local max_ammo_style = table_merge_recursive(spare_ammo_style, {
+				font_size = spare_ammo_style.font_size * modifier,
+				default_font_size = spare_ammo_style.default_font_size * modifier,
+				focused_font_size = spare_ammo_style.focused_font_size * modifier,
+			})
+
 			UIWidget.add_definition_pass(ammo_text_widget, {
 				value_id = "max_ammo",
 				style_id = "max_ammo",
 				pass_type = "text",
 				value = "",
-				style = table_merge_recursive(spare_ammo_style, {
-					font_size = spare_ammo_style.font_size * modifier,
-					default_font_size = spare_ammo_style.default_font_size * modifier,
-					focused_font_size = spare_ammo_style.focused_font_size * modifier,
-				}),
+				style = max_ammo_style,
 			})
+			UIWidget.add_definition_pass(
+				ammo_text_widget,
+				TextStyle.backplate_pass(
+					max_ammo_style,
+					"max_ammo",
+					MAX_AMMO_BACKPLATE_STYLE_ID,
+					MAX_AMMO_BACKPLATE_LAYER
+				)
+			)
 			instance.widget_definitions["ammo_text_" .. i] = ammo_text_widget
 		end
 	end
@@ -380,6 +401,8 @@ local function _update_max_ammo_style(self)
 					+ AMMO_TEXT_FONT_SIZE_DEFAULT * 1.1
 					+ (max_ammo_offset_y - AMMO_TEXT_OFFSET_Y_DEFAULT)
 				ammo_text_widget.dirty = true
+				-- the backplate follows the text's size and position
+				self._numericui_text_style_dirty = true
 			end
 		end
 	end
@@ -421,6 +444,8 @@ local function _update_max_ammo_text(self, total_current, total_max)
 						content.max_ammo = string_format("%d%%", max_ammo_value)
 					else
 						content.max_ammo = string_format("/%d", max_ammo_value)
+						-- the backplate is sized for this string; in percent mode it uses a fixed sample instead
+						self._numericui_text_style_dirty = true
 					end
 
 					ammo_text_widget.dirty = true
@@ -434,6 +459,33 @@ local function _update_max_ammo_text(self, total_current, total_max)
 	end
 
 	self._numericui_max_reserve = max_reserve
+end
+
+local function _update_max_ammo_text_style(self, ui_renderer)
+	if not mod.setting("max_ammo_text") then
+		return
+	end
+
+	local percent_sample = mod.setting("show_max_ammo_as_percent") and MAX_AMMO_PERCENT_SAMPLE
+	local widgets_by_name = self._widgets_by_name
+
+	for i = 1, NetworkConstants.clips_in_use.max_size do
+		local ammo_text_widget = widgets_by_name[_ammo_text_widget_names[i]]
+
+		if
+			ammo_text_widget
+			and TextStyle.apply(
+				ammo_text_widget,
+				MAX_AMMO_TEXT_STYLE_PREFIX,
+				"max_ammo",
+				MAX_AMMO_BACKPLATE_STYLE_ID,
+				ui_renderer,
+				percent_sample or ammo_text_widget.content.max_ammo
+			)
+		then
+			ammo_text_widget.dirty = true
+		end
+	end
 end
 
 local function _update_ammo_icon_color(self, total_current, total_max)
@@ -830,7 +882,7 @@ local function _update_blitz_background_progress(self)
 	end
 end
 
-mod:hook_safe("HudElementPlayerWeapon", "update", function(self, dt)
+mod:hook_safe("HudElementPlayerWeapon", "update", function(self, dt, _t, ui_renderer)
 	local cached_max_reserve = self._numericui_max_reserve
 
 	if cached_max_reserve then
@@ -839,6 +891,15 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, dt)
 		if slot_component and slot_component.max_ammunition_reserve ~= cached_max_reserve then
 			_update_max_ammo_text(self, self._numericui_total_current, self._numericui_total_max)
 		end
+	end
+
+	-- a new element starts without a version, so it applies the text style once before its first draw
+	local text_style_version = TextStyle.version
+
+	if self._numericui_text_style_dirty or self._numericui_text_style_version ~= text_style_version then
+		self._numericui_text_style_dirty = nil
+		self._numericui_text_style_version = text_style_version
+		_update_max_ammo_text_style(self, ui_renderer)
 	end
 
 	local gained = self._numericui_pending_ammo_gain

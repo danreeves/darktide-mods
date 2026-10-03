@@ -1,4 +1,7 @@
 local mod = get_mod("NumericUI")
+local TextStyle = mod:io_dofile("NumericUI/scripts/mods/NumericUI/TextStyle")
+
+local AMMO_TEXT_COLOR_DEFAULT = { 255, 113, 126, 103 } -- ARGB, the game's spare ammo colour
 
 local color_options = {}
 for _, color_name in ipairs(Color.list) do
@@ -226,6 +229,8 @@ return {
 							return mod:get("ammo_text_offset_x") or 80
 						end,
 					},
+					TextStyle.color_setting("ammo_text", AMMO_TEXT_COLOR_DEFAULT),
+					TextStyle.backplate_setting("ammo_text"),
 					{
 						setting_id = "show_ammo_icon",
 						type = "checkbox",
