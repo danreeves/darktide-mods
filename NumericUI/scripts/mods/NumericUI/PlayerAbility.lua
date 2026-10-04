@@ -8,11 +8,13 @@ local math_floor = math.floor
 local string_format = string.format
 local table_clone = table.clone
 
+local ABILITY_COOLDOWN_FONT_SIZE_DEFAULT = 30
+
 local style = table_clone(UIFontSettings.hud_body)
 style.text_horizontal_alignment = "center"
 style.text_vertical_alignment = "center"
 
-style.font_size = mod:get("ability_cooldown_font_size")
+style.font_size = mod:get("ability_cooldown_font_size") or ABILITY_COOLDOWN_FONT_SIZE_DEFAULT
 
 -- selene: allow(global_usage)
 mod:hook(_G, "dofile", function(func, path)
@@ -82,6 +84,17 @@ local function _update_cooldown_text(self)
 
 	if not text_widget then
 		return
+	end
+
+	-- the definition above reads the font size only when this file loads, so a changed setting is applied to the
+	-- live widget here
+	local font_size = mod.setting("ability_cooldown_font_size") or ABILITY_COOLDOWN_FONT_SIZE_DEFAULT
+	local text_style = text_widget.style.text
+
+	if text_style._numericui_font_size ~= font_size then
+		text_style._numericui_font_size = font_size
+		text_style.font_size = font_size
+		text_widget.dirty = true
 	end
 
 	local content = text_widget.content
