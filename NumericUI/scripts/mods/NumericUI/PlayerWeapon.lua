@@ -18,6 +18,7 @@ local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local FixedFrame = require("scripts/utilities/fixed_frame")
 
 local math_abs = math.abs
+local math_clamp = math.clamp
 local math_floor = math.floor
 local math_min = math.min
 local math_round = math.round
@@ -50,6 +51,7 @@ local _ammo_text_widget_names = {}
 local AMMO_TEXT_FONT_SIZE_DEFAULT = 16
 local AMMO_TEXT_OFFSET_X_DEFAULT = 80
 local AMMO_TEXT_OFFSET_Y_DEFAULT = -16
+local AMMO_TEXT_COLOR_DEFAULT = { 255, 113, 126, 103 } -- ARGB, the game's spare ammo colour
 
 local BLITZ_COOLDOWN_FONT_SIZE_DEFAULT = 30
 local BLITZ_COOLDOWN_X_OFFSET_DEFAULT = -80
@@ -339,6 +341,39 @@ local function _element_state(self)
 	}
 end
 
+-- The colour setting's channels. mod.setting hands out a new table after every settings change, so the setting is
+-- only validated again when the table changes.
+local max_ammo_color = table_clone(AMMO_TEXT_COLOR_DEFAULT)
+local max_ammo_color_setting
+
+local function _max_ammo_color()
+	local color_setting = mod.setting("ammo_text_color")
+
+	if color_setting ~= max_ammo_color_setting then
+		max_ammo_color_setting = color_setting
+
+		-- anything but an ARGB table keeps the game's colour
+		local source = AMMO_TEXT_COLOR_DEFAULT
+
+		if type(color_setting) == "table" then
+			source = color_setting
+
+			for i = 1, 4 do
+				if type(color_setting[i]) ~= "number" then
+					source = AMMO_TEXT_COLOR_DEFAULT
+					break
+				end
+			end
+		end
+
+		for i = 1, 4 do
+			max_ammo_color[i] = math_clamp(source[i], 0, 255)
+		end
+	end
+
+	return max_ammo_color
+end
+
 local function _update_max_ammo_style(self)
 	if not mod.setting("max_ammo_text") then
 		return
@@ -347,6 +382,7 @@ local function _update_max_ammo_style(self)
 	local max_ammo_font_size = mod.setting("ammo_text_font_size") or AMMO_TEXT_FONT_SIZE_DEFAULT
 	local max_ammo_offset_x = mod.setting("ammo_text_offset_x") or AMMO_TEXT_OFFSET_X_DEFAULT
 	local max_ammo_offset_y = mod.setting("ammo_text_offset_y") or AMMO_TEXT_OFFSET_Y_DEFAULT
+	local color = _max_ammo_color()
 	local widgets_by_name = self._widgets_by_name
 
 	for i = 1, NetworkConstants.clips_in_use.max_size do
@@ -379,6 +415,21 @@ local function _update_max_ammo_style(self)
 				max_ammo_style.offset[2] = base_y
 					+ AMMO_TEXT_FONT_SIZE_DEFAULT * 1.1
 					+ (max_ammo_offset_y - AMMO_TEXT_OFFSET_Y_DEFAULT)
+				ammo_text_widget.dirty = true
+			end
+
+			local text_color = max_ammo_style.text_color
+
+			if
+				text_color[1] ~= color[1]
+				or text_color[2] ~= color[2]
+				or text_color[3] ~= color[3]
+				or text_color[4] ~= color[4]
+			then
+				text_color[1] = color[1]
+				text_color[2] = color[2]
+				text_color[3] = color[3]
+				text_color[4] = color[4]
 				ammo_text_widget.dirty = true
 			end
 		end
