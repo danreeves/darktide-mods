@@ -1,5 +1,15 @@
 # NumericUI Changelog
 
+## 26.10.05
+
+Added an `Ammo text colour` setting to change the colour and opacity of the max ammo text.
+NumericUI now requires an up-to-date Darktide Mod Framework.
+Fixed `Ability text font size` only taking effect after reloading mods or restarting the game.
+Fixed the `Ability cooldown format` and `Blitz cooldown format` timers jumping back up when a temporary recharge speed boost ends, such as Redline Capacitors or leaving a Stimm Field.
+Fixed the `Ability cooldown format` timer showing a large, rising number during the Skitarius' Precision Stance. It now stays blank while the stance is active.
+Fixed the teammate ability cooldown progress bar and counter being off when a teammate's ability cost is changed, for example by Seer's Presence.
+Changed the German names of the max ammo settings.
+
 ## 26.09.29.1
 
 Fixed `Ability cooldown format` showing nothing while the second charge of Fury of the Faithful, or of any other ability with more than one charge, recharges.
