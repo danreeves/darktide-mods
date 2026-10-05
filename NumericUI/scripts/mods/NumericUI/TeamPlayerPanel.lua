@@ -362,6 +362,24 @@ local function update_numericui_ability_bar(ability_bar_widget, max_charges, rem
 	end
 end
 
+-- Progress of the charge being regenerated. A teammate's copy of the ability extension prices a charge at the
+-- template cost and ignores cost modifiers, while the synced max resource, resource and charge count include
+-- them, so the cost per charge comes from the synced values. This equals vanilla's progress for local extensions.
+local function ability_charge_regen_progress(ability_extension, regen_progress_func, max_charges, remaining_charges)
+	local max_resource = ability_extension:max_ability_resource(ABILITY_TYPE)
+
+	-- nothing synced yet
+	if max_charges <= 0 or max_resource <= 0 then
+		return math_clamp(regen_progress_func(ability_extension, ABILITY_TYPE) or 0, 0, 1)
+	end
+
+	local cost_per_charge = max_resource / max_charges
+	local charge_resource = ability_extension:remaining_ability_resource(ABILITY_TYPE)
+		- remaining_charges * cost_per_charge
+
+	return math_clamp(charge_resource / cost_per_charge, 0, 1)
+end
+
 local function update_numericui_ability_cd(self, ability_extension, ability_bar_widget, ability_text_widget)
 	local hide_widgets = (self._show_as_dead or self._dead or self._hogtied)
 	local show_ability_text = (mod.setting("ability_cd_text") and ability_text_widget)
@@ -395,7 +413,8 @@ local function update_numericui_ability_cd(self, ability_extension, ability_bar_
 	local regen_progress = 1
 
 	if is_regenerating then
-		regen_progress = math_clamp(regen_progress_func(ability_extension, ABILITY_TYPE) or 0, 0, 1)
+		regen_progress =
+			ability_charge_regen_progress(ability_extension, regen_progress_func, max_charges, remaining_charges)
 	end
 
 	if show_ability_text then
