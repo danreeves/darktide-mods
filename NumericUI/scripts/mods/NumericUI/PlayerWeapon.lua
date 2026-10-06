@@ -16,6 +16,7 @@ local HudElementPlayerWeaponHandlerSettings =
 	require("scripts/ui/hud/elements/player_weapon_handler/hud_element_player_weapon_handler_settings")
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local FixedFrame = require("scripts/utilities/fixed_frame")
+local TalentSettings = require("scripts/settings/talent/talent_settings")
 
 local math_abs = math.abs
 local math_clamp = math.clamp
@@ -57,6 +58,24 @@ local BLITZ_COOLDOWN_FONT_SIZE_DEFAULT = 30
 local BLITZ_COOLDOWN_X_OFFSET_DEFAULT = -80
 local BLITZ_COOLDOWN_Y_OFFSET_DEFAULT = 0
 local BLITZ_BUFF_SCAN_INTERVAL = 0.5
+
+-- Blinder's talent buff, and the buff whose stacks count its kills towards the next grenade. The server adds a stack
+-- for every kill it counts and sends it to the owner, so the stack count is the game's own count on every client.
+local BLITZ_KILL_COUNTER_BUFF = "broker_passive_blitz_charge_on_kill"
+local BLITZ_KILL_STACK_BUFF = "broker_passive_blitz_charge_on_kill_stack"
+
+local broker_talent_settings = TalentSettings.broker
+local flash_grenade_settings = broker_talent_settings
+	and broker_talent_settings.blitz
+	and broker_talent_settings.blitz.flash_grenade
+local blitz_kills_per_charge = flash_grenade_settings and flash_grenade_settings.num_kills
+
+-- "20" .. "1" built once instead of every frame
+local blitz_kill_texts = {}
+
+for i = 1, blitz_kills_per_charge or 0 do
+	blitz_kill_texts[i] = string_format("%d", i)
+end
 
 local blitz_icon_size = HudElementPlayerWeaponHandlerSettings.icon_size
 local blitz_cooldown_style = table_clone(UIFontSettings.hud_body)
@@ -786,6 +805,26 @@ local function _blitz_replenishment_cooldown(self, dt)
 	return remaining, total and total > 0 and remaining / total or nil
 end
 
+-- Kills left until Blinder restores a grenade, or nil without the talent. The kill that restores it can leave the
+-- stacks at or above the threshold until the server's removal of them all arrives, which already starts a new cycle.
+local function _blitz_kills_remaining(buff_extension)
+	if
+		not blitz_kills_per_charge
+		or not buff_extension
+		or buff_extension:current_stacks(BLITZ_KILL_COUNTER_BUFF) == 0
+	then
+		return
+	end
+
+	local kills = buff_extension:current_stacks(BLITZ_KILL_STACK_BUFF)
+
+	if kills >= blitz_kills_per_charge then
+		kills = 0
+	end
+
+	return blitz_kills_per_charge - kills
+end
+
 local function _blitz_remaining_cooldown(self, dt)
 	local ability_extension = self._ability_extension
 	local ability_type = self._ability_type
@@ -808,7 +847,16 @@ local function _blitz_remaining_cooldown(self, dt)
 		return remaining, self._charge_regen_progress
 	end
 
-	return _blitz_replenishment_cooldown(self, dt)
+	local progress
+
+	remaining, progress = _blitz_replenishment_cooldown(self, dt)
+
+	if remaining then
+		return remaining, progress
+	end
+
+	-- a timed recharge takes precedence over Blinder's kill count
+	return nil, nil, _blitz_kills_remaining(buff_extension)
 end
 
 local function _update_blitz_cooldown_text(self, dt)
@@ -826,9 +874,15 @@ local function _update_blitz_cooldown_text(self, dt)
 		content._numericui_last_value = nil
 		new_text = " "
 	else
-		local remaining, progress = _blitz_remaining_cooldown(self, dt)
+		local remaining, progress, kills_remaining = _blitz_remaining_cooldown(self, dt)
 
-		if not remaining then
+		if kills_remaining then
+			_update_blitz_cooldown_style(self, widget)
+
+			-- a timer or percent value equal to the kill count must still be rebuilt once the timer is back
+			content._numericui_last_value = nil
+			new_text = blitz_kill_texts[kills_remaining]
+		elseif not remaining then
 			content._numericui_last_value = nil
 			new_text = " "
 		else
