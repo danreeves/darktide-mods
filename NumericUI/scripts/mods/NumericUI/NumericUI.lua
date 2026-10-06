@@ -98,6 +98,10 @@ local RECREATE_HUD_DELAY = 0.25
 local initialized = false
 local recreate_hud_delay = 0
 mod.update = function(dt)
+	if mod._ability_active_timer_element then
+		mod.update_ability_active_timer()
+	end
+
 	if initialized then
 		return
 	end

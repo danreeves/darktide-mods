@@ -269,6 +269,11 @@ return {
 						},
 					},
 					{
+						setting_id = "show_ability_active_timer",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
 						setting_id = "disable_ability_background_progress",
 						type = "checkbox",
 						default_value = true,
