@@ -67,6 +67,9 @@ end
 
 local AMMO_UPDATE_INTERVAL = 0.1
 
+-- U+E021, the peril skull in Darktide's private-use glyph range, escaped so editors can't strip it again
+local PERIL_ICON = "\238\128\161"
+
 mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod.setting("health_text") or mod.setting("toughness_text") then
 		instance.widget_definitions.coherency_indicator = UIWidget.create_definition({
@@ -146,7 +149,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 		instance.widget_definitions.ability_bar = nil
 	end
 
-	if mod.setting("ammo_text") or mod.setting("peril_icon") then
+	if mod.setting("ammo_text") or mod.setting("peril_text") or mod.setting("peril_icon") then
 		instance.widget_definitions.numeric_ui_peril_icon = UIWidget.create_definition({
 			{
 				value_id = "icon_text",
@@ -172,7 +175,8 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 		instance.widget_definitions.numeric_ui_peril_icon = nil
 	end
 
-	if mod.setting("ammo_text") then
+	-- also shows the peril percent in place of the ammo text on weapons without ammo
+	if mod.setting("ammo_text") or mod.setting("peril_text") then
 		instance.widget_definitions.numeric_ui_ammo_text = UIWidget.create_definition({
 			{
 				value_id = "text",
@@ -520,6 +524,11 @@ local function update_numericui_ammo(self, unit_data_extension, ammo_text_widget
 		end
 	end
 
+	-- the weapon scan below only feeds the text
+	if not ammo_text_widget then
+		return
+	end
+
 	local weapon_slots = self._weapon_slots
 	local total_current_ammo = 0
 	local total_max_ammo = 0
@@ -538,24 +547,44 @@ local function update_numericui_ammo(self, unit_data_extension, ammo_text_widget
 		end
 	end
 
-	local show_as_empty = total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied
+	local unavailable = self._show_as_dead or self._dead or self._hogtied
+	-- the peril percent takes the place of the ammo text on weapons without ammo, such as staves
+	local show_peril = not unavailable
+		and total_max_ammo == 0
+		and peril_icon_widget
+		and peril_icon_widget.visible
+		and mod.setting("peril_text")
+	local show_as_empty = unavailable or (not show_peril and (total_max_ammo == 0 or not mod.setting("ammo_text")))
+	-- only tracked while shown, so peril changes on a gun don't re-render its ammo text
+	local peril_percent = nil
+	local peril_text_color = nil
 
-	-- only re-render the retained widget when the displayed values change
+	if show_peril then
+		peril_percent = math_round(warp_charge_level * 100)
+		peril_text_color = peril_color
+	end
+
+	-- only re-render the retained widget when the displayed values change. The colour is tracked separately
+	-- because it steps at 50/75/98% on the unrounded peril, so it can change within one displayed percent
 	if
 		total_current_ammo ~= self._numericui_ammo_current
 		or total_max_ammo ~= self._numericui_ammo_max
 		or show_as_empty ~= self._numericui_ammo_empty
+		or peril_percent ~= self._numericui_peril_percent
+		or peril_text_color ~= self._numericui_peril_color
 	then
 		self._numericui_ammo_current = total_current_ammo
 		self._numericui_ammo_max = total_max_ammo
 		self._numericui_ammo_empty = show_as_empty
+		self._numericui_peril_percent = peril_percent
+		self._numericui_peril_color = peril_text_color
 
 		if show_as_empty then
-			-- No ammo or dead
+			-- No ammo, ammo text off, or dead
 			ammo_text_widget.content.text = ""
-		elseif total_max_ammo == 0 and (peril_icon_widget and peril_icon_widget.visible) and mod.setting("peril_text") then
+		elseif show_peril then
 			-- Ammo text as peril percent
-			ammo_text_widget.content.text = string_format("%1d%%", math_round(warp_charge_level * 100))
+			ammo_text_widget.content.text = string_format("%1d%%", peril_percent)
 			ammo_text_widget.style.text.text_color = peril_color
 		else
 			-- Ammo
@@ -578,7 +607,7 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 	local extensions = self:_player_extensions(player)
 	local unit_data_extension = extensions and extensions.unit_data
 
-	if ammo_text_widget and unit_data_extension then
+	if (ammo_text_widget or peril_icon_widget) and unit_data_extension then
 		local elapsed = (self._numericui_ammo_t or AMMO_UPDATE_INTERVAL) + dt
 
 		if elapsed >= AMMO_UPDATE_INTERVAL then
@@ -620,9 +649,9 @@ mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _dra
 			local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
 
 			if mod.setting("peril_icon") then
-				peril_icon_widget.content.icon_text = "" -- this boxed questionmark is the character for the peril icon
+				peril_icon_widget.content.icon_text = PERIL_ICON
 				peril_icon_widget.visible = (archetype == "psyker")
-			elseif mod.setting("ammo_text") then
+			elseif mod.setting("ammo_text") or mod.setting("peril_text") then
 				peril_icon_widget.content.icon_text = ""
 				peril_icon_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
 			end
