@@ -227,6 +227,12 @@ return {
 						end,
 					},
 					{
+						setting_id = "ammo_text_color",
+						type = "color",
+						default_value = { 255, 113, 126, 103 }, -- ARGB, the game's spare ammo colour
+						has_alpha = true,
+					},
+					{
 						setting_id = "show_ammo_icon",
 						type = "checkbox",
 						default_value = true,
@@ -261,6 +267,11 @@ return {
 							{ text = "percent", value = "percent" },
 							{ text = "none", value = "none" },
 						},
+					},
+					{
+						setting_id = "show_ability_active_timer",
+						type = "checkbox",
+						default_value = true,
 					},
 					{
 						setting_id = "disable_ability_background_progress",
