@@ -47,6 +47,20 @@ local tough_text_style = {
 	offset = { 0, -6, 2 },
 }
 
+-- shared with the peril percent, which takes this slot for a Psyker with no ammo text to show
+local ammo_text_style = {
+	default_font_size = 16,
+	font_size = 16,
+	text_vertical_alignment = "center",
+	text_horizontal_alignment = "left",
+	vertical_alignment = "center",
+	offset = { 80, -16, 3 },
+	size = { bar_size[1] * 1.5, bar_size[2] },
+	font_type = hud_body_font_settings.font_type,
+	text_color = UIHudSettings.color_tint_main_2,
+	default_text_color = UIHudSettings.color_tint_main_2,
+}
+
 local ability_bar_cooldown_color = Color.terminal_background_gradient_selected(255, true)
 local ABILITY_TYPE = "combat_ability"
 
@@ -66,6 +80,20 @@ for i = 1, ABILITY_BAR_MAX_SEGMENTS do
 end
 
 local AMMO_UPDATE_INTERVAL = 0.1
+
+-- U+E021, the peril skull in Darktide's private-use glyph range, escaped so editors can't strip it again
+local PERIL_ICON = "\238\128\161"
+
+-- while the ammo text shows a gun's ammo, a smaller percent sits above the skull's column at the end of the bar,
+-- over a smaller skull, so neither runs into the ammo text on the same line. Text wraps to its box, so the
+-- percent gets a box wide enough for "100%", centred on the column
+local PERIL_STACK_WIDTH = 20
+local PERIL_STACK_TEXT_WIDTH = 60
+local PERIL_STACK_LINE_HEIGHT = 12
+local PERIL_STACK_TEXT_Y = -26
+local PERIL_STACK_ICON_Y = -14
+local PERIL_STACK_TEXT_FONT_SIZE = 12
+local PERIL_STACK_ICON_FONT_SIZE = 14
 
 mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod.setting("health_text") or mod.setting("toughness_text") then
@@ -146,7 +174,39 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 		instance.widget_definitions.ability_bar = nil
 	end
 
-	if mod.setting("ammo_text") or mod.setting("peril_icon") then
+	if mod.setting("peril_text") or mod.setting("peril_icon") then
+		local peril_icon_style = {
+			font_size = 18,
+			text_vertical_alignment = "center",
+			text_horizontal_alignment = "right",
+			vertical_alignment = "top",
+			horizontal_alignment = "left",
+			offset = { 0, -22, 3 },
+			size = { bar_size[1], 18 },
+			font_type = "machine_medium",
+			text_color = UIHudSettings.color_tint_alert_2,
+			default_text_color = UIHudSettings.color_tint_main_2,
+		}
+		local column_x = bar_size[1] - PERIL_STACK_WIDTH
+		local peril_icon_stacked_style = table_merge_recursive(table_clone(peril_icon_style), {
+			font_size = PERIL_STACK_ICON_FONT_SIZE,
+			text_horizontal_alignment = "center",
+			offset = { column_x, PERIL_STACK_ICON_Y },
+			size = { PERIL_STACK_WIDTH, PERIL_STACK_LINE_HEIGHT },
+		})
+		local peril_text_style = {
+			font_size = PERIL_STACK_TEXT_FONT_SIZE,
+			text_vertical_alignment = "center",
+			text_horizontal_alignment = "center",
+			vertical_alignment = "top",
+			horizontal_alignment = "left",
+			offset = { column_x + (PERIL_STACK_WIDTH - PERIL_STACK_TEXT_WIDTH) / 2, PERIL_STACK_TEXT_Y, 3 },
+			size = { PERIL_STACK_TEXT_WIDTH, PERIL_STACK_LINE_HEIGHT },
+			font_type = hud_body_font_settings.font_type,
+			text_color = UIHudSettings.color_tint_main_2,
+		}
+
+		-- the update fills in whichever passes match the current layout and leaves the others empty
 		instance.widget_definitions.numeric_ui_peril_icon = UIWidget.create_definition({
 			{
 				value_id = "icon_text",
@@ -154,18 +214,28 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 				pass_type = "text",
 				value = "",
 				visible = false,
-				style = {
-					font_size = 18,
-					text_vertical_alignment = "center",
-					text_horizontal_alignment = "right",
-					vertical_alignment = "top",
-					horizontal_alignment = "left",
-					offset = { 0, -22, 3 },
-					size = { bar_size[1], 18 },
-					font_type = "machine_medium",
-					text_color = UIHudSettings.color_tint_alert_2,
-					default_text_color = UIHudSettings.color_tint_main_2,
-				},
+				style = peril_icon_style,
+			},
+			{
+				value_id = "icon_text_stacked",
+				style_id = "icon_text_stacked",
+				pass_type = "text",
+				value = "",
+				style = peril_icon_stacked_style,
+			},
+			{
+				value_id = "peril_text",
+				style_id = "peril_text",
+				pass_type = "text",
+				value = "",
+				style = peril_text_style,
+			},
+			{
+				value_id = "peril_ammo_slot_text",
+				style_id = "peril_ammo_slot_text",
+				pass_type = "text",
+				value = "",
+				style = table_clone(ammo_text_style),
 			},
 		}, "toughness_bar")
 	else
@@ -179,18 +249,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 				style_id = "text",
 				pass_type = "text",
 				value = "<ammo_count>",
-				style = {
-					default_font_size = 16,
-					font_size = 16,
-					text_vertical_alignment = "center",
-					text_horizontal_alignment = "left",
-					vertical_alignment = "center",
-					offset = { 80, -16, 3 },
-					size = { bar_size[1] * 1.5, bar_size[2] },
-					font_type = hud_body_font_settings.font_type,
-					text_color = UIHudSettings.color_tint_main_2,
-					default_text_color = UIHudSettings.color_tint_main_2,
-				},
+				style = table_clone(ammo_text_style),
 			},
 		}, "toughness_bar")
 	else
@@ -496,30 +555,74 @@ mod:hook_safe("HudElementPlayerPanelBase", "destroy", function(self)
 	end
 end)
 
-local function update_numericui_ammo(self, unit_data_extension, ammo_text_widget, peril_icon_widget)
+local function update_numericui_peril(self, unit_data_extension, peril_icon_widget, total_max_ammo)
+	local warp_charge_component = unit_data_extension:read_component("warp_charge")
+	local warp_charge_level = warp_charge_component.current_percentage
+	local peril_style = peril_icon_widget.style
+	local show_icon = mod.setting("peril_icon")
 	local peril_color = nil
-	local warp_charge_level = nil
 
-	if peril_icon_widget and peril_icon_widget.visible then
-		local warp_charge_component = unit_data_extension:read_component("warp_charge")
-		warp_charge_level = warp_charge_component.current_percentage
-
-		if warp_charge_level > 0.98 then
-			peril_color = UIHudSettings.color_tint_ammo_high
-		elseif warp_charge_level > 0.75 then
-			peril_color = UIHudSettings.color_tint_ammo_medium
-		elseif warp_charge_level > 0.5 then
-			peril_color = UIHudSettings.color_tint_ammo_low
-		else
-			peril_color = peril_icon_widget.style.icon_text.default_text_color
-		end
-
-		if mod.setting("peril_icon") and peril_color ~= peril_icon_widget.style.icon_text.text_color then
-			peril_icon_widget.style.icon_text.text_color = peril_color
-			peril_icon_widget.dirty = true
-		end
+	if warp_charge_level > 0.98 then
+		peril_color = UIHudSettings.color_tint_ammo_high
+	elseif warp_charge_level > 0.75 then
+		peril_color = UIHudSettings.color_tint_ammo_medium
+	elseif warp_charge_level > 0.5 then
+		peril_color = UIHudSettings.color_tint_ammo_low
+	else
+		peril_color = peril_style.icon_text.default_text_color
 	end
 
+	if show_icon and peril_color ~= peril_style.icon_text.text_color then
+		peril_style.icon_text.text_color = peril_color
+		peril_style.icon_text_stacked.text_color = peril_color
+		peril_icon_widget.dirty = true
+	end
+
+	if not mod.setting("peril_text") then
+		return
+	end
+
+	local peril_content = peril_icon_widget.content
+	local unavailable = self._show_as_dead or self._dead or self._hogtied
+	local peril_percent = not unavailable and math_round(warp_charge_level * 100) or nil
+	-- with no ammo text to show, the percent takes the ammo text's slot and the skull keeps its full size
+	local in_ammo_slot = total_max_ammo == 0 or not mod.setting("ammo_text")
+
+	-- only re-render the retained widget when the displayed percent or its place changes
+	if
+		peril_content._numericui_peril_percent ~= peril_percent
+		or peril_content._numericui_peril_in_ammo_slot ~= in_ammo_slot
+	then
+		local text = peril_percent and string_format("%1d%%", peril_percent) or ""
+
+		peril_content._numericui_peril_percent = peril_percent
+		peril_content._numericui_peril_in_ammo_slot = in_ammo_slot
+		peril_content.peril_ammo_slot_text = in_ammo_slot and text or ""
+		-- without the skull, the ammo text carries the percent after a gun's ammo count instead
+		peril_content.peril_text = (in_ammo_slot or not show_icon) and "" or text
+
+		if show_icon then
+			-- next to a gun's ammo text, the skull shrinks to stack under the percent
+			peril_content.icon_text = in_ammo_slot and PERIL_ICON or ""
+			peril_content.icon_text_stacked = in_ammo_slot and "" or PERIL_ICON
+		end
+
+		peril_icon_widget.dirty = true
+	end
+
+	-- checked on its own, as it steps on the unrounded peril and can change within one displayed percent
+	if peril_color ~= peril_style.peril_text.text_color then
+		peril_style.peril_text.text_color = peril_color
+		peril_style.peril_ammo_slot_text.text_color = peril_color
+		peril_icon_widget.dirty = true
+	end
+
+	if not in_ammo_slot and not show_icon then
+		return peril_percent, peril_color
+	end
+end
+
+local function update_numericui_ammo(self, unit_data_extension, ammo_text_widget, peril_icon_widget)
 	local weapon_slots = self._weapon_slots
 	local total_current_ammo = 0
 	local total_max_ammo = 0
@@ -538,6 +641,18 @@ local function update_numericui_ammo(self, unit_data_extension, ammo_text_widget
 		end
 	end
 
+	-- the ammo totals also decide where the peril percent goes. It comes back when it follows the ammo count
+	local peril_percent = nil
+	local peril_color = nil
+
+	if peril_icon_widget and peril_icon_widget.visible then
+		peril_percent, peril_color = update_numericui_peril(self, unit_data_extension, peril_icon_widget, total_max_ammo)
+	end
+
+	if not ammo_text_widget then
+		return
+	end
+
 	local show_as_empty = total_max_ammo == 0 or self._show_as_dead or self._dead or self._hogtied
 
 	-- only re-render the retained widget when the displayed values change
@@ -545,25 +660,41 @@ local function update_numericui_ammo(self, unit_data_extension, ammo_text_widget
 		total_current_ammo ~= self._numericui_ammo_current
 		or total_max_ammo ~= self._numericui_ammo_max
 		or show_as_empty ~= self._numericui_ammo_empty
+		or peril_percent ~= self._numericui_ammo_peril_percent
+		or peril_color ~= self._numericui_ammo_peril_color
 	then
 		self._numericui_ammo_current = total_current_ammo
 		self._numericui_ammo_max = total_max_ammo
 		self._numericui_ammo_empty = show_as_empty
+		self._numericui_ammo_peril_percent = peril_percent
+		self._numericui_ammo_peril_color = peril_color
 
 		if show_as_empty then
 			-- No ammo or dead
 			ammo_text_widget.content.text = ""
-		elseif total_max_ammo == 0 and (peril_icon_widget and peril_icon_widget.visible) and mod.setting("peril_text") then
-			-- Ammo text as peril percent
-			ammo_text_widget.content.text = string_format("%1d%%", math_round(warp_charge_level * 100))
-			ammo_text_widget.style.text.text_color = peril_color
 		else
 			-- Ammo
+			local text = nil
+
 			if mod.setting("ammo_as_percent") then
-				ammo_text_widget.content.text = string_format("%1d%%", (total_current_ammo / total_max_ammo) * 100)
+				text = string_format("%1d%%", (total_current_ammo / total_max_ammo) * 100)
 			else
-				ammo_text_widget.content.text = string_format("%1d/%1d", total_current_ammo, total_max_ammo)
+				text = string_format("%1d/%1d", total_current_ammo, total_max_ammo)
 			end
+
+			-- the peril percent follows in its own colour, on the same line and in the same font
+			if peril_percent then
+				text = string_format(
+					"%s {#color(%d,%d,%d)}%1d%%{#reset()}",
+					text,
+					peril_color[2],
+					peril_color[3],
+					peril_color[4],
+					peril_percent
+				)
+			end
+
+			ammo_text_widget.content.text = text
 			ammo_text_widget.style.text.text_color = self._widgets_by_name.ammo_status.style.ammo.color
 		end
 		ammo_text_widget.dirty = true
@@ -578,7 +709,7 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 	local extensions = self:_player_extensions(player)
 	local unit_data_extension = extensions and extensions.unit_data
 
-	if ammo_text_widget and unit_data_extension then
+	if (ammo_text_widget or peril_icon_widget) and unit_data_extension then
 		local elapsed = (self._numericui_ammo_t or AMMO_UPDATE_INTERVAL) + dt
 
 		if elapsed >= AMMO_UPDATE_INTERVAL then
@@ -620,9 +751,9 @@ mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _dra
 			local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
 
 			if mod.setting("peril_icon") then
-				peril_icon_widget.content.icon_text = "" -- this boxed questionmark is the character for the peril icon
+				peril_icon_widget.content.icon_text = PERIL_ICON
 				peril_icon_widget.visible = (archetype == "psyker")
-			elseif mod.setting("ammo_text") then
+			elseif mod.setting("peril_text") then
 				peril_icon_widget.content.icon_text = ""
 				peril_icon_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
 			end
