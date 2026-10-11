@@ -546,6 +546,33 @@ local function _update_ammo_icon_color(self, total_current, total_max)
 	end
 end
 
+local function _digit_count(value)
+	if value >= 1000 then
+		return 4
+	elseif value >= 100 then
+		return 3
+	elseif value >= 10 then
+		return 2
+	end
+
+	return 1
+end
+
+-- the reserve as vanilla's _set_ammo_amount draws it: the total minus the clips in use
+local function _spare_ammo(self, slot_component, amount)
+	local clips_in_use = slot_component.current_ammunition_clips_in_use
+	local current_clips = self._current_ammunition_clips
+	local spare = amount
+
+	for i = 1, NetworkConstants.clips_in_use.max_size do
+		if clips_in_use[i] then
+			spare = spare - (current_clips[i] or 0)
+		end
+	end
+
+	return spare
+end
+
 mod:hook_safe("HudElementPlayerWeapon", "_set_ammo_amount", function(self, amount, total_max_amount)
 	-- called once from init with (nil, nil), before any clip data exists
 	if not amount then
@@ -590,6 +617,16 @@ mod:hook_safe("HudElementPlayerWeapon", "_set_ammo_amount", function(self, amoun
 	local max_clip = self._max_ammunition_clips[1] or 0
 	self._numericui_ammo_len = max_clip >= 10 and 3 or 2
 
+	-- the retained reserve digits can keep a stale leading digit when the reserve gains or loses a digit (100 -> 99),
+	-- so ammo_text_1 is rebuilt then, as reopening the HUD does
+	local spare_digits = _digit_count(_spare_ammo(self, slot_component, amount))
+
+	if self._numericui_spare_digits and self._numericui_spare_digits ~= spare_digits then
+		self._numericui_rebuild_ammo_text = true
+	end
+
+	self._numericui_spare_digits = spare_digits
+
 	_update_max_ammo_text(self, amount, total_max_amount)
 	_update_ammo_icon_color(self, amount, total_max_amount)
 
@@ -605,6 +642,18 @@ mod:hook_safe("HudElementPlayerWeapon", "_set_ammo_amount", function(self, amoun
 end)
 
 mod:hook_safe("HudElementPlayerWeapon", "set_wield_anim_progress", function(self, _progress, ui_renderer)
+	if self._numericui_rebuild_ammo_text and ui_renderer then
+		self._numericui_rebuild_ammo_text = nil
+
+		local ammo_text_widget = self._widgets_by_name.ammo_text_1
+
+		if ammo_text_widget then
+			-- the next draw creates the retained text again from the current digits
+			UIWidget.destroy(ui_renderer, ammo_text_widget)
+			ammo_text_widget.dirty = true
+		end
+	end
+
 	_update_max_ammo_style(self)
 
 	local ammo_len = self._numericui_ammo_len
