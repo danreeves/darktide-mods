@@ -1,5 +1,17 @@
 # NumericUI Changelog
 
+## 26.10.12
+
+Added `Show ability duration while active`, on by default: while your combat ability is active, its text counts down the seconds it has left. Suggested by QueriousKelpie.
+Added a kill counter to the Blitz cooldown text for Blinder, showing the kills left until your next grenade. Suggested by KarmasBad.
+Added a `Stimm Cooldown HUD` for the Hive Scum, with a Stimm cooldown timer, the Stimm's remaining duration, and optional icon and text colours for ready, active and on cooldown. Suggested by thelemming27.
+Changed the `Blitz Cooldown HUD` settings to no longer affect the Hive Scum's Stimm. Your current Blitz settings are copied to the new Stimm settings. Reported by Samuel23816.
+Fixed `Show peril icon` and `Show peril percent text` not showing anything for Psykers. Reported by bobrock1.
+Fixed the reserve ammo counter keeping a leftover digit when dropping below 100, for example showing 199 instead of 99. Reported by benji102491.
+Fixed dead and hogtied teammates still showing their health, toughness, ammo, peril and ability cooldown numbers, and ammo sometimes showing as `<ammo_count>`.
+Fixed `Show ammo amount from packs and tins` showing nothing at full ammo for a Zealot with Blades of Faith who can still pick up ammo to refill their knives. Reported by ryetart.
+Improved the Traditional Chinese translation. Thanks to SyuanTsai.
+
 ## 26.10.05
 
 Added an `Ammo text colour` setting to change the colour and opacity of the max ammo text.
