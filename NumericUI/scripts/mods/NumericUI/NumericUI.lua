@@ -6,8 +6,47 @@ local mod = get_mod("NumericUI")
 local table_find_by_key = table.find_by_key
 local table_insert = table.insert
 local ipairs = ipairs
+local pairs = pairs
+
+local SETTINGS_SCHEMA_VERSION_ID = "settings_schema_version"
+local SETTINGS_SCHEMA_VERSION = 1
+
+-- The Blitz timer used to time the Hive Scum's Stimm as well, until the Stimm got settings of its own
+local STIMM_SETTINGS_FROM_BLITZ = {
+	blitz_cooldown_format = "stimm_cooldown_format",
+	blitz_cooldown_font_size = "stimm_cooldown_font_size",
+	blitz_cooldown_x_offset = "stimm_cooldown_x_offset",
+	blitz_cooldown_y_offset = "stimm_cooldown_y_offset",
+	disable_blitz_background_progress = "disable_stimm_background_progress",
+}
+
+-- Settings a release moved are copied over once, so the HUD looks the same after updating. DMF has saved the new
+-- settings' defaults by now, and the Stimm defaults match the Blitz ones, so a fresh install keeps its defaults.
+local function migrate_settings()
+	local schema_version = mod:get(SETTINGS_SCHEMA_VERSION_ID)
+
+	if type(schema_version) ~= "number" then
+		schema_version = 0
+	elseif schema_version >= SETTINGS_SCHEMA_VERSION then
+		return
+	end
+
+	if schema_version < 1 then
+		for blitz_setting_id, stimm_setting_id in pairs(STIMM_SETTINGS_FROM_BLITZ) do
+			local value = mod:get(blitz_setting_id)
+
+			if value ~= nil then
+				mod:set(stimm_setting_id, value, false)
+			end
+		end
+	end
+
+	mod:set(SETTINGS_SCHEMA_VERSION_ID, SETTINGS_SCHEMA_VERSION, false)
+end
 
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/utils")
+
+migrate_settings()
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/TeamPlayerPanel")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerWeapon")

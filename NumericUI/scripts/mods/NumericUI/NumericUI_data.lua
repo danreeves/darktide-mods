@@ -354,6 +354,88 @@ return {
 				},
 			},
 			{
+				setting_id = "stimm_items",
+				type = "group",
+				sub_widgets = {
+					{
+						setting_id = "stimm_cooldown_format",
+						type = "dropdown",
+						default_value = "none",
+						options = {
+							{ text = "timer", value = "time" },
+							{ text = "percent", value = "percent" },
+							{ text = "none", value = "none" },
+						},
+					},
+					{
+						setting_id = "show_stimm_active_timer",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
+						setting_id = "disable_stimm_background_progress",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
+						setting_id = "stimm_cooldown_font_size",
+						type = "numeric",
+						default_value = 30,
+						range = { 20, 50 },
+						step_size_value = 1,
+					},
+					{
+						setting_id = "stimm_cooldown_x_offset",
+						type = "numeric",
+						default_value = -80,
+						range = { -500, 500 },
+						step_size_value = 1,
+					},
+					{
+						setting_id = "stimm_cooldown_y_offset",
+						type = "numeric",
+						default_value = 0,
+						range = { -500, 500 },
+						step_size_value = 1,
+					},
+					{
+						setting_id = "stimm_active_text_color",
+						type = "color",
+						default_value = { 255, 216, 237, 190 }, -- ARGB, the game's HUD text colour
+						has_alpha = true,
+					},
+					{
+						setting_id = "stimm_cooldown_text_color",
+						type = "color",
+						default_value = { 255, 216, 237, 190 }, -- ARGB, the game's HUD text colour
+						has_alpha = true,
+					},
+					{
+						setting_id = "stimm_icon_state_colors",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
+						setting_id = "stimm_ready_icon_color",
+						type = "color",
+						default_value = { 255, 169, 191, 153 }, -- ARGB, the game's icon colour
+						has_alpha = false,
+					},
+					{
+						setting_id = "stimm_active_icon_color",
+						type = "color",
+						default_value = { 255, 226, 216, 0 },
+						has_alpha = false,
+					},
+					{
+						setting_id = "stimm_cooldown_icon_color",
+						type = "color",
+						default_value = { 255, 246, 69, 69 },
+						has_alpha = false,
+					},
+				},
+			},
+			{
 				setting_id = "mission_timer",
 				type = "group",
 				sub_widgets = {
