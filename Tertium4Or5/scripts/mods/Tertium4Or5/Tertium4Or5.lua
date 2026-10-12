@@ -66,7 +66,7 @@ mod:hook("ProfilesService", "fetch_all_profiles", function(func, ...)
 	return profiles_promise
 end)
 
-mod:hook(ProfileUtils, "generate_random_name", function(func, profile)
+mod:hook(ProfileUtils, "bot_character_name", function(func, profile)
 	if profile.original_name then
 		return profile.original_name
 	end
