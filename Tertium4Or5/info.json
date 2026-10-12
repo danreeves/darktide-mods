@@ -1,5 +1,11 @@
 {
-  "version": "26.09.05",
-  "author": "raindish",
-  "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/183"
+  "name": "Tertium 5... or 4",
+  "description": "Lets you choose your own operatives, with their names and loadouts, as bots in solo play, and can add a fourth bot.",
+  "version": "26.10.12",
+  "author": "raindish & LucLeto",
+  "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/183",
+  "source": "https://github.com/danreeves/darktide-mods",
+  "funding": {
+    "kofi": "https://ko-fi.com/raindish"
+  }
 }

@@ -32,6 +32,30 @@ for _, weapon_template in pairs(WeaponTemplates) do
 	end
 end
 
+local function character_option_text(profile)
+	local gender_text = mod:localize("gender_female_abbreviation")
+	if profile.gender == "male" then
+		gender_text = mod:localize("gender_male_abbreviation")
+	end
+
+	local text = profile.original_name .. " " .. gender_text
+
+	local lore = profile.lore
+	local backstory = lore and lore.backstory
+	local personality = backstory and Personalities[backstory.personality]
+	if personality and personality.display_name then
+		text = text .. " " .. Localize(personality.display_name)
+	end
+
+	local archetype = profile.archetype
+	if archetype and archetype.archetype_name then
+		local archetype_raw_name = Localize(archetype.archetype_name)
+		text = text .. " " .. archetype_raw_name:sub(1, 1):upper() .. archetype_raw_name:sub(2)
+	end
+
+	return text
+end
+
 mod:hook("ProfilesService", "fetch_all_profiles", function(func, ...)
 	local profiles_promise = func(...)
 
@@ -45,28 +69,23 @@ mod:hook("ProfilesService", "fetch_all_profiles", function(func, ...)
 			profile.original_name = profile.name
 			profiles[profile.character_id] = profile
 
-			local gender_text = mod:localize("gender_female_abbreviation")
-			if profile.gender == "male" then
-				gender_text = mod:localize("gender_male_abbreviation")
+			local success, text = mod:pcall(character_option_text, profile)
+			if not success then
+				text = tostring(profile.original_name or profile.character_id)
 			end
 
-			local archetype = profile.archetype
-			local archetype_raw_name = Localize(archetype.archetype_name)
-			local archetype_name = archetype_raw_name:sub(1, 1):upper() .. archetype_raw_name:sub(2)
-
-			local personality_name = Localize(Personalities[profile.lore.backstory.personality].display_name)
-
 			table.insert(mod.character_options, {
-				text = profile.original_name .. " " .. gender_text .. " " .. personality_name .. " " .. archetype_name,
+				text = text,
 				value = profile.character_id,
 			})
 		end
+		mod:info("Listed %d of %d operatives in the bot dropdowns", #mod.character_options - 1, #data.profiles)
 	end)
 
 	return profiles_promise
 end)
 
-mod:hook(ProfileUtils, "generate_random_name", function(func, profile)
+mod:hook(ProfileUtils, "bot_character_name", function(func, profile)
 	if profile.original_name then
 		return profile.original_name
 	end
