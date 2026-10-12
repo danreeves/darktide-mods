@@ -111,18 +111,29 @@ local function _update_pickup_description(self, interactor_extension)
 	elseif missing_ammo > 0 then
 		ammo_gain = missing_ammo
 		ammo_wasted = clip_gain - missing_ammo
+	elseif not self._numericui_pickup_block_text then
+		-- full ammo, but the game still allows the pickup (Blades of Faith refilling knives)
+		ammo_wasted = clip_gain
 	end
 
 	local show_ammo_gain = ammo_gain > 0
 	local show_ammo_wasted = ammo_wasted > 0
+	local text
 
-	local desc_str = show_ammo_gain
-			and show_ammo_wasted
-			and "%s {#color(0,255,0,200);}(+%d) {#color(255,0,0,200);}(%d)"
-		or show_ammo_gain and not show_ammo_wasted and "%s {#color(0,255,0,200);}(+%d)"
-		or "%s"
-
-	local text = string_format(desc_str, base_text, ammo_gain, ammo_wasted)
+	if show_ammo_gain and show_ammo_wasted then
+		text = string_format(
+			"%s {#color(0,255,0,200);}(+%d) {#color(255,0,0,200);}(%d)",
+			base_text,
+			ammo_gain,
+			ammo_wasted
+		)
+	elseif show_ammo_gain then
+		text = string_format("%s {#color(0,255,0,200);}(+%d)", base_text, ammo_gain)
+	elseif show_ammo_wasted then
+		text = string_format("%s {#color(255,0,0,200);}(%d)", base_text, ammo_wasted)
+	else
+		text = base_text
+	end
 
 	if description_widget.content.text ~= text then
 		description_widget.content.text = text
@@ -151,6 +162,7 @@ mod:hook_safe(
 
 	self._numericui_pickup_hud_description = hud_description
 	self._numericui_pickup_base_text = description_widget and description_widget.content.text
+	self._numericui_pickup_block_text = interactor_extension:hud_block_text()
 
 	_update_pickup_description(self, interactor_extension)
 	mod._pickup_preview_dirty = false
