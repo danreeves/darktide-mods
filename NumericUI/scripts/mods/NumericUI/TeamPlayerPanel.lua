@@ -95,6 +95,10 @@ local PERIL_STACK_ICON_Y = -14
 local PERIL_STACK_TEXT_FONT_SIZE = 12
 local PERIL_STACK_ICON_FONT_SIZE = 14
 
+-- NumericUI's team panel numbers that vanilla's _set_dead doesn't hide. The ability cooldown widgets hide
+-- themselves in update_numericui_ability_cd
+local COMBAT_WIDGET_NAMES = { "health_text", "toughness_text", "numeric_ui_ammo_text", "numeric_ui_peril_icon" }
+
 mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	if mod.setting("health_text") or mod.setting("toughness_text") then
 		instance.widget_definitions.coherency_indicator = UIWidget.create_definition({
@@ -248,7 +252,7 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 				value_id = "text",
 				style_id = "text",
 				pass_type = "text",
-				value = "<ammo_count>",
+				value = "",
 				style = table_clone(ammo_text_style),
 			},
 		}, "toughness_bar")
@@ -449,7 +453,8 @@ local function update_numericui_ability_cd(self, ability_extension, ability_bar_
 		return
 	end
 
-	if hide_widgets then
+	-- a dead teammate has no unit, so no ability extension either
+	if hide_widgets or not ability_extension then
 		hide_numericui_ability_cd(ability_bar_widget, ability_text_widget, show_ability_text, show_ability_bar)
 
 		return
@@ -722,7 +727,8 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 
 	local ability_extension = extensions and extensions.ability
 
-	if ability_extension and (mod.setting("ability_cd_text") or mod.setting("ability_cd_bar")) then
+	-- runs without a unit too, so the cooldown widgets hide for a dead teammate
+	if mod.setting("ability_cd_text") or mod.setting("ability_cd_bar") then
 		update_numericui_ability_cd(
 			self,
 			ability_extension,
@@ -734,6 +740,24 @@ end
 
 mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_numericui_player_features)
 mod:hook("HudElementTeamPlayerPanel", "_update_player_features", update_numericui_player_features)
+
+-- vanilla hides its own toughness bars here for a dead or hogtied player. Its content.visible switch leaves
+-- widget.visible alone, which marks a Psyker on the peril widget
+mod:hook_safe("HudElementTeamPlayerPanel", "_set_dead", function(self, _is_dead, show_as_dead, ui_renderer)
+	local widgets_by_name = self._widgets_by_name
+	local visible = not show_as_dead
+
+	for i = 1, #COMBAT_WIDGET_NAMES do
+		local widget = widgets_by_name[COMBAT_WIDGET_NAMES[i]]
+
+		if widget then
+			self:_set_widget_visible(widget, visible, ui_renderer)
+		end
+	end
+
+	-- the ammo text refreshes on the frame the player comes back instead of up to an interval later
+	self._numericui_ammo_t = nil
+end)
 
 mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _draw_layer, _start_scale, data)
 	HudElementTeamPlayerPanelSettings.feature_list.health_text = mod.setting("health_text")

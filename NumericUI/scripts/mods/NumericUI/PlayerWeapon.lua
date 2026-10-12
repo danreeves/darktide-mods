@@ -23,6 +23,7 @@ local math_clamp = math.clamp
 local math_floor = math.floor
 local math_min = math.min
 local math_round = math.round
+local rawget = rawget
 local string_format = string.format
 local table_clone = table.clone
 local table_insert = table.insert
@@ -58,6 +59,19 @@ local BLITZ_COOLDOWN_FONT_SIZE_DEFAULT = 30
 local BLITZ_COOLDOWN_X_OFFSET_DEFAULT = -80
 local BLITZ_COOLDOWN_Y_OFFSET_DEFAULT = 0
 local BLITZ_BUFF_SCAN_INTERVAL = 0.5
+
+-- The Hive Scum's Stimm is the only pocketable with an ability, and the buff it gives whoever it is injected into
+local STIMM_ABILITY_TYPE = "pocketable_ability"
+local STIMM_ABILITY_GROUP = "broker_syringe"
+local STIMM_BUFF = "syringe_broker_buff"
+
+local STIMM_COOLDOWN_FONT_SIZE_DEFAULT = 30
+local STIMM_COOLDOWN_X_OFFSET_DEFAULT = -80
+local STIMM_COOLDOWN_Y_OFFSET_DEFAULT = 0
+local STIMM_READY_ICON_COLOR_DEFAULT = { 255, 169, 191, 153 } -- ARGB, the game's icon colour
+local STIMM_ACTIVE_ICON_COLOR_DEFAULT = { 255, 226, 216, 0 } -- ARGB, ui_terminal_highlight
+local STIMM_COOLDOWN_ICON_COLOR_DEFAULT = { 255, 246, 69, 69 } -- ARGB, the game's alert red
+local STIMM_TEXT_COLOR_DEFAULT = { 255, 216, 237, 190 } -- ARGB, the game's HUD text colour
 
 -- Blinder's talent buff, and the buff whose stacks count its kills towards the next grenade. The server adds a stack
 -- for every kill it counts and sends it to the owner, so the stack count is the game's own count on every client.
@@ -360,37 +374,57 @@ local function _element_state(self)
 	}
 end
 
--- The colour setting's channels. mod.setting hands out a new table after every settings change, so the setting is
--- only validated again when the table changes.
-local max_ammo_color = table_clone(AMMO_TEXT_COLOR_DEFAULT)
-local max_ammo_color_setting
+-- Each colour setting's channels. mod.setting hands out a new table after every settings change, so a setting is
+-- only validated again when its table changes.
+local setting_colors = {}
+local setting_color_sources = {}
 
-local function _max_ammo_color()
-	local color_setting = mod.setting("ammo_text_color")
+local function _setting_color(setting_id, default_color)
+	local color_setting = mod.setting(setting_id)
+	local color = setting_colors[setting_id]
 
-	if color_setting ~= max_ammo_color_setting then
-		max_ammo_color_setting = color_setting
+	if not color or color_setting ~= setting_color_sources[setting_id] then
+		if not color then
+			color = {}
+			setting_colors[setting_id] = color
+		end
+
+		setting_color_sources[setting_id] = color_setting
 
 		-- anything but an ARGB table keeps the game's colour
-		local source = AMMO_TEXT_COLOR_DEFAULT
+		local source = default_color
 
 		if type(color_setting) == "table" then
 			source = color_setting
 
 			for i = 1, 4 do
 				if type(color_setting[i]) ~= "number" then
-					source = AMMO_TEXT_COLOR_DEFAULT
+					source = default_color
 					break
 				end
 			end
 		end
 
 		for i = 1, 4 do
-			max_ammo_color[i] = math_clamp(source[i], 0, 255)
+			color[i] = math_clamp(source[i], 0, 255)
 		end
 	end
 
-	return max_ammo_color
+	return color
+end
+
+-- Copies a colour's channels from first_channel on (1 with alpha, 2 without), returning whether any changed
+local function _set_color_channels(target, color, first_channel)
+	local changed = false
+
+	for i = first_channel, 4 do
+		if target[i] ~= color[i] then
+			target[i] = color[i]
+			changed = true
+		end
+	end
+
+	return changed
 end
 
 local function _update_max_ammo_style(self)
@@ -401,7 +435,7 @@ local function _update_max_ammo_style(self)
 	local max_ammo_font_size = mod.setting("ammo_text_font_size") or AMMO_TEXT_FONT_SIZE_DEFAULT
 	local max_ammo_offset_x = mod.setting("ammo_text_offset_x") or AMMO_TEXT_OFFSET_X_DEFAULT
 	local max_ammo_offset_y = mod.setting("ammo_text_offset_y") or AMMO_TEXT_OFFSET_Y_DEFAULT
-	local color = _max_ammo_color()
+	local color = _setting_color("ammo_text_color", AMMO_TEXT_COLOR_DEFAULT)
 	local widgets_by_name = self._widgets_by_name
 
 	for i = 1, NetworkConstants.clips_in_use.max_size do
@@ -781,11 +815,7 @@ local function _blitz_counter_extra_width(self)
 	return extra_digits * digit_width
 end
 
-local function _update_blitz_cooldown_style(self, widget)
-	local font_size = mod.setting("blitz_cooldown_font_size") or BLITZ_COOLDOWN_FONT_SIZE_DEFAULT
-	local x_offset = (mod.setting("blitz_cooldown_x_offset") or BLITZ_COOLDOWN_X_OFFSET_DEFAULT)
-		- _blitz_counter_extra_width(self)
-	local y_offset = mod.setting("blitz_cooldown_y_offset") or BLITZ_COOLDOWN_Y_OFFSET_DEFAULT
+local function _update_cooldown_text_style(self, widget, font_size, x_offset, y_offset)
 	local height_offset = (self._height_offset or 0) + y_offset
 	local offset = widget.offset
 	local style = widget.style.blitz_cooldown
@@ -805,6 +835,26 @@ local function _update_blitz_cooldown_style(self, widget)
 		offset[2] = height_offset
 		widget.dirty = true
 	end
+end
+
+local function _update_blitz_cooldown_style(self, widget)
+	_update_cooldown_text_style(
+		self,
+		widget,
+		mod.setting("blitz_cooldown_font_size") or BLITZ_COOLDOWN_FONT_SIZE_DEFAULT,
+		(mod.setting("blitz_cooldown_x_offset") or BLITZ_COOLDOWN_X_OFFSET_DEFAULT) - _blitz_counter_extra_width(self),
+		mod.setting("blitz_cooldown_y_offset") or BLITZ_COOLDOWN_Y_OFFSET_DEFAULT
+	)
+end
+
+local function _update_stimm_cooldown_style(self, widget)
+	_update_cooldown_text_style(
+		self,
+		widget,
+		mod.setting("stimm_cooldown_font_size") or STIMM_COOLDOWN_FONT_SIZE_DEFAULT,
+		mod.setting("stimm_cooldown_x_offset") or STIMM_COOLDOWN_X_OFFSET_DEFAULT,
+		mod.setting("stimm_cooldown_y_offset") or STIMM_COOLDOWN_Y_OFFSET_DEFAULT
+	)
 end
 
 local function _find_blitz_replenishment_buff(buff_extension)
@@ -908,6 +958,37 @@ local function _blitz_remaining_cooldown(self, dt)
 	return nil, nil, _blitz_kills_remaining(buff_extension)
 end
 
+-- The recharge as a countdown or as a percentage of the vanilla progress, or nil while the shown value is unchanged
+local function _cooldown_text(content, cooldown_format, remaining, progress)
+	if cooldown_format == "percent" then
+		if progress then
+			local percent = math_floor((1 - progress) * 100)
+
+			if content._numericui_last_value ~= percent then
+				content._numericui_last_value = percent
+
+				return string_format("%d%%", percent)
+			end
+		else
+			content._numericui_last_value = nil
+
+			return " "
+		end
+	elseif remaining <= 1 then
+		content._numericui_last_value = nil
+
+		return string_format("%.1f", remaining)
+	else
+		local seconds = math_floor(remaining)
+
+		if content._numericui_last_value ~= seconds then
+			content._numericui_last_value = seconds
+
+			return string_format("%d", seconds)
+		end
+	end
+end
+
 local function _update_blitz_cooldown_text(self, dt)
 	local widget = self._widgets_by_name.blitz_cooldown
 
@@ -937,29 +1018,7 @@ local function _update_blitz_cooldown_text(self, dt)
 		else
 			_update_blitz_cooldown_style(self, widget)
 
-			if cooldown_format == "percent" then
-				if progress then
-					local percent = math_floor((1 - progress) * 100)
-
-					if content._numericui_last_value ~= percent then
-						content._numericui_last_value = percent
-						new_text = string_format("%d%%", percent)
-					end
-				else
-					content._numericui_last_value = nil
-					new_text = " "
-				end
-			elseif remaining <= 1 then
-				content._numericui_last_value = nil
-				new_text = string_format("%.1f", remaining)
-			else
-				local seconds = math_floor(remaining)
-
-				if content._numericui_last_value ~= seconds then
-					content._numericui_last_value = seconds
-					new_text = string_format("%d", seconds)
-				end
-			end
+			new_text = _cooldown_text(content, cooldown_format, remaining, progress)
 		end
 	end
 
@@ -969,8 +1028,8 @@ local function _update_blitz_cooldown_text(self, dt)
 	end
 end
 
-local function _update_blitz_background_progress(self)
-	if not mod.setting("disable_blitz_background_progress") then
+local function _update_background_progress(self, setting_id)
+	if not mod.setting(setting_id) then
 		return
 	end
 
@@ -981,6 +1040,157 @@ local function _update_blitz_background_progress(self)
 		glow_style.uvs[2][2] = 0
 		glow_style.scale[2] = 0
 		background_widget.dirty = true
+	end
+end
+
+-- Whether this slot holds the Hive Scum's Stimm. An element keeps the ability it was created with.
+local function _is_stimm(self)
+	local is_stimm = self._numericui_is_stimm
+
+	if is_stimm == nil then
+		is_stimm = self._ability_type == STIMM_ABILITY_TYPE and self._ability.ability_group == STIMM_ABILITY_GROUP
+		self._numericui_is_stimm = is_stimm
+	end
+
+	return is_stimm
+end
+
+local function _find_buff(buff_extension, buff_name)
+	local buffs = buff_extension:buffs()
+
+	for i = 1, #buffs do
+		local buff = buffs[i]
+
+		if buff:template_name() == buff_name then
+			return buff
+		end
+	end
+end
+
+-- Seconds left on the Hive Scum's own Stimm, or nil when it isn't running. The Stimm holds its recharge until its buff
+-- ends, so the buff is only looked for while that recharge is paused: a Stimm injected into a teammate starts the
+-- recharge straight away, and one a teammate injects into you leaves your own Stimm as it was.
+local function _stimm_active_time_remaining(self, ability_extension, buff_extension)
+	if not ability_extension:is_ability_resource_regen_paused(STIMM_ABILITY_TYPE) then
+		self._numericui_stimm_buff = nil
+
+		return
+	end
+
+	local buff = self._numericui_stimm_buff
+
+	-- a deleted buff ended, or was replaced by a newer Stimm
+	if not buff or rawget(buff, "__deleted") then
+		buff = buff_extension and _find_buff(buff_extension, STIMM_BUFF)
+		self._numericui_stimm_buff = buff
+
+		if not buff then
+			return
+		end
+	end
+
+	local duration = buff:duration()
+
+	if not duration then
+		return
+	end
+
+	local remaining = buff:start_time() + duration - FixedFrame.get_latest_fixed_time()
+
+	if remaining > 0 then
+		return remaining
+	end
+end
+
+-- Vanilla never colours this text, so all four channels are the player's
+local function _update_stimm_text_style(self, widget, color_setting_id)
+	_update_stimm_cooldown_style(self, widget)
+
+	local text_color = _setting_color(color_setting_id, STIMM_TEXT_COLOR_DEFAULT)
+
+	if _set_color_channels(widget.style.blitz_cooldown.text_color, text_color, 1) then
+		widget.dirty = true
+	end
+end
+
+local function _update_stimm(self)
+	local widget = self._widgets_by_name.blitz_cooldown
+
+	if not widget then
+		return
+	end
+
+	local content = widget.content
+	local cooldown_format = mod.setting("stimm_cooldown_format")
+	local show_cooldown = cooldown_format == "time" or cooldown_format == "percent"
+	local show_active = mod.setting("show_stimm_active_timer")
+	local state_colors = mod.setting("stimm_icon_state_colors")
+	local active_remaining, remaining
+
+	if show_cooldown or show_active or state_colors then
+		local ability_extension = self._ability_extension
+		local buff_extension = self._parent:get_player_extension(self._data.player, "buff_system")
+
+		active_remaining = _stimm_active_time_remaining(self, ability_extension, buff_extension)
+
+		local recharging = not active_remaining
+			and ability_extension:remaining_ability_charges(STIMM_ABILITY_TYPE)
+				< ability_extension:max_ability_charges(STIMM_ABILITY_TYPE)
+
+		if state_colors then
+			local icon_color
+
+			if active_remaining then
+				icon_color = _setting_color("stimm_active_icon_color", STIMM_ACTIVE_ICON_COLOR_DEFAULT)
+			elseif recharging then
+				icon_color = _setting_color("stimm_cooldown_icon_color", STIMM_COOLDOWN_ICON_COLOR_DEFAULT)
+			else
+				icon_color = _setting_color("stimm_ready_icon_color", STIMM_READY_ICON_COLOR_DEFAULT)
+			end
+
+			local icon_widget = self._widgets_by_name.icon
+
+			-- Only the RGB: vanilla dims the icon through its alpha while no charge is left. Vanilla rewrites the RGB
+			-- while the slot's wield animation runs, which is always before this update in the same frame.
+			if _set_color_channels(icon_widget.style.icon.color, icon_color, 2) then
+				icon_widget.dirty = true
+			end
+		end
+
+		if recharging and show_cooldown then
+			remaining = mod.ability_charge_time_remaining(ability_extension, buff_extension, STIMM_ABILITY_TYPE)
+		end
+	end
+
+	local new_text
+
+	if active_remaining and show_active then
+		_update_stimm_text_style(self, widget, "stimm_active_text_color")
+
+		-- tenths of a second, so a running Stimm reads differently from the whole-second recharge after it
+		local tenths = math_floor(active_remaining * 10)
+
+		-- the recharge text below must be rebuilt once the Stimm ends
+		content._numericui_last_value = nil
+
+		if content._numericui_last_active_value ~= tenths then
+			content._numericui_last_active_value = tenths
+			new_text = string_format("%.1f", tenths / 10)
+		end
+	elseif remaining then
+		_update_stimm_text_style(self, widget, "stimm_cooldown_text_color")
+
+		content._numericui_last_active_value = nil
+		new_text = _cooldown_text(content, cooldown_format, remaining, self._charge_regen_progress)
+	else
+		content._numericui_last_value = nil
+		content._numericui_last_active_value = nil
+		new_text = " "
+	end
+
+	if new_text and content.blitz_cooldown ~= new_text then
+		content.blitz_cooldown = new_text
+		widget.dirty = true
 	end
 end
 
@@ -1010,7 +1220,12 @@ mod:hook_safe("HudElementPlayerWeapon", "update", function(self, dt)
 	end
 
 	if self._ability then
-		_update_blitz_cooldown_text(self, dt)
-		_update_blitz_background_progress(self)
+		if _is_stimm(self) then
+			_update_stimm(self)
+			_update_background_progress(self, "disable_stimm_background_progress")
+		else
+			_update_blitz_cooldown_text(self, dt)
+			_update_background_progress(self, "disable_blitz_background_progress")
+		end
 	end
 end)
