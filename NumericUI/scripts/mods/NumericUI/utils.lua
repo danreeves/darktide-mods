@@ -32,9 +32,8 @@ mod.flush_settings = function()
 	table_clear(setting_cached)
 end
 
--- "<ability_type>_resource_*" stat buff names built once instead of every frame
+-- "<ability_type>_resource_flat_regen" stat buff names built once instead of every frame
 local flat_regen_stat_buffs = {}
-local regen_modifier_stat_buffs = {}
 
 local stat_buff_base_values = BuffSettings.stat_buff_type_base_values
 
@@ -43,14 +42,14 @@ local stat_buff_base_values = BuffSettings.stat_buff_type_base_values
 local timed_stat_buffs = setmetatable({}, { __index = stat_buff_base_values })
 local timed_modified_stats = {}
 
--- Per buff extension and ability type: the regen stat totals the timed share was last measured against, and
+-- Per buff extension and ability type: the flat regen total the timed share was last measured against, and
 -- that share. Weakly keyed so a respawned player's old buff extension can still be collected.
 local timed_regen_shares = setmetatable({}, { __mode = "k" })
 
--- Buffs with a duration, stimms, and proc buffs whose proc stats touch regen only speed up recharge for a while.
+-- Buffs with a duration, stimms, and proc buffs whose proc stats touch flat regen only add regen for a while.
 -- Stimms are matched by keyword because the copies a Hive Scum's Stimm Field applies have no duration: they
 -- last for as long as you stand in the field.
-local function _is_timed_regen_buff(buff, flat_regen_stat_buff, regen_modifier_stat_buff)
+local function _is_timed_regen_buff(buff, flat_regen_stat_buff)
 	if buff:duration() then
 		return true
 	end
@@ -64,22 +63,14 @@ local function _is_timed_regen_buff(buff, flat_regen_stat_buff, regen_modifier_s
 
 	local proc_stat_buffs = template.proc_stat_buffs
 
-	return proc_stat_buffs ~= nil
-		and (proc_stat_buffs[flat_regen_stat_buff] ~= nil or proc_stat_buffs[regen_modifier_stat_buff] ~= nil)
+	return proc_stat_buffs ~= nil and proc_stat_buffs[flat_regen_stat_buff] ~= nil
 end
 
--- The flat regen and regen modifier that timed buffs add right now. Each timed buff is measured with its own
--- update_stat_buffs, so stacks, multipliers and conditions count exactly as vanilla counts them. The share can
--- only change when one of the regen stat totals does, so the buff list is walked only then.
-local function _timed_regen_share(
-	buff_extension,
-	stat_buffs,
-	ability_type,
-	flat_regen_stat_buff,
-	regen_modifier_stat_buff
-)
+-- The flat regen that timed buffs add right now. Each timed buff is measured with its own update_stat_buffs, so
+-- stacks, multipliers and conditions count exactly as vanilla counts them. The share can only change when the
+-- flat regen total does, so the buff list is walked only then.
+local function _timed_regen_share(buff_extension, stat_buffs, ability_type, flat_regen_stat_buff)
 	local flat_regen_total = stat_buffs[flat_regen_stat_buff] or 0
-	local regen_modifier_total = stat_buffs[regen_modifier_stat_buff] or 1
 	local shares = timed_regen_shares[buff_extension]
 
 	if not shares then
@@ -94,7 +85,7 @@ local function _timed_regen_share(
 		shares[ability_type] = share
 	end
 
-	if share.flat_regen_total ~= flat_regen_total or share.regen_modifier_total ~= regen_modifier_total then
+	if share.flat_regen_total ~= flat_regen_total then
 		table_clear(timed_stat_buffs)
 		table_clear(timed_modified_stats)
 		timed_stat_buffs._modified_stats = timed_modified_stats
@@ -105,29 +96,27 @@ local function _timed_regen_share(
 		for i = 1, #buffs do
 			local buff = buffs[i]
 
-			if _is_timed_regen_buff(buff, flat_regen_stat_buff, regen_modifier_stat_buff) then
+			if _is_timed_regen_buff(buff, flat_regen_stat_buff) then
 				-- a buff that can't be measured outside its extension stays in the projection, as before
 				pcall(buff.update_stat_buffs, buff, timed_stat_buffs, t)
 			end
 		end
 
 		share.flat_regen_total = flat_regen_total
-		share.regen_modifier_total = regen_modifier_total
 		share.flat_regen = timed_stat_buffs[flat_regen_stat_buff] - stat_buff_base_values[flat_regen_stat_buff]
-		share.regen_modifier = timed_stat_buffs[regen_modifier_stat_buff]
-			- stat_buff_base_values[regen_modifier_stat_buff]
 	end
 
-	return share.flat_regen, share.regen_modifier
+	return share.flat_regen
 end
 
--- Seconds until the next charge of an ability, using the regen maths of
--- PlayerUnitAbilityExtension._update_ability_resources at the recharge speed of permanent buffs only. Timed
--- buffs are left out, so the countdown never assumes they last until the charge is ready and never jumps back
--- up when they end; while one is active the countdown runs slightly faster than the clock instead. Returns nil
--- when no charge is regenerating, regen is paused, the active ability is draining its own resource, or regen is
--- not progressing. Only pass the local player's ability extension: husk extensions error on
--- get_ability_resource_cost_per_second.
+-- Seconds until the next charge of an ability at its base recharge speed, using the regen maths of
+-- PlayerUnitAbilityExtension._update_ability_resources without the regen modifier, the way vanilla's
+-- max_regen_time_for_ability_charge and the teammate panel time a charge. Recharge speed modifiers, permanent or
+-- timed, make the countdown run faster or slower than the clock instead of shortening it; it still reaches zero
+-- when the charge is ready because the missing resource is live. Flat regen from timed buffs is left out, so the
+-- countdown never jumps back up when they end. Returns nil when no charge is regenerating, regen is paused, the
+-- active ability is draining its own resource, or regen is not progressing. Only pass the local player's ability
+-- extension: husk extensions error on get_ability_resource_cost_per_second.
 mod.ability_charge_time_remaining = function(ability_extension, buff_extension, ability_type)
 	local missing_resource_func = ability_extension.missing_ability_resource_until_next_charge
 
@@ -162,20 +151,11 @@ mod.ability_charge_time_remaining = function(ability_extension, buff_extension, 
 		if not flat_regen_stat_buff then
 			flat_regen_stat_buff = ability_type .. "_resource_flat_regen"
 			flat_regen_stat_buffs[ability_type] = flat_regen_stat_buff
-			regen_modifier_stat_buffs[ability_type] = ability_type .. "_resource_regen_modifier"
 		end
 
-		local regen_modifier_stat_buff = regen_modifier_stat_buffs[ability_type]
-		local timed_flat_regen, timed_regen_modifier = _timed_regen_share(
-			buff_extension,
-			stat_buffs,
-			ability_type,
-			flat_regen_stat_buff,
-			regen_modifier_stat_buff
-		)
-
-		regen_per_second = (regen_per_second + (stat_buffs[flat_regen_stat_buff] or 0) - timed_flat_regen)
-			* ((stat_buffs[regen_modifier_stat_buff] or 1) - timed_regen_modifier)
+		regen_per_second = regen_per_second
+			+ (stat_buffs[flat_regen_stat_buff] or 0)
+			- _timed_regen_share(buff_extension, stat_buffs, ability_type, flat_regen_stat_buff)
 	end
 
 	local resource_cost_per_second = ability_extension:get_ability_resource_cost_per_second(ability_type)
