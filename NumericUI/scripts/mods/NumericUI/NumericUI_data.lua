@@ -71,6 +71,16 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
+					{
+						setting_id = "blitz_charges_text",
+						type = "checkbox",
+						default_value = true,
+					},
+					{
+						setting_id = "blitz_hud_icon",
+						type = "checkbox",
+						default_value = false,
+					},
 				},
 			},
 			{
