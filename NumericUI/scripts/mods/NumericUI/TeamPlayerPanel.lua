@@ -121,6 +121,9 @@ local OUTLINE_OFFSETS = {
 }
 local BLITZ_CHARGES_OUTLINE_COLOR = { 120, 0, 0, 0 }
 local BLITZ_ICON_OUTLINE_COLOR = { 120, 0, 0, 0 }
+-- Detailed icons are drawn for the weapon HUD's 84px slot and lose fine detail at vanilla's 16px, like the burst inside
+-- the frag grenade, so they're drawn a little bigger, centred on vanilla's icon. Vanilla's own icons keep their size
+local BLITZ_ICON_DETAILED_SIZE = 20
 -- a two-digit count ends where vanilla's ammo icon starts, and the ammo icon has room before the pickup icons
 local BLITZ_CHARGES_AMMO_ICON_SHIFT = 3
 
@@ -333,9 +336,11 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	end
 
 	if mod.setting("blitz_hud_icon") then
-		-- dark copies of the Blitz icon around and below vanilla's
+		-- dark copies of the Blitz icon around and below vanilla's, sized for the detailed icons they outline
 		local icon_style = instance.widget_definitions.throwable.style.texture
 		local icon_x, icon_y, icon_z = unpack(icon_style.offset)
+		local grow_x = (BLITZ_ICON_DETAILED_SIZE - icon_style.size[1]) / 2
+		local grow_y = (BLITZ_ICON_DETAILED_SIZE - icon_style.size[2]) / 2
 		local passes = {}
 
 		for i = 1, #OUTLINE_OFFSETS do
@@ -349,8 +354,8 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 				style = {
 					horizontal_alignment = icon_style.horizontal_alignment,
 					vertical_alignment = icon_style.vertical_alignment,
-					size = table_clone(icon_style.size),
-					offset = { icon_x + outline_offset[1], icon_y + outline_offset[2], icon_z - 1 },
+					size = { BLITZ_ICON_DETAILED_SIZE, BLITZ_ICON_DETAILED_SIZE },
+					offset = { icon_x - grow_x + outline_offset[1], icon_y - grow_y + outline_offset[2], icon_z - 1 },
 					color = BLITZ_ICON_OUTLINE_COLOR,
 				},
 			}
@@ -961,12 +966,43 @@ mod:hook_safe("HudElementTeamPlayerPanel", "destroy", function(self)
 	release_numericui_blitz_icon(self, false)
 end)
 
--- The outline draws the icon's material too, so it only shows while vanilla's icon shows a detailed one. When the panel
--- lets go of a held icon, the outline drops it in the same frame, before the package can unload
+-- Grows vanilla's icon to the detailed size around its centre, or puts it back. Every panel's style is its own copy
+local function resize_numericui_blitz_icon(self, icon_widget, detailed)
+	local style = icon_widget.style.texture
+	local offset = style.offset
+	local size = style.size
+	local base = self._numericui_blitz_icon_base
+
+	if not base then
+		base = { offset[1], offset[2], size[1], size[2] }
+		self._numericui_blitz_icon_base = base
+	end
+
+	local grow_x = detailed and (BLITZ_ICON_DETAILED_SIZE - base[3]) / 2 or 0
+	local grow_y = detailed and (BLITZ_ICON_DETAILED_SIZE - base[4]) / 2 or 0
+
+	offset[1] = base[1] - grow_x
+	offset[2] = base[2] - grow_y
+	size[1] = base[3] + grow_x * 2
+	size[2] = base[4] + grow_y * 2
+	icon_widget.dirty = true
+	self._numericui_blitz_icon_enlarged = detailed
+end
+
+-- Sizes the icon for what it shows, and keeps the outline on it. The outline draws the icon's material too, so it only
+-- shows while the icon shows a detailed one. When the panel lets go of a held icon, the outline drops it in the same
+-- frame, before the package can unload
 local function update_numericui_blitz_icon_outline(self, widget, ui_renderer)
-	local icon_content = self._widgets_by_name.throwable.content
+	local icon_widget = self._widgets_by_name.throwable
+	local icon_content = icon_widget.content
 	local texture = icon_content.texture
-	local visible = icon_content.visible ~= false and texture == self._numericui_blitz_detailed_icon
+	local detailed = texture == self._numericui_blitz_detailed_icon
+
+	if self._numericui_blitz_icon_enlarged ~= detailed then
+		resize_numericui_blitz_icon(self, icon_widget, detailed)
+	end
+
+	local visible = detailed and icon_content.visible ~= false
 	local content = widget.content
 
 	if visible and content.texture ~= texture then
