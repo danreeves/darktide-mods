@@ -1,5 +1,11 @@
 # NumericUI Changelog
 
+## 26.10.13
+
+Added `Show team's Blitz charges`, on by default: each teammate's Blitz icon shows how many charges they have left. Thanks to Omerside.
+Added `Show detailed team Blitz icons`, off by default, which replaces the small Blitz icons on the team panel with the detailed ones from the weapon HUD.
+Changed the ability, Blitz and Stimm cooldown timers to start at the full cooldown and count down faster with recharge speed bonuses such as Augmented Power-Cycle and Static Capacitor Drain, instead of starting lower. Reported by kuli.
+
 ## 26.10.12
 
 Added `Show ability duration while active`, on by default: while your combat ability is active, its text counts down the seconds it has left. Suggested by QueriousKelpie.
