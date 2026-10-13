@@ -1,6 +1,7 @@
 local mod = get_mod("NumericUI")
 local TEAM_HUD_DEF_PATH = "scripts/ui/hud/elements/team_player_panel/hud_element_team_player_panel_definitions"
 local Ammo = require("scripts/utilities/ammo")
+local MasterItems = require("scripts/backend/master_items")
 
 local backups = mod:persistent_table("team_hud_backups")
 backups.team_hud_definitions = backups.team_hud_definitions or mod:original_require(TEAM_HUD_DEF_PATH)
@@ -94,6 +95,34 @@ local PERIL_STACK_TEXT_Y = -26
 local PERIL_STACK_ICON_Y = -14
 local PERIL_STACK_TEXT_FONT_SIZE = 12
 local PERIL_STACK_ICON_FONT_SIZE = 14
+
+local GRENADE_ABILITY_TYPE = "grenade_ability"
+local GRENADE_SLOT_NAME = "slot_grenade_ability"
+local BLITZ_ICON_PACKAGE_REFERENCE = "NumericUI_team_blitz_icon"
+-- the team panel definitions' own Blitz icon, loaded with the team panel's package
+local THROWABLE_DEFAULT_ICON = "content/ui/materials/hud/icons/party_throwable"
+
+-- the Blitz charge count sits in the bottom-right corner of vanilla's 16px Blitz icon. It is right-aligned to end
+-- in the gap before the ammo icon, so a two-digit count (Assail, throwing knives) grows over the Blitz icon instead
+local BLITZ_CHARGES_RIGHT_X = 20
+local BLITZ_CHARGES_WIDTH = 24
+
+-- The count sits on the icon's strokes, and the engine's text only has a single drop shadow, so a dark copy is drawn
+-- 1px off in each of the eight directions behind it, outlining every digit. A detailed Blitz icon gets the same outline
+local OUTLINE_OFFSETS = {
+	{ -1, -1 },
+	{ 0, -1 },
+	{ 1, -1 },
+	{ -1, 0 },
+	{ 1, 0 },
+	{ -1, 1 },
+	{ 0, 1 },
+	{ 1, 1 },
+}
+local BLITZ_CHARGES_OUTLINE_COLOR = { 120, 0, 0, 0 }
+local BLITZ_ICON_OUTLINE_COLOR = { 120, 0, 0, 0 }
+-- a two-digit count ends where vanilla's ammo icon starts, and the ammo icon has room before the pickup icons
+local BLITZ_CHARGES_AMMO_ICON_SHIFT = 3
 
 -- NumericUI's team panel numbers that vanilla's _set_dead doesn't hide. The ability cooldown widgets hide
 -- themselves in update_numericui_ability_cd
@@ -258,6 +287,78 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 		}, "toughness_bar")
 	else
 		instance.widget_definitions.numeric_ui_ammo_text = nil
+	end
+
+	if mod.setting("blitz_charges_text") then
+		local text_style = {
+			font_size = 11,
+			text_vertical_alignment = "center",
+			text_horizontal_alignment = "right",
+			vertical_alignment = "top",
+			horizontal_alignment = "left",
+			offset = { BLITZ_CHARGES_RIGHT_X - BLITZ_CHARGES_WIDTH, -16, 5 },
+			size = { BLITZ_CHARGES_WIDTH, 12 },
+			font_type = hud_body_font_settings.font_type,
+			text_color = UIHudSettings.color_tint_main_1,
+		}
+		local passes = {}
+
+		-- every pass shows the same content.text
+		for i = 1, #OUTLINE_OFFSETS do
+			local outline_offset = OUTLINE_OFFSETS[i]
+
+			passes[i] = {
+				value_id = "text",
+				style_id = "outline_" .. i,
+				pass_type = "text",
+				value = "",
+				style = table_merge_recursive(table_clone(text_style), {
+					offset = { text_style.offset[1] + outline_offset[1], text_style.offset[2] + outline_offset[2], 4 },
+					text_color = BLITZ_CHARGES_OUTLINE_COLOR,
+				}),
+			}
+		end
+
+		passes[#passes + 1] = {
+			value_id = "text",
+			style_id = "text",
+			pass_type = "text",
+			value = "",
+			style = text_style,
+		}
+
+		instance.widget_definitions.numeric_ui_blitz_charges = UIWidget.create_definition(passes, "toughness_bar")
+	else
+		instance.widget_definitions.numeric_ui_blitz_charges = nil
+	end
+
+	if mod.setting("blitz_hud_icon") then
+		-- dark copies of the Blitz icon around and below vanilla's
+		local icon_style = instance.widget_definitions.throwable.style.texture
+		local icon_x, icon_y, icon_z = unpack(icon_style.offset)
+		local passes = {}
+
+		for i = 1, #OUTLINE_OFFSETS do
+			local outline_offset = OUTLINE_OFFSETS[i]
+
+			passes[i] = {
+				value_id = "texture",
+				style_id = "outline_" .. i,
+				pass_type = "texture",
+				value = THROWABLE_DEFAULT_ICON,
+				style = {
+					horizontal_alignment = icon_style.horizontal_alignment,
+					vertical_alignment = icon_style.vertical_alignment,
+					size = table_clone(icon_style.size),
+					offset = { icon_x + outline_offset[1], icon_y + outline_offset[2], icon_z - 1 },
+					color = BLITZ_ICON_OUTLINE_COLOR,
+				},
+			}
+		end
+
+		instance.widget_definitions.numeric_ui_blitz_icon_outline = UIWidget.create_definition(passes, "toughness_bar")
+	else
+		instance.widget_definitions.numeric_ui_blitz_icon_outline = nil
 	end
 
 	if mod.setting("health_text") then
@@ -706,6 +807,221 @@ local function update_numericui_ammo(self, unit_data_extension, ammo_text_widget
 	end
 end
 
+-- an item's material fields that ItemPackage loads as packages named after their value
+local ITEM_PACKAGE_MATERIAL_FIELDS = { "hud_icon", "icon", "icon_material", "material_resource" }
+
+local function item_loads_material(item, material)
+	for i = 1, #ITEM_PACKAGE_MATERIAL_FIELDS do
+		if item[ITEM_PACKAGE_MATERIAL_FIELDS[i]] == material then
+			return true
+		end
+	end
+
+	return false
+end
+
+-- The weapon HUD's Blitz icon, and whether the panel has to hold it. Mostly it's an item's hud_icon, which the team
+-- panel doesn't own: PackageSynchronizer loads it with the teammate's loadout and unloads it when they leave or a
+-- player takes over their bot, even while a panel still draws it, which crashes the game. So each panel holds its own
+-- package reference on such an icon, and keeps vanilla's small icon until that has loaded. Zealot knives, the Hive Scum
+-- flash grenade and the Skitarius force field put no item in the Blitz slot, but their ability names one, which loads
+-- the same way. When that item doesn't carry the ability's icon (force field), and for the Arbites whistle, which has
+-- no item at all, the icon can only come with the HUD's own packages, which stay loaded as long as the HUD
+local function blitz_hud_icon(extensions)
+	local visual_loadout_extension = extensions.visual_loadout
+	local item = visual_loadout_extension and visual_loadout_extension:item_from_slot(GRENADE_SLOT_NAME)
+	local item_icon = item and item.hud_icon
+
+	if item then
+		if item_icon and item_icon ~= "" then
+			return item_icon, true
+		end
+
+		return nil, false
+	end
+
+	local ability_extension = extensions.ability
+	local ability = ability_extension and ability_extension:equipped_abilities()[GRENADE_ABILITY_TYPE]
+
+	-- an item Blitz whose item hasn't synced yet only has a placeholder icon on its ability
+	if not ability or ability.inventory_item_name then
+		return nil, false
+	end
+
+	local icon = ability.hud_icon ~= "" and ability.hud_icon or nil
+	local item_reference = ability.inventory_item_reference
+	local referenced_item = item_reference
+		and MasterItems.item_exists(item_reference)
+		and MasterItems.get_item(item_reference)
+
+	if referenced_item then
+		local referenced_icon = referenced_item.hud_icon
+
+		if referenced_icon and referenced_icon ~= "" then
+			return referenced_icon, true
+		end
+
+		if icon and item_loads_material(referenced_item, icon) then
+			return icon, true
+		end
+	end
+
+	if icon and Application.can_get_resource("material", icon) then
+		return icon, false
+	end
+
+	return nil, false
+end
+
+-- Lets go of the panel's icon reference. A live panel goes back to vanilla's icon first, so nothing draws the old one
+-- by the time it unloads
+local function release_numericui_blitz_icon(self, reset_texture)
+	local load_id = self._numericui_blitz_icon_load_id
+
+	if not load_id then
+		return
+	end
+
+	if reset_texture then
+		local widget = self._widgets_by_name.throwable
+
+		if widget.content.texture == self._numericui_blitz_icon then
+			widget.content.texture = self._grenade_ability_hud_icon or THROWABLE_DEFAULT_ICON
+			widget.dirty = true
+		end
+	end
+
+	-- the outline follows in this frame's update, before the package can unload
+	if self._numericui_blitz_detailed_icon == self._numericui_blitz_icon then
+		self._numericui_blitz_detailed_icon = nil
+	end
+
+	Managers.package:release(load_id)
+
+	self._numericui_blitz_icon_load_id = nil
+	self._numericui_blitz_icon = nil
+end
+
+local function request_numericui_blitz_icon(self, icon)
+	self._numericui_blitz_icon = icon
+	self._numericui_blitz_icon_load_id = Managers.package:load(icon, BLITZ_ICON_PACKAGE_REFERENCE, function()
+		-- vanilla set its small icon meanwhile and only sets one again on a change, so the icon goes in here
+		if rawget(self, "destroyed") or self._numericui_blitz_icon ~= icon then
+			return
+		end
+
+		local widget = self._widgets_by_name.throwable
+
+		widget.content.texture = icon
+		widget.dirty = true
+		self._numericui_blitz_detailed_icon = icon
+	end)
+end
+
+-- vanilla only sets its icon here, when the Blitz's charge status, visibility or small icon changes
+mod:hook(
+	"HudElementTeamPlayerPanel",
+	"_update_grenade_ability_presentation",
+	function(func, self, status, visible, hud_icon, ui_renderer)
+		local detailed_icon = nil
+
+		if mod.setting("blitz_hud_icon") then
+			local extensions = self:_player_extensions(self._data.player)
+			local icon, held = nil, false
+
+			if extensions then
+				icon, held = blitz_hud_icon(extensions)
+			end
+
+			local held_icon = held and icon or nil
+
+			if held_icon ~= self._numericui_blitz_icon then
+				release_numericui_blitz_icon(self, true)
+
+				if held_icon then
+					request_numericui_blitz_icon(self, held_icon)
+				end
+			end
+
+			if not held or Managers.package:has_loaded_id(self._numericui_blitz_icon_load_id) then
+				detailed_icon = icon
+			end
+
+			hud_icon = detailed_icon or hud_icon
+		end
+
+		func(self, status, visible, hud_icon, ui_renderer)
+
+		self._numericui_blitz_detailed_icon = detailed_icon
+	end
+)
+
+-- the team panel's destroy is its own copy of the base class's, so a hook on the base wouldn't run for it
+mod:hook_safe("HudElementTeamPlayerPanel", "destroy", function(self)
+	release_numericui_blitz_icon(self, false)
+end)
+
+-- The outline draws the icon's material too, so it only shows while vanilla's icon shows a detailed one. When the panel
+-- lets go of a held icon, the outline drops it in the same frame, before the package can unload
+local function update_numericui_blitz_icon_outline(self, widget, ui_renderer)
+	local icon_content = self._widgets_by_name.throwable.content
+	local texture = icon_content.texture
+	local visible = icon_content.visible ~= false and texture == self._numericui_blitz_detailed_icon
+	local content = widget.content
+
+	if visible and content.texture ~= texture then
+		content.texture = texture
+		widget.dirty = true
+	end
+
+	if content.visible ~= visible then
+		self:_set_widget_visible(widget, visible, ui_renderer)
+	end
+
+	if not visible and content.texture ~= THROWABLE_DEFAULT_ICON then
+		content.texture = THROWABLE_DEFAULT_ICON
+	end
+end
+
+-- The count belongs to vanilla's Blitz icon, so it shows and hides with the icon and takes its colour. Bots and
+-- Blitzes without charges, like Smite, get no count, since vanilla doesn't track their charges either
+local function update_numericui_blitz_charges(self, player, ability_extension, widget, ui_renderer)
+	local count = nil
+
+	if
+		self._grenade_ability_visible
+		and ability_extension
+		and player:is_human_controlled()
+		and ability_extension:ability_is_equipped(GRENADE_ABILITY_TYPE)
+		and ability_extension:max_ability_charges(GRENADE_ABILITY_TYPE) > 0
+	then
+		count = ability_extension:remaining_ability_charges(GRENADE_ABILITY_TYPE)
+	end
+
+	local visible = count ~= nil
+	local content = widget.content
+
+	if content.visible ~= visible then
+		self:_set_widget_visible(widget, visible, ui_renderer)
+	end
+
+	if not visible then
+		return
+	end
+
+	local status = self._grenade_ability_status
+
+	-- only re-render the retained widget when the count or the icon's colour changes
+	if content._numericui_count ~= count or content._numericui_status ~= status then
+		content._numericui_count = count
+		content._numericui_status = status
+		content.text = string_format("%d", count)
+		-- vanilla recolours the icon's colour table in place, so the text shares it
+		widget.style.text.text_color = self._widgets_by_name.throwable.style.texture.color
+		widget.dirty = true
+	end
+end
+
 local function update_numericui_player_features(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
 
@@ -736,6 +1052,18 @@ local function update_numericui_player_features(func, self, dt, t, player, ui_re
 			self._widgets_by_name.ability_text
 		)
 	end
+
+	local blitz_icon_outline_widget = self._widgets_by_name.numeric_ui_blitz_icon_outline
+
+	if blitz_icon_outline_widget then
+		update_numericui_blitz_icon_outline(self, blitz_icon_outline_widget, ui_renderer)
+	end
+
+	local blitz_charges_widget = self._widgets_by_name.numeric_ui_blitz_charges
+
+	if blitz_charges_widget then
+		update_numericui_blitz_charges(self, player, ability_extension, blitz_charges_widget, ui_renderer)
+	end
 end
 
 mod:hook("HudElementPersonalPlayerPanel", "_update_player_features", update_numericui_player_features)
@@ -765,6 +1093,13 @@ mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _dra
 	HudElementTeamPlayerPanelSettings.feature_list.level = mod.setting("level")
 
 	func(self, _parent, _draw_layer, _start_scale, data)
+
+	-- every panel's style is its own copy, so the shift can't add up. Bots get it too, keeping all rows aligned
+	if mod.setting("blitz_charges_text") then
+		local ammo_offset = self._widgets_by_name.ammo_status.style.ammo.offset
+
+		ammo_offset[1] = ammo_offset[1] + BLITZ_CHARGES_AMMO_ICON_SHIFT
+	end
 
 	local player_extensions = self:_player_extensions(data.player)
 
