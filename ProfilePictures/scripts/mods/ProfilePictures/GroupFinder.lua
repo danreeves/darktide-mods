@@ -53,6 +53,27 @@ local function _clear_profile_image(widget)
 	widget_content.profile_picture_account_id = nil
 end
 
+-- Vanilla points the icon slot back at its own render, or at the placeholder, without the entry changing player
+local function _restore_profile_image(widget)
+	local texture = widget.content.profile_picture_texture
+
+	if not texture then
+		return
+	end
+
+	local style = widget.style.character_portrait
+
+	if not style then
+		return
+	end
+
+	local material_values = style.material_values
+
+	if material_values.texture_icon ~= texture or material_values.use_placeholder_texture ~= 0 then
+		_apply_profile_image(widget, "character_portrait", texture)
+	end
+end
+
 -- The previewed group's members and the incoming join requests both render through this blueprint
 mod:hook_require("scripts/ui/views/group_finder_view/group_finder_view_definitions", function(instance)
 	local grid_blueprints = instance.grid_blueprints
@@ -65,25 +86,18 @@ mod:hook_require("scripts/ui/views/group_finder_view/group_finder_view_definitio
 	mod:hook_safe(blueprint, "load_icon", function(_parent, widget, element)
 		local account_id = element and element.account_id
 
-		-- The grid re-runs this every frame while it scrolls, so only act once the entry changed player
+		-- The grid re-runs this every frame while it scrolls, so only start a load once the entry changed player
 		if widget.content.profile_picture_account_id ~= account_id then
 			_load_profile_image(widget, account_id)
+		else
+			-- An already rendered portrait lands in the icon slot inside vanilla's call, after this frame's update and before its draw
+			_restore_profile_image(widget)
 		end
 	end)
 
-	-- Vanilla loads the portrait through a closure instead of a named method, so the entry's own update is the only place its render target landing in the icon slot is observable
+	-- Vanilla loads the portrait through a closure instead of a named method, so a render that finishes after load_icon returned only shows up in the entry's own update
 	mod:hook_safe(blueprint, "update", function(_parent, widget)
-		local texture = widget.content.profile_picture_texture
-
-		if not texture then
-			return
-		end
-
-		local style = widget.style.character_portrait
-
-		if style and style.material_values.texture_icon ~= texture then
-			_apply_profile_image(widget, "character_portrait", texture)
-		end
+		_restore_profile_image(widget)
 	end)
 
 	-- Runs when an entry scrolls out of view
