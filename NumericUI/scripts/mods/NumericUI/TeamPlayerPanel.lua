@@ -1056,8 +1056,33 @@ local function update_numericui_blitz_charges(self, player, ability_extension, w
 	end
 end
 
+-- The peril widget's visible flag marks a Psyker. The archetype comes from the player's profile, which a bot replacing
+-- a leaving player already has while its unit hasn't spawned yet. Until the profile has synced, the widget stays
+-- hidden. Returns whether the archetype was known
+local function mark_numericui_peril_owner(self, player)
+	local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
+
+	if not peril_icon_widget then
+		return true
+	end
+
+	-- guarded like vanilla's name prefix: player:archetype_name() would index a profile without an archetype
+	local profile = player:profile()
+	local archetype = profile and profile.archetype
+	local archetype_name = archetype and archetype.name
+
+	peril_icon_widget.visible = archetype_name == "psyker"
+	peril_icon_widget.content.icon_text = mod.setting("peril_icon") and PERIL_ICON or ""
+
+	return archetype_name ~= nil
+end
+
 local function update_numericui_player_features(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
+
+	if not self._numericui_peril_owner_known then
+		self._numericui_peril_owner_known = mark_numericui_peril_owner(self, player)
+	end
 
 	local ammo_text_widget = self._widgets_by_name.numeric_ui_ammo_text
 	local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
@@ -1135,21 +1160,5 @@ mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _dra
 		ammo_offset[1] = ammo_offset[1] + BLITZ_CHARGES_AMMO_ICON_SHIFT
 	end
 
-	local player_extensions = self:_player_extensions(data.player)
-
-	if player_extensions then
-		local unit_data_extension = player_extensions.unit_data
-		if unit_data_extension then
-			local archetype = unit_data_extension:archetype_name()
-			local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
-
-			if mod.setting("peril_icon") then
-				peril_icon_widget.content.icon_text = PERIL_ICON
-				peril_icon_widget.visible = (archetype == "psyker")
-			elseif mod.setting("peril_text") then
-				peril_icon_widget.content.icon_text = ""
-				peril_icon_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
-			end
-		end
-	end
+	self._numericui_peril_owner_known = mark_numericui_peril_owner(self, data.player)
 end)
