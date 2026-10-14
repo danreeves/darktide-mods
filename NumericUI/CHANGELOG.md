@@ -1,5 +1,10 @@
 # NumericUI Changelog
 
+## 26.10.14
+
+Fixed a crash when a player joins mid-mission and takes over a bot, or a teammate leaves, while `Show detailed team Blitz icons` is on. Reported by Runegorger.
+Fixed bots that replace a leaving player showing the peril percent and skull even when they aren't a Psyker.
+
 ## 26.10.13
 
 Added `Show team's Blitz charges`, on by default: each teammate's Blitz icon shows how many charges they have left. Thanks to Omerside.
