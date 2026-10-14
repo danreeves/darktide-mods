@@ -1,5 +1,12 @@
 # ProfilePictures Changelog
 
+## 26.10.14
+
+Changed profile pictures of downed or dead players in the player HUD to darken and keep their colours instead of turning grey.
+Fixed profile pictures in the player HUD having their edges cut off. Reported by CobaltNinja.
+Fixed profile pictures sometimes missing from the player HUD during missions with ShowInsignias installed. Reported by CobaltNinja.
+Fixed profile pictures in the Party Finder briefly switching back to the character portrait while scrolling.
+
 ## 26.09.29
 
 Added a "Portrait frames" setting to hide the portrait frames in the player HUD, for square, borderless profile pictures.
