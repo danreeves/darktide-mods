@@ -87,6 +87,16 @@ local function _add_profile_picture_passes(instance)
 	})
 end
 
+-- Another mod's hook_require can replace player_icon after ours ran, as ShowInsignias does, and DMF runs them all again in no fixed order on every require of the definitions. So the passes go back in right before the panel builds its widgets from them.
+local function _create_widgets(func, self, definitions, widgets, widgets_by_name)
+	_add_profile_picture_passes(definitions)
+
+	return func(self, definitions, widgets, widgets_by_name)
+end
+
+-- Panel classes already logged, so a player_icon without the picture layer is only reported once
+local reported_missing_passes = {}
+
 -- The panel's player icon, while the panel is alive and the icon has the picture layer
 local function _player_icon_widget(self)
 	if self.__deleted or self.destroyed then
@@ -96,8 +106,20 @@ local function _player_icon_widget(self)
 	local widgets_by_name = self._widgets_by_name
 	local widget = widgets_by_name and widgets_by_name.player_icon
 
-	if widget and widget.style.profile_picture then
-		return widget
+	if widget then
+		local style = widget.style
+
+		if style.profile_picture then
+			return widget
+		end
+
+		local class_name = self.__class_name
+
+		if not reported_missing_passes[class_name] then
+			reported_missing_passes[class_name] = true
+
+			mod:info("%s player_icon is missing the ProfilePictures passes, insignia=%s", class_name, tostring(style.insignia ~= nil))
+		end
 	end
 
 	return nil
@@ -463,6 +485,7 @@ end
 for _, hud_type in ipairs(hud_types) do
 	local class_name = "HudElement" .. hud_type
 
+	mod:hook(class_name, "_create_widgets", _create_widgets)
 	mod:hook_safe(class_name, "_load_portrait_icon", _load_portrait_icon)
 	mod:hook_safe(class_name, "_cb_set_player_icon", _cb_set_player_icon)
 	mod:hook_safe(class_name, "_cb_unset_player_icon", _cb_unset_player_icon)
