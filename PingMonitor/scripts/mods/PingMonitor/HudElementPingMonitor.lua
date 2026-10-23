@@ -9,10 +9,10 @@ local scenegraph_definition = {
 	screen = UIWorkspaceSettings.screen,
 	ping_panel = {
 		parent = "screen",
-		vertical_alignment = "center",
+		vertical_alignment = "top",
 		horizontal_alignment = "center",
 		size = { 75, 25 },
-		position = { 0, 0, 1001 },
+		position = { 0, 12, 1001 },
 	},
 }
 
