@@ -3,6 +3,18 @@ local WeaponTemplates = require("scripts/settings/equipment/weapon_templates/wea
 local ProfileUtils = require("scripts/utilities/profile_utils")
 local profiles = mod:persistent_table("profiles")
 local Personalities = require("scripts/settings/character/personalities")
+local BotSpawning = require("scripts/managers/bot/bot_spawning")
+
+local VANILLA_NUM_BOTS = 3
+local NUM_VANILLA_BOT_PROFILES = 6
+
+-- The "Enable 4 bots" checkbox became the num_bots slider
+if mod:get("four_bots") ~= nil then
+	if mod:get("four_bots") then
+		mod:set("num_bots", 4)
+	end
+	mod:set("four_bots", nil)
+end
 
 for _, weapon_template in pairs(WeaponTemplates) do
 	if table.array_contains(weapon_template.keywords, "ranged") then
@@ -126,21 +138,31 @@ end
 -- mod.on_game_state_changed("enter", "StateLoading")
 
 mod:hook("PlayerUnitSpawnManager", "_num_available_bot_slots", function(func, self, ...)
-	local num = func(self, ...)
-	if mod:get("four_bots") then
-		return num + 1
+	return func(self, ...) + mod:get("num_bots") - VANILLA_NUM_BOTS
+end)
+
+-- Vanilla gives each initial bot one of its 6 bot profiles and errors past 6,
+-- so leave the rest queued for _handle_bot_spawning, which spawns one per frame
+mod:hook("PlayerUnitSpawnManager", "_handle_initial_bot_spawning", function(func, self)
+	local num_overflow_bots = math.max(self._queued_bots_n - NUM_VANILLA_BOT_PROFILES, 0)
+	self._queued_bots_n = self._queued_bots_n - num_overflow_bots
+	func(self)
+	self._queued_bots_n = self._queued_bots_n + num_overflow_bots
+end)
+
+-- _handle_bot_spawning passes nil once all 6 vanilla bot profiles are in use; reuse one of them
+mod:hook(BotSpawning, "spawn_bot_character", function(func, profile_name)
+	if not profile_name then
+		profile_name = BotSpawning.get_bot_config_identifier() .. "_bot_" .. math.random(NUM_VANILLA_BOT_PROFILES)
 	end
-	return num
+	return func(profile_name)
 end)
 
 mod:hook_require(
 	"scripts/ui/hud/elements/team_panel_handler/hud_element_team_panel_handler_settings",
 	function(settings)
-		if mod:get("four_bots") then
-			settings.max_panels = 5
-		else
-			settings.max_panels = 4
-		end
+		-- Sized for the num_bots maximum: this runs once per game launch, and slots without a player draw nothing
+		settings.max_panels = mod.max_bots + 1
 	end
 )
 
