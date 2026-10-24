@@ -12,14 +12,19 @@ mod.jitter = 0
 
 -- Get color from number
 mod.ping_color = function(jitter, ping)
+	-- Local-hosted games never take a sample, which leaves the ping NaN
+	if ping ~= ping then
+		return Color.white(255, true)
+	end
+
 	local p10 = ping / 100 * 10
 	local p15 = ping / 100 * 15
 
-	if jitter < p10 then
+	if jitter <= p10 then
 		return Color.online_green(255, true)
-	elseif jitter > p10 and jitter <= p15 then
+	elseif jitter <= p15 then
 		return Color.citadel_troll_slayer_orange(255, true)
-	elseif jitter > p15 then
+	else
 		return Color.citadel_wild_rider_red(255, true)
 	end
 end
