@@ -5,6 +5,9 @@ local UIWidget = require("scripts/managers/ui/ui_widget")
 
 local HudElementPingMonitor = class("HudElementPingMonitor", "HudElementBase")
 
+-- Created once at load, the renderer only reads it
+local NO_DATA_COLOR = Color.white(255, true)
+
 local scenegraph_definition = {
 	screen = UIWorkspaceSettings.screen,
 	ping_panel = {
@@ -56,9 +59,17 @@ end
 
 HudElementPingMonitor.update = function(self, dt, t, ui_renderer, render_settings, input_service)
 	HudElementPingMonitor.super.update(self, dt, t, ui_renderer, render_settings, input_service)
-	local color = mod.ping_color(mod.jitter, mod.ping)
+	local ping = mod.ping
 	local ping_widget = self._widgets_by_name.ping_monitor
-	ping_widget.content.ping_text = mod.ping ~= mod.ping and "" or mod.ping
+	local color
+	-- No valid sample since the last game state change, e.g. local-hosted games never take one
+	if ping then
+		color = mod.ping_color(mod.jitter, ping)
+		ping_widget.content.ping_text = ping
+	else
+		color = NO_DATA_COLOR
+		ping_widget.content.ping_text = ""
+	end
 	ping_widget.style.ping_text.text_color = color
 	ping_widget.style.ping_icon.color = color
 	ping_widget.dirty = true
