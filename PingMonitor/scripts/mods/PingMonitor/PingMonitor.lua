@@ -7,6 +7,15 @@ local UIWidget = require("scripts/managers/ui/ui_widget")
 -- Current average
 mod.num_measurements = 30
 
+-- Read once at load and on change, the HUD element checks it every frame
+mod.always_visible = mod:get("always_visible")
+
+mod.on_setting_changed = function(setting_id)
+	if setting_id == "always_visible" then
+		mod.always_visible = mod:get("always_visible")
+	end
+end
+
 -- Empty the sampling window and drop the shown values. ping and jitter stay nil
 -- until a valid sample arrives, so the HUD never shows a value that wasn't measured
 mod.reset_measurements = function()
@@ -78,6 +87,12 @@ mod.on_game_state_changed = function()
 	mod.reset_measurements()
 end
 
+-- The hook doesn't sample while the mod is disabled, so re-enabling starts from
+-- no data instead of the ping from before
+mod.on_disabled = function()
+	mod.reset_measurements()
+end
+
 -- Add a sample the reporter just took and update the averages
 local function take_sample(latest_ping)
 	if not is_finite_number(latest_ping) then
@@ -112,8 +127,14 @@ local hud_element_settings = {
 	class_name = "HudElementPingMonitor",
 	filename = "PingMonitor/scripts/mods/PingMonitor/HudElementPingMonitor",
 	use_hud_scale = true,
+	-- The tactical overlay plus the groups vanilla's always-on gameplay elements use.
+	-- Outside the overlay HudElementPingMonitor only draws with always_visible on
 	visibility_groups = {
 		"tactical_overlay",
+		"alive",
+		"communication_wheel",
+		"emote_wheel",
+		"player_in_danger_zone",
 	},
 }
 
