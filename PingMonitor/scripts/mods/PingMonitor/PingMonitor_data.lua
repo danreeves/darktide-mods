@@ -12,6 +12,14 @@ return {
 				default_value = false,
 				tooltip = "always_visible_tooltip",
 			},
+			{
+				setting_id = "averaging_samples",
+				type = "numeric",
+				default_value = 30,
+				range = { 1, 120 },
+				decimals_number = 0,
+				tooltip = "averaging_samples_tooltip",
+			},
 		},
 	},
 }
