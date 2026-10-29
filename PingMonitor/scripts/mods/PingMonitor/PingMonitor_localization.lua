@@ -15,4 +15,10 @@ return {
 	always_visible_tooltip = {
 		en = "Keeps your ping on screen while you are alive in missions and the Mourningstar, not only while the tactical overlay is open.\nIt stays hidden in menus, cutscenes and loading screens, and while you are dead or spectating, where the tactical overlay still shows it.",
 	},
+	averaging_samples = {
+		en = "Averaging samples",
+	},
+	averaging_samples_tooltip = {
+		en = "How many of the latest ping measurements your ping and its colour are averaged over.\nThe game measures about once per second, so fewer samples react faster to connection changes and more samples give a steadier number.",
+	},
 }

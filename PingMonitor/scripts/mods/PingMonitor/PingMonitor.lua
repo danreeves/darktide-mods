@@ -4,15 +4,49 @@
 local mod = get_mod("PingMonitor")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 
+-- x - x is 0 for every finite number, NaN for NaN and ±inf
+local function is_finite_number(value)
+	return type(value) == "number" and value - value == 0
+end
+
+-- The averaging_samples option rounded into its 1-120 range. Anything else the
+-- settings file can hold falls back to the option's default of 30
+local function read_num_measurements()
+	local value = mod:get("averaging_samples")
+
+	if is_finite_number(value) then
+		return math.clamp(math.round(value), 1, 120)
+	end
+
+	return 30
+end
+
 -- Current average
-mod.num_measurements = 30
+mod.num_measurements = read_num_measurements()
 
 -- Read once at load and on change, the HUD element checks it every frame
 mod.always_visible = mod:get("always_visible")
 
+-- Recompute the shown values from the sampling window, which holds at least one sample here
+local function update_averages()
+	local measurements = mod.measurements
+	mod.ping = math.round(table.average(measurements))
+	mod.jitter = math.round(mod.avg_difference(measurements))
+end
+
 mod.on_setting_changed = function(setting_id)
 	if setting_id == "always_visible" then
 		mod.always_visible = mod:get("always_visible")
+	elseif setting_id == "averaging_samples" then
+		local num_measurements = read_num_measurements()
+		local measurements = mod.measurements
+		mod.num_measurements = num_measurements
+
+		-- A smaller window drops the oldest samples right away, a larger one fills up with new samples
+		if #measurements > num_measurements then
+			mod.measurements = mod.tail(measurements, num_measurements)
+			update_averages()
+		end
 	end
 end
 
@@ -25,11 +59,6 @@ mod.reset_measurements = function()
 end
 
 mod.reset_measurements()
-
--- x - x is 0 for every finite number, NaN for NaN and ±inf
-local function is_finite_number(value)
-	return type(value) == "number" and value - value == 0
-end
 
 -- Created once at load, the HUD assigns them every frame and the renderer only reads them
 local WHITE = Color.white(255, true)
@@ -103,8 +132,7 @@ local function take_sample(latest_ping)
 	measurements[#measurements + 1] = latest_ping
 	measurements = mod.tail(measurements, mod.num_measurements)
 	mod.measurements = measurements
-	mod.ping = math.round(table.average(measurements))
-	mod.jitter = math.round(mod.avg_difference(measurements))
+	update_averages()
 	-- mod:echo("latest: %d, avg: %d, jitter: %d, measures: %d", latest_ping, mod.ping, mod.jitter, #mod.measurements)
 end
 
