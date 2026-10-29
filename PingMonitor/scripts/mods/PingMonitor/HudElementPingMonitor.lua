@@ -55,9 +55,23 @@ HudElementPingMonitor.init = function(self, parent, draw_layer, start_scale)
 		scenegraph_definition = scenegraph_definition,
 		widget_definitions = widget_definitions,
 	})
+
+	-- DMF also injects the element into the spectator HUD, whose player is the spectated
+	-- teammate and whose alive group is active. Only our own HUD shows it outside the overlay
+	self._is_own_hud = parent:player() == Managers.player:local_player(1)
+	self._shown = false
 end
 
 HudElementPingMonitor.update = function(self, dt, t, ui_renderer, render_settings, input_service)
+	-- The HUD updates the element in all its registered groups, so outside the
+	-- tactical overlay it only shows with always_visible on
+	local shown = self._is_own_hud and mod.always_visible or self._parent:tactical_overlay_active()
+	self._shown = shown
+
+	if not shown then
+		return
+	end
+
 	HudElementPingMonitor.super.update(self, dt, t, ui_renderer, render_settings, input_service)
 	local ping = mod.ping
 	local ping_widget = self._widgets_by_name.ping_monitor
@@ -73,6 +87,13 @@ HudElementPingMonitor.update = function(self, dt, t, ui_renderer, render_setting
 	ping_widget.style.ping_text.text_color = color
 	ping_widget.style.ping_icon.color = color
 	ping_widget.dirty = true
+end
+
+-- The HUD draws before it updates in a frame, so this follows the last update's decision
+HudElementPingMonitor.draw = function(self, dt, t, ui_renderer, render_settings, input_service)
+	if self._shown then
+		return HudElementPingMonitor.super.draw(self, dt, t, ui_renderer, render_settings, input_service)
+	end
 end
 
 return HudElementPingMonitor
