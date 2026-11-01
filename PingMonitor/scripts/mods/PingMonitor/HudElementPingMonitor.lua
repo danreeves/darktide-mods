@@ -72,6 +72,16 @@ HudElementPingMonitor.update = function(self, dt, t, ui_renderer, render_setting
 		return
 	end
 
+	-- Position, resolution and HUD scale changes only invalidate the layout, so ping_panel is
+	-- placed once per change, ahead of the scenegraph update in the base class. A new element
+	-- has no version yet and places it on its first shown frame
+	local layout_version = mod.layout_version
+	if self._layout_version ~= layout_version then
+		self._layout_version = layout_version
+		local horizontal_alignment, vertical_alignment, x, y = mod.ping_panel_layout(render_settings.scale)
+		self:set_scenegraph_position("ping_panel", x, y, nil, horizontal_alignment, vertical_alignment)
+	end
+
 	HudElementPingMonitor.super.update(self, dt, t, ui_renderer, render_settings, input_service)
 	local ping = mod.ping
 	local ping_widget = self._widgets_by_name.ping_monitor
@@ -87,6 +97,13 @@ HudElementPingMonitor.update = function(self, dt, t, ui_renderer, render_setting
 	ping_widget.style.ping_text.text_color = color
 	ping_widget.style.ping_icon.color = color
 	ping_widget.dirty = true
+end
+
+-- The HUD calls this on every element, shown or not, when the resolution or HUD scale changes,
+-- which moves the screen edges the layout keeps the indicator inside
+HudElementPingMonitor.on_resolution_modified = function(self)
+	self._layout_version = nil
+	return HudElementPingMonitor.super.on_resolution_modified(self)
 end
 
 -- The HUD draws before it updates in a frame, so this follows the last update's decision
