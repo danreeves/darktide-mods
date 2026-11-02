@@ -8,6 +8,7 @@ Added `Widget position` settings to move your ping anywhere on screen. Suggested
 Changed the default position of your ping from the centre of the screen to the top centre. Suggested by feisheng68.
 Fixed the ping icon and number having no colour when jitter was exactly 10% of your ping.
 Fixed your ping showing a green 0 before the first measurement, and keeping the previous server's ping after loading into a new mission.
+Added AI assisted translations for all 12 languages the game supports. Corrections are welcome!
 
 ## 26.09.05
 
