@@ -27,19 +27,17 @@ local NO_RENDER_MATERIAL = "content/ui/materials/base/ui_portrait_frame_base_no_
 local FRAME_TEXTURE_MATERIAL = "content/ui/materials/base/ui_default_base"
 local DEFAULT_FRAME_TEXTURE = "content/ui/textures/nameplates/portrait_frames/default"
 
--- The portrait material only draws the middle of its quad, about x 10-80 and y 12-89 of 90x100
-local WINDOW_WIDTH = 70 / 90
+-- A profile picture is drawn as a plain texture too, so the whole avatar shows at its own size and with its transparency. The portrait material would only draw its middle.
+local PICTURE_MATERIAL = FRAME_TEXTURE_MATERIAL
+
+-- The frame opening, which is also the middle the portrait material draws of its quad: about x 10-80 and y 12-89 of 90x100
 local WINDOW_TOP = 12 / 100
 local WINDOW_HEIGHT = 77 / 100
-
--- Just narrower than tall, so the middle the material draws comes out square and the picture isn't stretched
-local PICTURE_ASPECT = WINDOW_HEIGHT / WINDOW_WIDTH
+local WINDOW_MIDDLE = WINDOW_TOP + WINDOW_HEIGHT * 0.5
 
 -- Vanilla draws the frame at 0 and the status icon above it, so the picture and the background square behind it go below
 local PICTURE_Z = -1
 local BACKGROUND_Z = -2
-
-local WHITE = { 255, 255, 255, 255 }
 
 -- Panels whose portrait is split, so a settings change reaches the ones on screen. Weak, so it never keeps a destroyed panel alive.
 local split_panels = setmetatable({}, { __mode = "k" })
@@ -89,6 +87,16 @@ local function _add_profile_picture_passes(instance)
 	})
 end
 
+-- Another mod's hook_require can replace player_icon after ours ran, as ShowInsignias does, and DMF runs them all again in no fixed order on every require of the definitions. So the passes go back in right before the panel builds its widgets from them.
+local function _create_widgets(func, self, definitions, widgets, widgets_by_name)
+	_add_profile_picture_passes(definitions)
+
+	return func(self, definitions, widgets, widgets_by_name)
+end
+
+-- Panel classes already logged, so a player_icon without the picture layer is only reported once
+local reported_missing_passes = {}
+
 -- The panel's player icon, while the panel is alive and the icon has the picture layer
 local function _player_icon_widget(self)
 	if self.__deleted or self.destroyed then
@@ -98,15 +106,30 @@ local function _player_icon_widget(self)
 	local widgets_by_name = self._widgets_by_name
 	local widget = widgets_by_name and widgets_by_name.player_icon
 
-	if widget and widget.style.profile_picture then
-		return widget
+	if widget then
+		local style = widget.style
+
+		if style.profile_picture then
+			return widget
+		end
+
+		local class_name = self.__class_name
+
+		if not reported_missing_passes[class_name] then
+			reported_missing_passes[class_name] = true
+
+			mod:info("%s player_icon is missing the ProfilePictures passes, insignia=%s", class_name, tostring(style.insignia ~= nil))
+		end
 	end
 
 	return nil
 end
 
+-- A character render sits in the portrait material's icon slot, a profile picture in the plain texture's
 local function _holds_portrait(widget)
-	return widget.style.profile_picture.material_values.texture_icon ~= nil
+	local picture_values = widget.style.profile_picture.material_values
+
+	return picture_values.texture_icon ~= nil or picture_values.texture_map ~= nil
 end
 
 local function _copy_color(destination, source)
@@ -173,24 +196,23 @@ local function _set_render_geometry(self, style)
 	offset[2] = 0
 end
 
--- A picture gets a centred layer the height of the panel's quad, scaled by Profile picture size. The background square is the middle a full size picture draws.
+-- A picture gets a square as tall as the frame opening, centred on it and scaled by Profile picture size. The background square is the one a full size picture fills.
 local function _set_picture_geometry(self, style)
 	local icon_size = self._ui_scenegraph.player_icon.size
 	local icon_width = icon_size[1]
 	local icon_height = icon_size[2]
-	local height = icon_height * player_panel_settings.picture_scale
-	local width = height * PICTURE_ASPECT
+	local side = icon_height * WINDOW_HEIGHT
+	local picture_side = side * player_panel_settings.picture_scale
 	local picture_style = style.profile_picture
 	local size = picture_style.size
 	local offset = picture_style.offset
 
-	size[1] = width
-	size[2] = height
-	offset[1] = (icon_width - width) * 0.5
-	offset[2] = (icon_height - height) * 0.5
+	size[1] = picture_side
+	size[2] = picture_side
+	offset[1] = (icon_width - picture_side) * 0.5
+	offset[2] = icon_height * WINDOW_MIDDLE - picture_side * 0.5
 
 	local background_style = style.profile_picture_background
-	local side = icon_height * WINDOW_HEIGHT
 
 	size = background_style.size
 	offset = background_style.offset
@@ -200,22 +222,28 @@ local function _set_picture_geometry(self, style)
 	offset[2] = icon_height * WINDOW_TOP
 end
 
--- The chosen colour, greyed and darkened the way the portrait material shades the picture of a downed or dead player
+-- A plain texture can't be greyed, so a downed or dead player's picture is only darkened, as far as vanilla darkens the portrait. It starts from white, so the tint of your own mission panel only reaches the frame.
+local function _set_picture_color(style)
+	local picture_style = style.profile_picture
+	local brightness = 255 * (picture_style.material_values.intensity or 1)
+	local color = picture_style.color
+
+	color[1] = 255
+	color[2] = brightness
+	color[3] = brightness
+	color[4] = brightness
+end
+
+-- The chosen colour, darkened along with the picture in front of it for a downed or dead player
 local function _set_background_color(style)
-	local picture_values = style.profile_picture.material_values
-	local desaturation = picture_values.desaturation or 0
-	local intensity = picture_values.intensity or 1
+	local intensity = style.profile_picture.material_values.intensity or 1
 	local background_color = player_panel_settings.background_color
-	local red = background_color[2]
-	local green = background_color[3]
-	local blue = background_color[4]
-	local grey = (red + green + blue) / 3
 	local color = style.profile_picture_background.color
 
 	color[1] = 255
-	color[2] = (red + (grey - red) * desaturation) * intensity
-	color[3] = (green + (grey - green) * desaturation) * intensity
-	color[4] = (blue + (grey - blue) * desaturation) * intensity
+	color[2] = background_color[2] * intensity
+	color[3] = background_color[3] * intensity
+	color[4] = background_color[4] * intensity
 end
 
 local function _finish_split(self, widget)
@@ -232,6 +260,9 @@ local function _show_render(self, widget)
 	local picture_style = style.profile_picture
 	local picture_values = picture_style.material_values
 
+	-- A profile picture took the frame slot out, and a fresh portrait material draws its default frame there unless it is empty
+	picture_values.portrait_frame_texture = ""
+	picture_values.texture_map = nil
 	picture_values.use_placeholder_texture = 0
 	picture_values.rows = frame_values.rows
 	picture_values.columns = frame_values.columns
@@ -246,28 +277,33 @@ local function _show_render(self, widget)
 	_finish_split(self, widget)
 end
 
--- The picture is square and drawn in a layer of its own, so it isn't stretched, and the tint of your own mission panel only reaches the frame
+-- The whole picture is drawn as a plain texture in a square layer of its own, so it is neither cropped nor stretched, and the tint of your own mission panel only reaches the frame
 local function _show_picture(self, widget, texture)
 	local style = widget.style
+	local picture_values = style.profile_picture.material_values
 
-	_apply_profile_image(widget, "profile_picture", texture)
+	-- The plain texture has neither of the portrait material's texture slots
+	picture_values.portrait_frame_texture = nil
+	picture_values.texture_icon = nil
+	picture_values.texture_map = texture
+	widget.content.profile_picture = PICTURE_MATERIAL
 
-	widget.content.profile_picture = PORTRAIT_MATERIAL
-	_copy_color(style.profile_picture.color, WHITE)
-
+	_set_picture_color(style)
 	_set_picture_geometry(self, style)
 	_set_background_color(style)
 	_strip_frame_layer(widget)
 	_finish_split(self, widget)
 end
 
--- Switching to the material that skips the portrait gives the pass a fresh material, so no render target stays referenced
+-- Switching to the material that skips the portrait gives the pass a fresh material, so no render target or picture stays referenced
 local function _clear_picture_layer(widget)
 	local style = widget.style
 	local picture_style = style.profile_picture
+	local picture_values = picture_style.material_values
 
 	widget.content.profile_picture = NO_RENDER_MATERIAL
-	picture_style.material_values.texture_icon = nil
+	picture_values.texture_icon = nil
+	picture_values.texture_map = nil
 	picture_style.color[1] = 0
 	style.profile_picture_background.color[1] = 0
 	widget.dirty = true
@@ -373,6 +409,7 @@ local function _set_shadowing_portrait(self)
 	end
 
 	if self._profile_picture_texture then
+		_set_picture_color(style)
 		_set_background_color(style)
 	end
 
@@ -418,16 +455,22 @@ function mod.merge_player_panel_layers()
 				local content = widget.content
 				local frame_values = frame_style.material_values
 				local picture_values = style.profile_picture.material_values
+				local picture_texture = picture_values.texture_map
 
 				if content.texture == NO_RENDER_MATERIAL then
 					content.texture = PORTRAIT_MATERIAL
 				end
 
-				frame_values.use_placeholder_texture = 0
-				frame_values.rows = picture_values.rows
-				frame_values.columns = picture_values.columns
-				frame_values.grid_index = picture_values.grid_index
-				frame_values.texture_icon = picture_values.texture_icon
+				-- A profile picture goes into the icon slot as one whole cell, as on the other surfaces
+				if picture_texture then
+					_apply_profile_image(widget, "texture", picture_texture)
+				else
+					frame_values.use_placeholder_texture = 0
+					frame_values.rows = picture_values.rows
+					frame_values.columns = picture_values.columns
+					frame_values.grid_index = picture_values.grid_index
+					frame_values.texture_icon = picture_values.texture_icon
+				end
 			end
 
 			frame_style.visible = nil
@@ -442,6 +485,7 @@ end
 for _, hud_type in ipairs(hud_types) do
 	local class_name = "HudElement" .. hud_type
 
+	mod:hook(class_name, "_create_widgets", _create_widgets)
 	mod:hook_safe(class_name, "_load_portrait_icon", _load_portrait_icon)
 	mod:hook_safe(class_name, "_cb_set_player_icon", _cb_set_player_icon)
 	mod:hook_safe(class_name, "_cb_unset_player_icon", _cb_unset_player_icon)

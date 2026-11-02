@@ -1,5 +1,10 @@
 # Healthbars Changelog
 
+## 26.10.24
+
+Improved Traditional Chinese (zh-tw) translations for DoT and debuff markers, boss health bars, display duration settings, enemy categories, and stagger information. Thanks to SyuanTsai for the translation improvements!
+Animation Events is no longer a required mod. You only need it for the estimated stagger display when you're not the host.
+
 ## 26.09.29
 
 Fixed the Increased damage taken debuff indicator counting Soften Them Up as +10% instead of its new +15% since the Darktide 1.13 update.

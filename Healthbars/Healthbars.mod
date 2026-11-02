@@ -14,8 +14,4 @@ return {
 		"packages/ui/views/character_appearance_view/character_appearance_view",
 		"packages/ui/material_sets/circumstances",
 	},
-    load_after = {
-        "Alfs_DMF_Extensions",
-        "animation_events",
-    },
 }

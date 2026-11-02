@@ -825,13 +825,11 @@ local function item_loads_material(item, material)
 	return false
 end
 
--- The weapon HUD's Blitz icon, and whether the panel has to hold it. Mostly it's an item's hud_icon, which the team
--- panel doesn't own: PackageSynchronizer loads it with the teammate's loadout and unloads it when they leave or a
--- player takes over their bot, even while a panel still draws it, which crashes the game. So each panel holds its own
--- package reference on such an icon, and keeps vanilla's small icon until that has loaded. Zealot knives, the Hive Scum
--- flash grenade and the Skitarius force field put no item in the Blitz slot, but their ability names one, which loads
--- the same way. When that item doesn't carry the ability's icon (force field), and for the Arbites whistle, which has
--- no item at all, the icon can only come with the HUD's own packages, which stay loaded as long as the HUD
+-- The weapon HUD's Blitz icon, and whether it has to be held. Mostly it's an item's hud_icon, which loads with the
+-- teammate's loadout. Zealot knives, the Hive Scum flash grenade and the Skitarius force field put no item in the Blitz
+-- slot, but their ability names one, which loads the same way. When that item doesn't carry the ability's icon (force
+-- field), and for the Arbites whistle, which has no item at all, the icon can only come with the HUD's own packages,
+-- which stay loaded as long as the HUD
 local function blitz_hud_icon(extensions)
 	local visual_loadout_extension = extensions.visual_loadout
 	local item = visual_loadout_extension and visual_loadout_extension:item_from_slot(GRENADE_SLOT_NAME)
@@ -878,50 +876,44 @@ local function blitz_hud_icon(extensions)
 	return nil, false
 end
 
--- Lets go of the panel's icon reference. A live panel goes back to vanilla's icon first, so nothing draws the old one
--- by the time it unloads
-local function release_numericui_blitz_icon(self, reset_texture)
-	local load_id = self._numericui_blitz_icon_load_id
+-- Package references on the item icons the team panels show, per HUD: hud -> icon -> load id. PackageSynchronizer
+-- unloads a teammate's icons 3 seconds after they leave or a player takes over their bot, and the game crashes if the
+-- HUD's renderer still references one then. Letting go when the panel was destroyed wasn't enough, the renderer could
+-- still hold the icon. So an icon stays held until its HUD has destroyed its renderer
+local held_blitz_icons = {}
+
+local function hold_blitz_icon(hud, icon)
+	local icons = held_blitz_icons[hud]
+
+	if not icons then
+		icons = {}
+		held_blitz_icons[hud] = icons
+	end
+
+	local load_id = icons[icon]
 
 	if not load_id then
+		load_id = Managers.package:load(icon, BLITZ_ICON_PACKAGE_REFERENCE)
+		icons[icon] = load_id
+	end
+
+	return load_id
+end
+
+-- runs after the HUD destroyed its elements and its renderer, so nothing can draw the icons any more
+mod:hook_safe("UIHud", "destroy", function(self)
+	local icons = held_blitz_icons[self]
+
+	if not icons then
 		return
 	end
 
-	if reset_texture then
-		local widget = self._widgets_by_name.throwable
+	held_blitz_icons[self] = nil
 
-		if widget.content.texture == self._numericui_blitz_icon then
-			widget.content.texture = self._grenade_ability_hud_icon or THROWABLE_DEFAULT_ICON
-			widget.dirty = true
-		end
+	for _, load_id in pairs(icons) do
+		Managers.package:release(load_id)
 	end
-
-	-- the outline follows in this frame's update, before the package can unload
-	if self._numericui_blitz_detailed_icon == self._numericui_blitz_icon then
-		self._numericui_blitz_detailed_icon = nil
-	end
-
-	Managers.package:release(load_id)
-
-	self._numericui_blitz_icon_load_id = nil
-	self._numericui_blitz_icon = nil
-end
-
-local function request_numericui_blitz_icon(self, icon)
-	self._numericui_blitz_icon = icon
-	self._numericui_blitz_icon_load_id = Managers.package:load(icon, BLITZ_ICON_PACKAGE_REFERENCE, function()
-		-- vanilla set its small icon meanwhile and only sets one again on a change, so the icon goes in here
-		if rawget(self, "destroyed") or self._numericui_blitz_icon ~= icon then
-			return
-		end
-
-		local widget = self._widgets_by_name.throwable
-
-		widget.content.texture = icon
-		widget.dirty = true
-		self._numericui_blitz_detailed_icon = icon
-	end)
-end
+end)
 
 -- vanilla only sets its icon here, when the Blitz's charge status, visibility or small icon changes
 mod:hook(
@@ -929,6 +921,7 @@ mod:hook(
 	"_update_grenade_ability_presentation",
 	function(func, self, status, visible, hud_icon, ui_renderer)
 		local detailed_icon = nil
+		local pending_icon, pending_load_id = nil, nil
 
 		if mod.setting("blitz_hud_icon") then
 			local extensions = self:_player_extensions(self._data.player)
@@ -938,17 +931,15 @@ mod:hook(
 				icon, held = blitz_hud_icon(extensions)
 			end
 
-			local held_icon = held and icon or nil
+			if held then
+				local load_id = hold_blitz_icon(self._parent, icon)
 
-			if held_icon ~= self._numericui_blitz_icon then
-				release_numericui_blitz_icon(self, true)
-
-				if held_icon then
-					request_numericui_blitz_icon(self, held_icon)
+				if Managers.package:has_loaded_id(load_id) then
+					detailed_icon = icon
+				else
+					pending_icon, pending_load_id = icon, load_id
 				end
-			end
-
-			if not held or Managers.package:has_loaded_id(self._numericui_blitz_icon_load_id) then
+			else
 				detailed_icon = icon
 			end
 
@@ -958,13 +949,11 @@ mod:hook(
 		func(self, status, visible, hud_icon, ui_renderer)
 
 		self._numericui_blitz_detailed_icon = detailed_icon
+		-- vanilla only sets its icon again on a change, so the outline update puts this one in once it has loaded
+		self._numericui_blitz_pending_icon = pending_icon
+		self._numericui_blitz_pending_load_id = pending_load_id
 	end
 )
-
--- the team panel's destroy is its own copy of the base class's, so a hook on the base wouldn't run for it
-mod:hook_safe("HudElementTeamPlayerPanel", "destroy", function(self)
-	release_numericui_blitz_icon(self, false)
-end)
 
 -- Grows vanilla's icon to the detailed size around its centre, or puts it back. Every panel's style is its own copy
 local function resize_numericui_blitz_icon(self, icon_widget, detailed)
@@ -989,12 +978,21 @@ local function resize_numericui_blitz_icon(self, icon_widget, detailed)
 	self._numericui_blitz_icon_enlarged = detailed
 end
 
--- Sizes the icon for what it shows, and keeps the outline on it. The outline draws the icon's material too, so it only
--- shows while the icon shows a detailed one. When the panel lets go of a held icon, the outline drops it in the same
--- frame, before the package can unload
+-- Puts in a detailed icon that was still loading, sizes the icon for what it shows, and keeps the outline on it. The
+-- outline only shows while the icon shows a detailed one
 local function update_numericui_blitz_icon_outline(self, widget, ui_renderer)
 	local icon_widget = self._widgets_by_name.throwable
 	local icon_content = icon_widget.content
+	local pending_icon = self._numericui_blitz_pending_icon
+
+	if pending_icon and Managers.package:has_loaded_id(self._numericui_blitz_pending_load_id) then
+		self._numericui_blitz_pending_icon = nil
+		self._numericui_blitz_pending_load_id = nil
+		self._numericui_blitz_detailed_icon = pending_icon
+		icon_content.texture = pending_icon
+		icon_widget.dirty = true
+	end
+
 	local texture = icon_content.texture
 	local detailed = texture == self._numericui_blitz_detailed_icon
 
@@ -1058,8 +1056,33 @@ local function update_numericui_blitz_charges(self, player, ability_extension, w
 	end
 end
 
+-- The peril widget's visible flag marks a Psyker. The archetype comes from the player's profile, which a bot replacing
+-- a leaving player already has while its unit hasn't spawned yet. Until the profile has synced, the widget stays
+-- hidden. Returns whether the archetype was known
+local function mark_numericui_peril_owner(self, player)
+	local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
+
+	if not peril_icon_widget then
+		return true
+	end
+
+	-- guarded like vanilla's name prefix: player:archetype_name() would index a profile without an archetype
+	local profile = player:profile()
+	local archetype = profile and profile.archetype
+	local archetype_name = archetype and archetype.name
+
+	peril_icon_widget.visible = archetype_name == "psyker"
+	peril_icon_widget.content.icon_text = mod.setting("peril_icon") and PERIL_ICON or ""
+
+	return archetype_name ~= nil
+end
+
 local function update_numericui_player_features(func, self, dt, t, player, ui_renderer)
 	func(self, dt, t, player, ui_renderer)
+
+	if not self._numericui_peril_owner_known then
+		self._numericui_peril_owner_known = mark_numericui_peril_owner(self, player)
+	end
 
 	local ammo_text_widget = self._widgets_by_name.numeric_ui_ammo_text
 	local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
@@ -1137,21 +1160,5 @@ mod:hook("HudElementTeamPlayerPanel", "init", function(func, self, _parent, _dra
 		ammo_offset[1] = ammo_offset[1] + BLITZ_CHARGES_AMMO_ICON_SHIFT
 	end
 
-	local player_extensions = self:_player_extensions(data.player)
-
-	if player_extensions then
-		local unit_data_extension = player_extensions.unit_data
-		if unit_data_extension then
-			local archetype = unit_data_extension:archetype_name()
-			local peril_icon_widget = self._widgets_by_name.numeric_ui_peril_icon
-
-			if mod.setting("peril_icon") then
-				peril_icon_widget.content.icon_text = PERIL_ICON
-				peril_icon_widget.visible = (archetype == "psyker")
-			elseif mod.setting("peril_text") then
-				peril_icon_widget.content.icon_text = ""
-				peril_icon_widget.visible = (archetype == "psyker") -- I use the "visible" flag to determine if it's a psyker
-			end
-		end
-	end
+	self._numericui_peril_owner_known = mark_numericui_peril_owner(self, data.player)
 end)
