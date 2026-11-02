@@ -1,5 +1,11 @@
 {
-  "version": "26.09.05",
-  "author": "raindish",
-  "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/13"
+  "name": "Ping Monitor",
+  "description": "Shows your ping in the tab menu, or always on screen, at a position you choose. Its colour indicates jitter.",
+  "version": "26.11.02",
+  "author": "raindish & LucLeto",
+  "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/13",
+  "source": "https://github.com/danreeves/darktide-mods",
+  "funding": {
+    "kofi": "https://ko-fi.com/raindish"
+  }
 }
