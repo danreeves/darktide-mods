@@ -1,4 +1,7 @@
 local mod = get_mod("Tertium4Or5")
+local Archetypes = require("scripts/settings/archetype/archetypes")
+
+mod.max_bots = table.size(Archetypes)
 
 mod.character_options = {
 	{
@@ -13,7 +16,7 @@ mod.character_options = {
 
 local sub_widgets = {}
 
-for i = 1, 4 do
+for i = 1, mod.max_bots do
 	sub_widgets[#sub_widgets + 1] = {
 		setting_id = "character_" .. i,
 		type = "dropdown",
@@ -29,9 +32,10 @@ return {
 	options = {
 		widgets = {
 			{
-				setting_id = "four_bots",
-				type = "checkbox",
-				default_value = false,
+				setting_id = "num_bots",
+				type = "numeric",
+				default_value = 3,
+				range = { 3, mod.max_bots },
 			},
 			{
 				setting_id = "bots",
