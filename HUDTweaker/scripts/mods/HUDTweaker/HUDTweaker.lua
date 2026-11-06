@@ -25,6 +25,19 @@ local function set_style_tweak(path, val)
 	mod:set("style_tweaks", style_tweaks)
 end
 
+local function apply_style_tweaks(target, tweaks)
+	for key, value in pairs(tweaks) do
+		if type(value) == "table" then
+			local current = target[key]
+			if type(current) == "table" then
+				apply_style_tweaks(current, value)
+			end
+		else
+			target[key] = value
+		end
+	end
+end
+
 mod:hook_safe("HudElementBase", "init", function(self)
 	if not string.find(self.__class_name, "Handler") then
 		hud_elements[self.__class_name] = self
@@ -41,15 +54,7 @@ mod:hook("HudElementBase", "update", function(func, self, ...)
 				for style_id, custom_styles in pairs(widget_styles) do
 					local styles = widget.style[style_id]
 					if styles then
-						for style_key, value in pairs(custom_styles) do
-							if type(value) == "table" then
-								for k, v in pairs(value) do
-									styles[style_key][k] = v
-								end
-							else
-								styles[style_key] = value
-							end
-						end
+						apply_style_tweaks(styles, custom_styles)
 					end
 				end
 			end
