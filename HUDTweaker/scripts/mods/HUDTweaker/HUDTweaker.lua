@@ -92,6 +92,35 @@ function HUDTweaker:close()
 	Imgui.close_imgui()
 end
 
+-- Number fields that have held a fraction keep the float input after their value turns whole,
+-- so typing "0" on the way to "0.5" doesn't swap the field to the int input mid-edit.
+local float_fields = setmetatable({}, { __mode = "k" })
+
+local function input_float(label, val)
+	local new_val = Imgui.input_float(label, val, "%g")
+	-- Imgui holds floats in single precision, so a difference this small is rounding, not an edit.
+	if math.abs(new_val - val) <= math.abs(val) * 1e-6 then
+		return val
+	end
+	return new_val
+end
+
+-- Imgui.input_int holds whole numbers only, so a fractional field would lose its fraction just by being shown.
+local function number_input(t, key, val)
+	local float_keys = float_fields[t]
+	if float_keys and float_keys[key] then
+		return input_float
+	elseif val % 1 == 0 then
+		return Imgui.input_int
+	end
+	if not float_keys then
+		float_keys = {}
+		float_fields[t] = float_keys
+	end
+	float_keys[key] = true
+	return input_float
+end
+
 local function table_to_tree(t, prev_path)
 	for key, val in pairs(t) do
 		if Imgui.tree_node(key) then
@@ -103,7 +132,7 @@ local function table_to_tree(t, prev_path)
 			else
 				local input = nil
 				if typeof == "number" then
-					input = Imgui.input_int
+					input = number_input(t, key, val)
 				elseif typeof == "boolean" then
 					input = Imgui.checkbox
 				elseif typeof == "string" then
