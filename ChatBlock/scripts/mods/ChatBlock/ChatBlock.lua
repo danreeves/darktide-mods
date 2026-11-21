@@ -9,6 +9,7 @@ mod.chat_opening = false
 mod.cinematic_active = false
 mod.auto_melee_swap_blocked = false
 mod.auto_melee_swap_requested = false
+mod.auto_melee_swap_deferred = false
 
 local function auto_melee_swap_allowed()
 	local game_mode_manager = Managers.state.game_mode
@@ -33,10 +34,22 @@ local function holding_block_weapon(unit)
 	return weapon_template ~= nil and weapon_template.actions.action_block ~= nil
 end
 
+-- Same action kinds vanilla treats as a reload. A shotgun's per-shell reload
+-- chains straight into the next shell, so this stays set until the last one.
+local function ranged_reload_active(unit_data)
+	local weapon_action_component = unit_data:read_component("weapon_action")
+	local weapon_template = WeaponTemplate.current_weapon_template(weapon_action_component)
+	local action_settings = weapon_template and weapon_template.actions[weapon_action_component.current_action_name]
+	local action_kind = action_settings and action_settings.kind
+
+	return action_kind == "reload_state" or action_kind == "reload_shotgun" or action_kind == "ranged_load_special"
+end
+
 local function auto_melee_swap_on_blocked(blocked)
 	if not blocked then
 		-- The block ended before the swap went through, so don't swap afterwards
 		mod.auto_melee_swap_requested = false
+		mod.auto_melee_swap_deferred = false
 	elseif not mod.auto_melee_swap_blocked and mod:get("auto_melee_swap") then
 		local player = Managers.player:local_player(1)
 		if player then
@@ -47,22 +60,38 @@ local function auto_melee_swap_on_blocked(blocked)
 				local wielded_slot = inventory_component.wielded_slot
 
 				if wielded_slot ~= "slot_primary" then
-					-- Request a normal melee wield input rather than forcing the wield
-					-- locally, so it goes through the buffered, networked player input
-					-- and the server simulates the same swap instead of correcting it.
-					mod.auto_melee_swap_requested = true
+					if mod:get("auto_melee_swap_wait_for_reload") and ranged_reload_active(unit_data) then
+						-- The swap would cancel the reload, so hold it until the reload is done
+						mod.auto_melee_swap_deferred = true
+					else
+						-- Request a normal melee wield input rather than forcing the wield
+						-- locally, so it goes through the buffered, networked player input
+						-- and the server simulates the same swap instead of correcting it.
+						mod.auto_melee_swap_requested = true
+					end
 				end
 			end
+		end
+	elseif mod.auto_melee_swap_deferred then
+		-- Still blocked: hand over to the normal swap request once the reload is done
+		local player = Managers.player:local_player(1)
+		local unit = player and player.player_unit
+		local unit_data = unit and ScriptUnit.has_extension(unit, "unit_data_system")
+
+		if not (unit_data and ranged_reload_active(unit_data)) then
+			mod.auto_melee_swap_deferred = false
+			mod.auto_melee_swap_requested = true
 		end
 	end
 
 	mod.auto_melee_swap_blocked = blocked
 end
 
--- Never let a pending wield request outlive the blocked transition it was
--- made for, e.g. by being consumed after re-enabling or in the next mission.
+-- Never let a pending or deferred wield request outlive the blocked transition
+-- it was made for, e.g. by being consumed after re-enabling or in the next mission.
 local function clear_auto_melee_swap_request()
 	mod.auto_melee_swap_requested = false
+	mod.auto_melee_swap_deferred = false
 end
 
 mod.on_disabled = clear_auto_melee_swap_request
@@ -84,6 +113,7 @@ mod:hook("HumanGameplay", "_input_active", function(func, ...)
 	if not mod:get("auto_melee_swap") or not auto_melee_swap_allowed() or mod.cinematic_active then
 		mod.auto_melee_swap_blocked = false
 		mod.auto_melee_swap_requested = false
+		mod.auto_melee_swap_deferred = false
 	elseif mod.input_blocked then
 		-- Chat/menu block already implies the combined blocked state,
 		-- so no focus/overlay polling is needed on this path.
