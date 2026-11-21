@@ -1,5 +1,10 @@
 # ChatBlock Changelog
 
+## 26.11.21
+
+Added `Wait for Reload to Finish` under `Auto Swap to Melee`, off by default, to let a reload finish before switching to your melee weapon. Suggested by weeb9.
+Added AI assisted translations for all 12 languages the game supports. Corrections are welcome!
+
 ## 26.09.30
 
 Reduced ChatBlock's performance impact.
