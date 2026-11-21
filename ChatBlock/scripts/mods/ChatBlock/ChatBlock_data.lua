@@ -10,6 +10,14 @@ return {
 				setting_id = "auto_melee_swap",
 				type = "checkbox",
 				default_value = false,
+				sub_widgets = {
+					{
+						setting_id = "auto_melee_swap_wait_for_reload",
+						type = "checkbox",
+						default_value = false,
+						tooltip = "auto_melee_swap_wait_for_reload_tooltip",
+					},
+				},
 			},
 		},
 	},
