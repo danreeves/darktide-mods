@@ -18,4 +18,10 @@ return {
 		["zh-cn"] = "自动切换至近战武器",
 		["zh-tw"] = "自動切換至近戰武器",
 	},
+	auto_melee_swap_wait_for_reload = {
+		en = "Wait for Reload to Finish",
+	},
+	auto_melee_swap_wait_for_reload_tooltip = {
+		en = "If you are reloading when Auto Swap to Melee would switch weapons, the reload finishes first and the swap follows.\nIf you return to the game before the reload ends, you keep your ranged weapon.",
+	},
 }
