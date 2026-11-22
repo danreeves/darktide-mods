@@ -1,5 +1,11 @@
 {
-  "version": "26.09.05",
+  "name": "Killfeed Improvements",
+  "description": "Deduplicate feed items and filter by breed.",
+  "version": "26.11.22",
   "author": "raindish & LucLeto",
-  "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/70"
+  "homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/70",
+  "source": "https://github.com/danreeves/darktide-mods",
+  "funding": {
+    "kofi": "https://ko-fi.com/raindish"
+  }
 }
