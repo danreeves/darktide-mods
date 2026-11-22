@@ -4,7 +4,6 @@ local filter_teammate_kills = false
 local merge_kills = true
 local alignment = "left"
 local cached_is_in_psykanium = nil
-local cached_local_player = nil
 
 local function cache_settings()
 	filter_teammate_kills = mod:get("filter_teammate_kills")
@@ -19,10 +18,8 @@ mod.on_game_state_changed = function(status, state)
 	if state == "GameplayStateRun" then
 		if status == "enter" then
 			cached_is_in_psykanium = Managers.state.game_mode:game_mode_name() == "shooting_range"
-			cached_local_player = Managers.player:local_player(1)
 		elseif status == "exit" then
 			cached_is_in_psykanium = nil
-			cached_local_player = nil
 		end
 	end
 end
@@ -35,9 +32,10 @@ local temp_kill_message_localization_params = {
 
 mod:hook("HudElementCombatFeed", "event_combat_feed_kill", function(func, self, attacking_unit, attacked_unit)
 	if filter_teammate_kills and attacking_unit and type(attacking_unit) ~= "string" then
-		local local_unit = cached_local_player and cached_local_player.player_unit
-		if attacking_unit ~= local_unit then
-			for _, player in pairs(Managers.player:players()) do
+		local player_manager = Managers.player
+		local local_player = player_manager:local_player(1)
+		if local_player and attacking_unit ~= local_player.player_unit then
+			for _, player in pairs(player_manager:players()) do
 				if player.player_unit == attacking_unit then
 					return
 				end
@@ -45,24 +43,22 @@ mod:hook("HudElementCombatFeed", "event_combat_feed_kill", function(func, self, 
 		end
 	end
 
+	-- Scoreboard can pass a string instead of a unit.
+	local should_merge = merge_kills and type(attacked_unit) ~= "string"
+	local previous_notification = should_merge and self._notifications[1]
 	func(self, attacking_unit, attacked_unit)
 
-	if type(attacked_unit) == "string" then
-		-- scoreboard mod compatibility
-		return
-	end
-
-	if merge_kills then
+	if should_merge then
 		local notifications = self._notifications
 		local new_notification = notifications[1]
+		if not new_notification or new_notification == previous_notification then
+			return
+		end
+
 		local unit_data_extension = ScriptUnit.has_extension(attacked_unit, "unit_data_system")
 		local breed_or_nil = unit_data_extension and unit_data_extension:breed()
 
 		if not breed_or_nil or not mod:get(breed_or_nil.name) then
-			return
-		end
-
-		if new_notification == nil then
 			return
 		end
 
