@@ -81,6 +81,37 @@ return {
 						type = "checkbox",
 						default_value = false,
 					},
+					{
+						-- no alpha: the percent after the ammo count is coloured with RGB-only text markup
+						setting_id = "peril_color_settings",
+						type = "group",
+						sub_widgets = {
+							{
+								setting_id = "peril_color_low",
+								type = "color",
+								default_value = { 255, 169, 191, 153 }, -- ARGB, terminal_text_body
+								has_alpha = false,
+							},
+							{
+								setting_id = "peril_color_moderate",
+								type = "color",
+								default_value = { 255, 251, 195, 86 }, -- ARGB, ui_hud_warp_charge_low
+								has_alpha = false,
+							},
+							{
+								setting_id = "peril_color_high",
+								type = "color",
+								default_value = { 255, 245, 121, 21 }, -- ARGB, ui_hud_warp_charge_medium
+								has_alpha = false,
+							},
+							{
+								setting_id = "peril_color_critical",
+								type = "color",
+								default_value = { 255, 246, 69, 69 }, -- ARGB, ui_hud_warp_charge_high
+								has_alpha = false,
+							},
+						},
+					},
 				},
 			},
 			{

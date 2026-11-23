@@ -96,6 +96,30 @@ local PERIL_STACK_ICON_Y = -14
 local PERIL_STACK_TEXT_FONT_SIZE = 12
 local PERIL_STACK_ICON_FONT_SIZE = 14
 
+-- The percent and skull colour for each peril threshold, set from the settings whenever the peril widget is defined.
+-- Vanilla's colours until then, and for a setting that isn't an ARGB table
+local peril_color_low = UIHudSettings.color_tint_main_2
+local peril_color_moderate = UIHudSettings.color_tint_ammo_low
+local peril_color_high = UIHudSettings.color_tint_ammo_medium
+local peril_color_critical = UIHudSettings.color_tint_ammo_high
+
+-- mod.setting keeps one copy of a colour setting until settings change, so the update can compare colours by table
+local function peril_setting_color(setting_id, fallback_color)
+	local color = mod.setting(setting_id)
+
+	if type(color) ~= "table" then
+		return fallback_color
+	end
+
+	for i = 1, 4 do
+		if type(color[i]) ~= "number" then
+			return fallback_color
+		end
+	end
+
+	return color
+end
+
 local GRENADE_ABILITY_TYPE = "grenade_ability"
 local GRENADE_SLOT_NAME = "slot_grenade_ability"
 local BLITZ_ICON_PACKAGE_REFERENCE = "NumericUI_team_blitz_icon"
@@ -211,6 +235,11 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 	end
 
 	if mod.setting("peril_text") or mod.setting("peril_icon") then
+		peril_color_low = peril_setting_color("peril_color_low", UIHudSettings.color_tint_main_2)
+		peril_color_moderate = peril_setting_color("peril_color_moderate", UIHudSettings.color_tint_ammo_low)
+		peril_color_high = peril_setting_color("peril_color_high", UIHudSettings.color_tint_ammo_medium)
+		peril_color_critical = peril_setting_color("peril_color_critical", UIHudSettings.color_tint_ammo_high)
+
 		local peril_icon_style = {
 			font_size = 18,
 			text_vertical_alignment = "center",
@@ -221,7 +250,6 @@ mod:hook_require(TEAM_HUD_DEF_PATH, function(instance)
 			size = { bar_size[1], 18 },
 			font_type = "machine_medium",
 			text_color = UIHudSettings.color_tint_alert_2,
-			default_text_color = UIHudSettings.color_tint_main_2,
 		}
 		local column_x = bar_size[1] - PERIL_STACK_WIDTH
 		local peril_icon_stacked_style = table_merge_recursive(table_clone(peril_icon_style), {
@@ -674,13 +702,13 @@ local function update_numericui_peril(self, unit_data_extension, peril_icon_widg
 	local peril_color = nil
 
 	if warp_charge_level > 0.98 then
-		peril_color = UIHudSettings.color_tint_ammo_high
+		peril_color = peril_color_critical
 	elseif warp_charge_level > 0.75 then
-		peril_color = UIHudSettings.color_tint_ammo_medium
+		peril_color = peril_color_high
 	elseif warp_charge_level > 0.5 then
-		peril_color = UIHudSettings.color_tint_ammo_low
+		peril_color = peril_color_moderate
 	else
-		peril_color = peril_style.icon_text.default_text_color
+		peril_color = peril_color_low
 	end
 
 	if show_icon and peril_color ~= peril_style.icon_text.text_color then
