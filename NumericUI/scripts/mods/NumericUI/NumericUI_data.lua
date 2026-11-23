@@ -370,7 +370,7 @@ return {
 						setting_id = "blitz_cooldown_x_offset",
 						type = "numeric",
 						default_value = -80,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 						change = function(new_value)
 							mod:set("blitz_cooldown_x_offset", new_value)
@@ -383,7 +383,7 @@ return {
 						setting_id = "blitz_cooldown_y_offset",
 						type = "numeric",
 						default_value = 0,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 						change = function(new_value)
 							mod:set("blitz_cooldown_y_offset", new_value)
@@ -429,14 +429,14 @@ return {
 						setting_id = "stimm_cooldown_x_offset",
 						type = "numeric",
 						default_value = -80,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 					},
 					{
 						setting_id = "stimm_cooldown_y_offset",
 						type = "numeric",
 						default_value = 0,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 					},
 					{
