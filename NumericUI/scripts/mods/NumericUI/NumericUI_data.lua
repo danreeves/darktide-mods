@@ -349,6 +349,11 @@ return {
 						},
 					},
 					{
+						setting_id = "show_blitz_active_timer",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
 						setting_id = "disable_blitz_background_progress",
 						type = "checkbox",
 						default_value = false,
@@ -391,6 +396,18 @@ return {
 						get = function()
 							return mod:get("blitz_cooldown_y_offset") or 0
 						end,
+					},
+					{
+						setting_id = "blitz_active_text_color",
+						type = "color",
+						default_value = { 255, 246, 69, 69 }, -- ARGB, the game's HUD text colour
+						has_alpha = true,
+					},
+					{
+						setting_id = "blitz_cooldown_text_color",
+						type = "color",
+						default_value = { 255, 216, 237, 190 }, -- ARGB, the game's HUD text colour
+						has_alpha = true,
 					},
 				},
 			},

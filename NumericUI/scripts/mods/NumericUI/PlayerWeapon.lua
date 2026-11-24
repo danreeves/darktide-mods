@@ -17,12 +17,21 @@ local HudElementPlayerWeaponHandlerSettings =
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local FixedFrame = require("scripts/utilities/fixed_frame")
 local TalentSettings = require("scripts/settings/talent/talent_settings")
+local BreedActions = require("scripts/settings/breed/breed_actions")
+local CompanionServoSkullSettings = require("scripts/settings/companion/companion_servo_skull_settings")
+local Explosion = require("scripts/utilities/attack/explosion")
+local LiquidAreaSettings = require("scripts/settings/liquid_area/liquid_area_settings")
+local ProjectileTemplates = require("scripts/settings/projectile/projectile_templates")
+local ShockMineComponent = require("scripts/components/shock_mine")
+local SpecialRulesSettings = require("scripts/settings/ability/special_rules_settings")
 
 local math_abs = math.abs
 local math_clamp = math.clamp
 local math_floor = math.floor
+local math_max = math.max
 local math_min = math.min
 local math_round = math.round
+local pairs = pairs
 local rawget = rawget
 local string_format = string.format
 local table_clone = table.clone
@@ -59,6 +68,45 @@ local BLITZ_COOLDOWN_FONT_SIZE_DEFAULT = 30
 local BLITZ_COOLDOWN_X_OFFSET_DEFAULT = -80
 local BLITZ_COOLDOWN_Y_OFFSET_DEFAULT = 0
 local BLITZ_BUFF_SCAN_INTERVAL = 0.5
+local BLITZ_TEXT_COLOR_DEFAULT = { 255, 216, 237, 190 } -- ARGB, the game's HUD text colour
+
+-- The buff the starter Servo-Skull's order gives the Skitarius while the skull is empowered. The Artificer
+-- Servo-Skull stays empowered, so only Noospheric Command's faster fire after each order is timed for it, from the
+-- buff that talent gives the skull itself.
+local SERVO_SKULL_ORDER_BUFF = CompanionServoSkullSettings.buffs.base_order_ability_buff_name_player_dummy
+local NOOSPHERIC_COMMAND_BUFF = CompanionServoSkullSettings.buffs.shooting_tagging_buff_name
+
+-- The Purgator's flames run for a fixed time from when the skull is sent off, through the two states it shows then:
+-- flying to its spot, and burning once there
+local servo_skull_actions = BreedActions.companion_servo_skull
+local purgator_flames_action = servo_skull_actions and servo_skull_actions.shoot_flames
+local PURGATOR_DURATION = purgator_flames_action and purgator_flames_action.duration
+local PURGATOR_SPECIAL_RULE = SpecialRulesSettings.special_rules.cryptic_servo_skull_flamethrower
+local PURGATOR_FLAMES_STATE = CompanionServoSkullSettings.STATES.flamethrower
+local PURGATOR_FLAMES_SHOOTING_STATE = CompanionServoSkullSettings.STATES.flamethrower_shooting
+
+local adamant_blitz_settings = TalentSettings.adamant and TalentSettings.adamant.blitz_ability
+local shock_mine_settings = adamant_blitz_settings and adamant_blitz_settings.shock_mine
+local SHOCK_MINE_DURATION = shock_mine_settings and shock_mine_settings.duration
+
+-- The pool each fire and chem grenade leaves, by the explosion it leaves it with
+local POOL_GRENADE_PROJECTILES = { "fire_grenade", "broker_tox_grenade" }
+local pool_liquid_area_by_explosion = {}
+
+for i = 1, #POOL_GRENADE_PROJECTILES do
+	local projectile_template = ProjectileTemplates[POOL_GRENADE_PROJECTILES[i]]
+	local fuse = projectile_template and projectile_template.damage and projectile_template.damage.fuse
+
+	if fuse and fuse.explosion_template and fuse.liquid_area_template then
+		pool_liquid_area_by_explosion[fuse.explosion_template] = fuse.liquid_area_template
+	end
+end
+
+-- A pool spawns on the nav mesh found closest to its grenade's explosion, which the game looks for this far away
+local pool_pairing_reach = math_max(LiquidAreaSettings.nav_mesh_above, LiquidAreaSettings.nav_mesh_below)
+	+ LiquidAreaSettings.nav_mesh_lateral
+local POOL_PAIRING_DISTANCE_SQ = pool_pairing_reach * pool_pairing_reach
+local POOL_PAIRING_TIME = 1
 
 -- The Hive Scum's Stimm is the only pocketable with an ability, and the buff it gives whoever it is injected into
 local STIMM_ABILITY_TYPE = "pocketable_ability"
@@ -857,6 +905,18 @@ local function _update_stimm_cooldown_style(self, widget)
 	)
 end
 
+local function _find_buff(buff_extension, buff_name)
+	local buffs = buff_extension:buffs()
+
+	for i = 1, #buffs do
+		local buff = buffs[i]
+
+		if buff:template_name() == buff_name then
+			return buff
+		end
+	end
+end
+
 local function _find_blitz_replenishment_buff(buff_extension)
 	local buffs = buff_extension:buffs()
 
@@ -958,6 +1018,295 @@ local function _blitz_remaining_cooldown(self, dt)
 	return nil, nil, _blitz_kills_remaining(buff_extension)
 end
 
+-- The Refraction Emitter's field lasts as long as its activation action, which ends early only when a Daemonhost
+-- grabs the Skitarius or a Beast of Nurgle swallows them. Its buff has no duration of its own.
+local function _refraction_emitter_time_remaining(self, t)
+	local unit_data_extension = self._parent:get_player_extension(self._data.player, "unit_data_system")
+	local action_component = unit_data_extension and unit_data_extension:read_component("grenade_ability_action")
+
+	if action_component and action_component.current_action_name ~= "none" then
+		return action_component.end_t - t
+	end
+end
+
+-- Seconds left on a Servo-Skull buff. The instance is cached on the element, which has a single Blitz.
+local function _skull_buff_time_remaining(self, buff_extension, buff_name, t)
+	-- the buff has max_stacks, so whether it runs is a stack count instead of a search through every buff
+	if not buff_extension or buff_extension:current_stacks(buff_name) == 0 then
+		self._numericui_blitz_active_buff = nil
+
+		return
+	end
+
+	local buff = self._numericui_blitz_active_buff
+
+	-- a deleted buff ended, or was replaced by a newer order
+	if not buff or rawget(buff, "__deleted") then
+		buff = _find_buff(buff_extension, buff_name)
+		self._numericui_blitz_active_buff = buff
+
+		if not buff then
+			return
+		end
+	end
+
+	local duration = buff:duration()
+
+	if duration then
+		return buff:start_time() + duration - t
+	end
+end
+
+-- The starter Servo-Skull's order, read from its buff on the Skitarius
+local function _servo_skull_order_time_remaining(self, t)
+	return _skull_buff_time_remaining(
+		self,
+		self._parent:get_player_extension(self._data.player, "buff_system"),
+		SERVO_SKULL_ORDER_BUFF,
+		t
+	)
+end
+
+-- Noospheric Command's faster fire after an order to the Artificer Servo-Skull, read from its buff on the skull. The
+-- server syncs the skull's buffs to every client, and a new order restarts the buff.
+local function _noospheric_command_time_remaining(self, t)
+	local player_unit = self._data.player.player_unit
+	local companion_spawner_extension = player_unit
+		and ScriptUnit.has_extension(player_unit, "companion_spawner_system")
+	-- the skull is the Skitarius' only companion
+	local skull_unit = companion_spawner_extension and companion_spawner_extension:companion_units()[1]
+
+	return _skull_buff_time_remaining(
+		self,
+		skull_unit and ALIVE[skull_unit] and ScriptUnit.has_extension(skull_unit, "buff_system"),
+		NOOSPHERIC_COMMAND_BUFF,
+		t
+	)
+end
+
+-- The Purgator's flames are timed on the server alone. Every machine sees the skull's state, though, so the clock
+-- starts when it turns to flames and stops when it turns back. The skull reaching its spot only switches between the
+-- two flame states, so it leaves the clock running. A flame state seen before the skull was seen idle has an unknown
+-- start, so it gets no timer. A client sees the state slightly later than the server, so its timer is an estimate.
+local function _purgator_time_remaining(self, t)
+	local player_unit = self._data.player.player_unit
+	local companion_spawner_extension = player_unit
+		and ScriptUnit.has_extension(player_unit, "companion_spawner_system")
+	local skull_unit = companion_spawner_extension
+		and companion_spawner_extension:spawned_unit_lookup(PURGATOR_SPECIAL_RULE)
+	local state
+
+	if skull_unit and ALIVE[skull_unit] then
+		local game_session = Managers.state.game_session:game_session()
+		local game_object_id = Managers.state.unit_spawner:game_object_id(skull_unit)
+
+		if game_object_id and GameSession.game_object_exists(game_session, game_object_id) then
+			state = GameSession.game_object_field(game_session, game_object_id, "state")
+		end
+	end
+
+	if state ~= PURGATOR_FLAMES_STATE and state ~= PURGATOR_FLAMES_SHOOTING_STATE then
+		-- false: the skull was seen idle, so its next flames are timed from their start
+		self._numericui_purgator_end_t = false
+
+		return
+	end
+
+	local end_t = self._numericui_purgator_end_t
+
+	if end_t == false then
+		end_t = t + PURGATOR_DURATION
+		self._numericui_purgator_end_t = end_t
+	end
+
+	return end_t and end_t - t
+end
+
+-- Every smoke cloud keeps the time it fades, which the server syncs to clients. With two clouds up, the one thrown
+-- first fades first.
+local function _smoke_time_remaining(self, t)
+	local extension_manager = Managers.state.extension
+	local smoke_fog_system = extension_manager and extension_manager:system("smoke_fog_system")
+	local player_unit_spawn_manager = Managers.state.player_unit_spawn
+
+	if not smoke_fog_system or not player_unit_spawn_manager then
+		return
+	end
+
+	local player = self._data.player
+	local remaining
+
+	for unit, extension in pairs(smoke_fog_system:unit_to_extension_map()) do
+		if player_unit_spawn_manager:owner(unit) == player then
+			local smoke_remaining = extension:remaining_duration(t)
+
+			if smoke_remaining > 0 and (not remaining or smoke_remaining < remaining) then
+				remaining = smoke_remaining
+			end
+		end
+	end
+
+	return remaining
+end
+
+-- The local player's fire and chem pools by liquid area unit, with the fixed time each one ends. Only the server
+-- knows whose pool is whose, so each pool is paired with the explosion that left it: every machine sees who threw
+-- the grenade that exploded, and its pool spawns next to the explosion straight after. A client sees both slightly
+-- later than the server, so its timer is an estimate.
+local pool_end_times = {}
+local pending_pool_area_template
+local pending_pool_t
+local pending_pool_position = Vector3Box()
+
+-- Runs for every explosion on clients, and on the server when it isn't dedicated
+mod:hook_safe(
+	Explosion,
+	"create_husk_explosion",
+	function(_world, _physics_world, _wwise_world, owner_unit, explosion_template, position)
+		local liquid_area_template = pool_liquid_area_by_explosion[explosion_template]
+
+		if not liquid_area_template or not owner_unit then
+			return
+		end
+
+		local local_player = Managers.player:local_player(1)
+
+		if local_player and owner_unit == local_player.player_unit then
+			pending_pool_area_template = liquid_area_template
+			pending_pool_t = FixedFrame.get_latest_fixed_time()
+			pending_pool_position:store(position)
+		end
+	end
+)
+
+local function _pool_time_remaining(_self, t)
+	local extension_manager = Managers.state.extension
+	local liquid_area_system = extension_manager and extension_manager:system("liquid_area_system")
+
+	if not liquid_area_system then
+		return
+	end
+
+	local liquid_areas = liquid_area_system:unit_to_extension_map()
+	local pending_t = pending_pool_t
+
+	if pending_t then
+		-- an explosion from an earlier mission's clock is dropped as well
+		if t < pending_t or t - pending_t > POOL_PAIRING_TIME then
+			pending_pool_t = nil
+		else
+			local template_name = pending_pool_area_template.name
+			local explosion_position = pending_pool_position:unbox()
+
+			for unit, extension in pairs(liquid_areas) do
+				if
+					not pool_end_times[unit]
+					and extension._area_template_name == template_name
+					and Vector3.distance_squared(Unit.world_position(unit, 1), explosion_position)
+						<= POOL_PAIRING_DISTANCE_SQ
+				then
+					pool_end_times[unit] = pending_t + pending_pool_area_template.life_time
+					pending_pool_t = nil
+
+					break
+				end
+			end
+		end
+	end
+
+	local remaining
+
+	for unit, end_t in pairs(pool_end_times) do
+		local unit_remaining = end_t - t
+
+		-- a pool that is gone was removed by the server
+		if unit_remaining <= 0 or not liquid_areas[unit] then
+			pool_end_times[unit] = nil
+		elseif not remaining or unit_remaining < remaining then
+			remaining = unit_remaining
+		end
+	end
+
+	return remaining
+end
+
+-- The local player's Shock Mines by unit, with the fixed time each one ends. A mine starts its time when the first
+-- enemy triggers it, on the server alone. Its script component, which every machine runs, links the first target
+-- straight after, so the clock starts there. A client sees the link slightly later than the server, so its timer is
+-- an estimate. A mine keeps its entry until it is destroyed, so later links never start it again.
+local shock_mine_end_times = {}
+
+if SHOCK_MINE_DURATION and ShockMineComponent._play_target_vfx then
+	mod:hook_safe(ShockMineComponent, "_play_target_vfx", function(_self, _world, unit)
+		if shock_mine_end_times[unit] then
+			return
+		end
+
+		local owner = Managers.state.player_unit_spawn:owner(unit)
+
+		if owner and owner == Managers.player:local_player(1) then
+			shock_mine_end_times[unit] = FixedFrame.get_latest_fixed_time() + SHOCK_MINE_DURATION
+		end
+	end)
+end
+
+-- With two mines running, the one triggered first runs out first. The game releases a mine's ownership when the mine
+-- is destroyed, and every mission starts with a new spawn manager, so mines from an earlier mission are dropped too.
+local function _shock_mine_time_remaining(self, t)
+	local player_unit_spawn_manager = Managers.state.player_unit_spawn
+	local player = self._data.player
+	local remaining
+
+	for unit, end_t in pairs(shock_mine_end_times) do
+		if not player_unit_spawn_manager or player_unit_spawn_manager:owner(unit) ~= player then
+			shock_mine_end_times[unit] = nil
+		else
+			local unit_remaining = end_t - t
+
+			if unit_remaining > 0 and (not remaining or unit_remaining < remaining) then
+				remaining = unit_remaining
+			end
+		end
+	end
+
+	return remaining
+end
+
+-- Blitzes with a timed effect of their own, by ability name. The Artificer Servo-Skull's lasting bonuses, the
+-- Medicae Servo-Skull's healing, enemy debuffs and talent buffs are left out, apart from Noospheric Command, which
+-- times the Artificer Servo-Skull's orders.
+local BLITZ_ACTIVE_TIME_FUNCS = {
+	cryptic_force_field = _refraction_emitter_time_remaining,
+	cryptic_servo_skull_order_base = _servo_skull_order_time_remaining,
+	cryptic_servo_skull_order_base_inactive = _noospheric_command_time_remaining,
+	cryptic_servo_skull_order = PURGATOR_DURATION and _purgator_time_remaining,
+	veteran_smoke_grenade = _smoke_time_remaining,
+	zealot_fire_grenade = _pool_time_remaining,
+	broker_tox_grenade = _pool_time_remaining,
+	adamant_shock_mine = SHOCK_MINE_DURATION and _shock_mine_time_remaining,
+}
+
+-- Seconds left on the equipped Blitz's timed effect, or nil when none is running. How it is read is cached on the
+-- element, which keeps the ability it was created with; false for Blitzes without a timed effect.
+local function _blitz_active_time_remaining(self)
+	local time_func = self._numericui_blitz_active_time_func
+
+	if time_func == nil then
+		time_func = BLITZ_ACTIVE_TIME_FUNCS[self._ability.name] or false
+		self._numericui_blitz_active_time_func = time_func
+	end
+
+	if not time_func then
+		return
+	end
+
+	local remaining = time_func(self, FixedFrame.get_latest_fixed_time())
+
+	if remaining and remaining > 0 then
+		return remaining
+	end
+end
+
 -- The recharge as a countdown or as a percentage of the vanilla progress, or nil while the shown value is unchanged
 local function _cooldown_text(content, cooldown_format, remaining, progress)
 	if cooldown_format == "percent" then
@@ -989,6 +1338,17 @@ local function _cooldown_text(content, cooldown_format, remaining, progress)
 	end
 end
 
+-- Vanilla never colours this text, so all four channels are the player's
+local function _update_blitz_text_style(self, widget, color_setting_id)
+	_update_blitz_cooldown_style(self, widget)
+
+	local text_color = _setting_color(color_setting_id, BLITZ_TEXT_COLOR_DEFAULT)
+
+	if _set_color_channels(widget.style.blitz_cooldown.text_color, text_color, 1) then
+		widget.dirty = true
+	end
+end
+
 local function _update_blitz_cooldown_text(self, dt)
 	local widget = self._widgets_by_name.blitz_cooldown
 
@@ -997,28 +1357,47 @@ local function _update_blitz_cooldown_text(self, dt)
 	end
 
 	local content = widget.content
-	local cooldown_format = mod.setting("blitz_cooldown_format")
+	local active_remaining = mod.setting("show_blitz_active_timer") and _blitz_active_time_remaining(self)
 	local new_text
 
-	if cooldown_format ~= "time" and cooldown_format ~= "percent" then
+	if active_remaining then
+		_update_blitz_text_style(self, widget, "blitz_active_text_color")
+
+		-- tenths of a second, so a running effect reads differently from the whole-second recharge after it
+		local tenths = math_floor(active_remaining * 10)
+
+		-- the recharge text below must be rebuilt once the effect ends
 		content._numericui_last_value = nil
-		new_text = " "
+
+		if content._numericui_last_active_value ~= tenths then
+			content._numericui_last_active_value = tenths
+			new_text = string_format("%.1f", tenths / 10)
+		end
 	else
-		local remaining, progress, kills_remaining = _blitz_remaining_cooldown(self, dt)
+		content._numericui_last_active_value = nil
 
-		if kills_remaining then
-			_update_blitz_cooldown_style(self, widget)
+		local cooldown_format = mod.setting("blitz_cooldown_format")
 
-			-- a timer or percent value equal to the kill count must still be rebuilt once the timer is back
-			content._numericui_last_value = nil
-			new_text = blitz_kill_texts[kills_remaining]
-		elseif not remaining then
+		if cooldown_format ~= "time" and cooldown_format ~= "percent" then
 			content._numericui_last_value = nil
 			new_text = " "
 		else
-			_update_blitz_cooldown_style(self, widget)
+			local remaining, progress, kills_remaining = _blitz_remaining_cooldown(self, dt)
 
-			new_text = _cooldown_text(content, cooldown_format, remaining, progress)
+			if kills_remaining then
+				_update_blitz_text_style(self, widget, "blitz_cooldown_text_color")
+
+				-- a timer or percent value equal to the kill count must still be rebuilt once the timer is back
+				content._numericui_last_value = nil
+				new_text = blitz_kill_texts[kills_remaining]
+			elseif not remaining then
+				content._numericui_last_value = nil
+				new_text = " "
+			else
+				_update_blitz_text_style(self, widget, "blitz_cooldown_text_color")
+
+				new_text = _cooldown_text(content, cooldown_format, remaining, progress)
+			end
 		end
 	end
 
@@ -1053,18 +1432,6 @@ local function _is_stimm(self)
 	end
 
 	return is_stimm
-end
-
-local function _find_buff(buff_extension, buff_name)
-	local buffs = buff_extension:buffs()
-
-	for i = 1, #buffs do
-		local buff = buffs[i]
-
-		if buff:template_name() == buff_name then
-			return buff
-		end
-	end
 end
 
 -- Seconds left on the Hive Scum's own Stimm, or nil when it isn't running. The Stimm holds its recharge until its buff
