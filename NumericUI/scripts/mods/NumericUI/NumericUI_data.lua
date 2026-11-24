@@ -550,6 +550,16 @@ return {
 						type = "checkbox",
 						default_value = true,
 					},
+					{
+						setting_id = "show_ammo_pickup_notifications",
+						type = "dropdown",
+						default_value = "off",
+						options = {
+							{ text = "ammo_pickup_notifications_all", value = "all" },
+							{ text = "ammo_pickup_notifications_teammates", value = "teammates" },
+							{ text = "ammo_pickup_notifications_off", value = "off" },
+						},
+					},
 				},
 			},
 			{

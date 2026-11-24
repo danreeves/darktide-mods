@@ -4,71 +4,17 @@
 local mod = get_mod("NumericUI")
 
 local Pickups = require("scripts/settings/pickup/pickups")
-local Ammo = require("scripts/utilities/ammo")
 
 local string_format = string.format
-local pairs = pairs
+local pickup_ammo_amount = mod.pickup_ammo_amount
+local split_pickup_ammo = mod.split_pickup_ammo
+local weapon_ammo_totals = mod.weapon_ammo_totals
 
 local small_clip_data = Pickups.by_name["small_clip"]
 local large_clip_data = Pickups.by_name["large_clip"]
 
 local SMALL_CLIP_DESCRIPTION = "loc_pickup_consumable_small_clip_01"
 local LARGE_CLIP_DESCRIPTION = "loc_pickup_consumable_large_clip_01"
-
-local function _havoc_ammo_modifier()
-	local cached = mod._havoc_ammo_modifier
-
-	if cached then
-		return cached
-	end
-
-	local modifier = 1
-	local game_mode_manager = Managers.state.game_mode
-	local game_mode = game_mode_manager and game_mode_manager:game_mode()
-	local havoc_extension = game_mode and game_mode.extension and game_mode:extension("havoc")
-
-	if havoc_extension then
-		modifier = havoc_extension:get_modifier_value("ammo_pickup_modifier") or 1
-	end
-
-	mod._havoc_ammo_modifier = modifier
-
-	return modifier
-end
-
-local function _weapon_ammo_totals(player_unit)
-	local unit_data_extension = ScriptUnit.has_extension(player_unit, "unit_data_system")
-	local visual_loadout_extension = ScriptUnit.has_extension(player_unit, "visual_loadout_system")
-
-	if not unit_data_extension or not visual_loadout_extension then
-		return
-	end
-
-	local weapon_slot_configuration = visual_loadout_extension:slot_configuration_by_type("weapon")
-
-	for slot_name in pairs(weapon_slot_configuration) do
-		local wieldable_component = unit_data_extension:read_component(slot_name)
-
-		if wieldable_component and wieldable_component.max_ammunition_reserve > 0 then
-			return Ammo.current_ammo_in_reserve(wieldable_component),
-				Ammo.max_ammo_in_reserve(wieldable_component),
-				Ammo.current_ammo_in_clips(wieldable_component),
-				Ammo.max_ammo_in_clips(wieldable_component)
-		end
-	end
-end
-
-local function _pickup_gain(pickup_data, max_ammo_reserve, max_ammo_clip, ammo_modifier)
-	local previous_modifier = pickup_data.modifier
-
-	pickup_data.modifier = ammo_modifier
-
-	local gain = pickup_data.ammo_amount_func(max_ammo_reserve, max_ammo_clip, pickup_data)
-
-	pickup_data.modifier = previous_modifier
-
-	return gain
-end
 
 local function _update_pickup_description(self, interactor_extension)
 	local description_widget = self._widgets_by_name.description_text
@@ -90,30 +36,20 @@ local function _update_pickup_description(self, interactor_extension)
 		return
 	end
 
-	local ammo_reserve, max_ammo_reserve, ammo_clip, max_ammo_clip = _weapon_ammo_totals(player_unit)
+	local ammo_reserve, max_ammo_reserve, ammo_clip, max_ammo_clip = weapon_ammo_totals(player_unit)
 
 	if not ammo_reserve then
 		return
 	end
 
-	local ammo_modifier = _havoc_ammo_modifier()
 	local pickup_data = hud_description == SMALL_CLIP_DESCRIPTION and small_clip_data or large_clip_data
-	local clip_gain = _pickup_gain(pickup_data, max_ammo_reserve, max_ammo_clip, ammo_modifier)
+	local clip_gain = pickup_ammo_amount(pickup_data, max_ammo_reserve, max_ammo_clip)
+	local ammo_gain, ammo_wasted =
+		split_pickup_ammo(clip_gain, ammo_clip + ammo_reserve, max_ammo_reserve + max_ammo_clip)
 
-	local max_ammo = max_ammo_reserve + max_ammo_clip
-	local current_ammo = ammo_clip + ammo_reserve
-	local missing_ammo = max_ammo - current_ammo
-	local ammo_gain = 0
-	local ammo_wasted = 0
-
-	if missing_ammo >= clip_gain then
-		ammo_gain = clip_gain
-	elseif missing_ammo > 0 then
-		ammo_gain = missing_ammo
-		ammo_wasted = clip_gain - missing_ammo
-	elseif not self._numericui_pickup_block_text then
-		-- full ammo, but the game still allows the pickup (Blades of Faith refilling knives)
-		ammo_wasted = clip_gain
+	-- at full ammo the game only allows the pickup to refill a Zealot's Blades of Faith, and blocks it otherwise
+	if ammo_gain == 0 and self._numericui_pickup_block_text then
+		ammo_wasted = 0
 	end
 
 	local show_ammo_gain = ammo_gain > 0
