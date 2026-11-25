@@ -1,5 +1,17 @@
 # NumericUI Changelog
 
+## 26.11.25.1
+
+Fixed the game crashing at startup when NumericUI is near the top of the mod load order. Reported by Ch4do.
+
+## 26.11.25
+
+Added `Show ammo and grenade pickup notifications`, off by default: shows the Ammo Tins, Ammo Stashes and Grenades you and your teammates pick up in the combat feed with the ammo gained, in rounds, shells, grenades, fuel, energy or needles depending on the weapon, and how much ammo each Ammo Crate refills. Grenades show the Blitz charges gained, and so do ammo pickups and Ammo Crates that also refill a Blitz, such as Blades of Faith. Suggested by sindau.
+Added `Show Blitz duration while active`, off by default: while your Blitz's effect lasts, its text counts down the seconds it has left. Covers the Refraction Emitter, Servo-Skull orders, Smoke, Immolation and Chem Grenades, and the Voltaic Shock Mine. Suggested by DScrafted.
+Added `Active Blitz text colour` and `Blitz cooldown text colour` to the `Blitz Cooldown HUD`.
+Added a `Peril Colours` group to the `Team HUD`, with a colour each for low, moderate, high and critical peril, used for a Psyker teammate's peril percent and skull. Suggested by gregghiggins321.
+Changed the `Horizontal offset` and `Vertical offset` settings of the `Blitz Cooldown HUD` and `Stimm Cooldown HUD` to go up to ±2000 instead of ±500. Suggested by Larzox.
+
 ## 26.10.14
 
 Fixed a crash when a player joins mid-mission and takes over a bot, or a teammate leaves, while `Show detailed team Blitz icons` is on. Reported by Runegorger.

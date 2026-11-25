@@ -81,6 +81,37 @@ return {
 						type = "checkbox",
 						default_value = false,
 					},
+					{
+						-- no alpha: the percent after the ammo count is coloured with RGB-only text markup
+						setting_id = "peril_color_settings",
+						type = "group",
+						sub_widgets = {
+							{
+								setting_id = "peril_color_low",
+								type = "color",
+								default_value = { 255, 169, 191, 153 }, -- ARGB, terminal_text_body
+								has_alpha = false,
+							},
+							{
+								setting_id = "peril_color_moderate",
+								type = "color",
+								default_value = { 255, 251, 195, 86 }, -- ARGB, ui_hud_warp_charge_low
+								has_alpha = false,
+							},
+							{
+								setting_id = "peril_color_high",
+								type = "color",
+								default_value = { 255, 245, 121, 21 }, -- ARGB, ui_hud_warp_charge_medium
+								has_alpha = false,
+							},
+							{
+								setting_id = "peril_color_critical",
+								type = "color",
+								default_value = { 255, 246, 69, 69 }, -- ARGB, ui_hud_warp_charge_high
+								has_alpha = false,
+							},
+						},
+					},
 				},
 			},
 			{
@@ -318,6 +349,11 @@ return {
 						},
 					},
 					{
+						setting_id = "show_blitz_active_timer",
+						type = "checkbox",
+						default_value = false,
+					},
+					{
 						setting_id = "disable_blitz_background_progress",
 						type = "checkbox",
 						default_value = false,
@@ -339,7 +375,7 @@ return {
 						setting_id = "blitz_cooldown_x_offset",
 						type = "numeric",
 						default_value = -80,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 						change = function(new_value)
 							mod:set("blitz_cooldown_x_offset", new_value)
@@ -352,7 +388,7 @@ return {
 						setting_id = "blitz_cooldown_y_offset",
 						type = "numeric",
 						default_value = 0,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 						change = function(new_value)
 							mod:set("blitz_cooldown_y_offset", new_value)
@@ -360,6 +396,18 @@ return {
 						get = function()
 							return mod:get("blitz_cooldown_y_offset") or 0
 						end,
+					},
+					{
+						setting_id = "blitz_active_text_color",
+						type = "color",
+						default_value = { 255, 246, 69, 69 }, -- ARGB, the game's HUD text colour
+						has_alpha = true,
+					},
+					{
+						setting_id = "blitz_cooldown_text_color",
+						type = "color",
+						default_value = { 255, 216, 237, 190 }, -- ARGB, the game's HUD text colour
+						has_alpha = true,
 					},
 				},
 			},
@@ -398,14 +446,14 @@ return {
 						setting_id = "stimm_cooldown_x_offset",
 						type = "numeric",
 						default_value = -80,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 					},
 					{
 						setting_id = "stimm_cooldown_y_offset",
 						type = "numeric",
 						default_value = 0,
-						range = { -500, 500 },
+						range = { -2000, 2000 },
 						step_size_value = 1,
 					},
 					{
@@ -501,6 +549,16 @@ return {
 						setting_id = "show_medical_crate_radius",
 						type = "checkbox",
 						default_value = true,
+					},
+					{
+						setting_id = "show_ammo_pickup_notifications",
+						type = "dropdown",
+						default_value = "off",
+						options = {
+							{ text = "ammo_pickup_notifications_all", value = "all" },
+							{ text = "ammo_pickup_notifications_teammates", value = "teammates" },
+							{ text = "ammo_pickup_notifications_off", value = "off" },
+						},
 					},
 				},
 			},

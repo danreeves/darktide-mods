@@ -51,6 +51,7 @@ mod:io_dofile("NumericUI/scripts/mods/NumericUI/TeamPlayerPanel")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerAbility")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/PlayerWeapon")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/Interactions")
+mod:io_dofile("NumericUI/scripts/mods/NumericUI/AmmoPickupNotifications")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/Nameplates")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/MedicalCrate")
 mod:io_dofile("NumericUI/scripts/mods/NumericUI/BossHealth")
@@ -178,8 +179,9 @@ end
 
 mod.on_game_state_changed = function(status, state)
 	if state == "GameplayStateRun" then
-		-- Mission-scoped caches (Havoc modifiers, ammo pickup preview) must not survive a mission.
+		-- Mission-scoped caches (Havoc modifiers, ammo pickup preview and notifications) must not survive a mission.
 		mod._havoc_ammo_modifier = nil
 		mod._pickup_preview_dirty = false
+		mod.clear_ammo_pickup_notifications()
 	end
 end
