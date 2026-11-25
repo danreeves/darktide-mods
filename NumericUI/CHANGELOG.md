@@ -1,5 +1,9 @@
 # NumericUI Changelog
 
+## 26.11.25.1
+
+Fixed the game crashing at startup when NumericUI is near the top of the mod load order. Reported by Ch4do.
+
 ## 26.11.25
 
 Added `Show ammo and grenade pickup notifications`, off by default: shows the Ammo Tins, Ammo Stashes and Grenades you and your teammates pick up in the combat feed with the ammo gained, in rounds, shells, grenades, fuel, energy or needles depending on the weapon, and how much ammo each Ammo Crate refills. Grenades show the Blitz charges gained, and so do ammo pickups and Ammo Crates that also refill a Blitz, such as Blades of Faith. Suggested by sindau.
