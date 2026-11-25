@@ -22,7 +22,6 @@ local CompanionServoSkullSettings = require("scripts/settings/companion/companio
 local Explosion = require("scripts/utilities/attack/explosion")
 local LiquidAreaSettings = require("scripts/settings/liquid_area/liquid_area_settings")
 local ProjectileTemplates = require("scripts/settings/projectile/projectile_templates")
-local ShockMineComponent = require("scripts/components/shock_mine")
 local SpecialRulesSettings = require("scripts/settings/ability/special_rules_settings")
 
 local math_abs = math.abs
@@ -1236,17 +1235,26 @@ end
 -- an estimate. A mine keeps its entry until it is destroyed, so later links never start it again.
 local shock_mine_end_times = {}
 
-if SHOCK_MINE_DURATION and ShockMineComponent._play_target_vfx then
-	mod:hook_safe(ShockMineComponent, "_play_target_vfx", function(_self, _world, unit)
-		if shock_mine_end_times[unit] then
+-- Component scripts need the component() function from scripts/components/components.lua, which the game first loads
+-- when the title screen spawns its level. That can be after NumericUI loads, and a component required before then fails
+-- and makes the game crash when it requires the component itself, so the hook waits for the game's own load.
+if SHOCK_MINE_DURATION then
+	mod:hook_require("scripts/components/shock_mine", function(ShockMineComponent)
+		if not ShockMineComponent._play_target_vfx then
 			return
 		end
 
-		local owner = Managers.state.player_unit_spawn:owner(unit)
+		mod:hook_safe(ShockMineComponent, "_play_target_vfx", function(_self, _world, unit)
+			if shock_mine_end_times[unit] then
+				return
+			end
 
-		if owner and owner == Managers.player:local_player(1) then
-			shock_mine_end_times[unit] = FixedFrame.get_latest_fixed_time() + SHOCK_MINE_DURATION
-		end
+			local owner = Managers.state.player_unit_spawn:owner(unit)
+
+			if owner and owner == Managers.player:local_player(1) then
+				shock_mine_end_times[unit] = FixedFrame.get_latest_fixed_time() + SHOCK_MINE_DURATION
+			end
+		end)
 	end)
 end
 
