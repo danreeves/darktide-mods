@@ -25,6 +25,19 @@ local function set_style_tweak(path, val)
 	mod:set("style_tweaks", style_tweaks)
 end
 
+local function apply_style_tweaks(target, tweaks)
+	for key, value in pairs(tweaks) do
+		if type(value) == "table" then
+			local current = target[key]
+			if type(current) == "table" then
+				apply_style_tweaks(current, value)
+			end
+		else
+			target[key] = value
+		end
+	end
+end
+
 mod:hook_safe("HudElementBase", "init", function(self)
 	if not string.find(self.__class_name, "Handler") then
 		hud_elements[self.__class_name] = self
@@ -41,15 +54,7 @@ mod:hook("HudElementBase", "update", function(func, self, ...)
 				for style_id, custom_styles in pairs(widget_styles) do
 					local styles = widget.style[style_id]
 					if styles then
-						for style_key, value in pairs(custom_styles) do
-							if type(value) == "table" then
-								for k, v in pairs(value) do
-									styles[style_key][k] = v
-								end
-							else
-								styles[style_key] = value
-							end
-						end
+						apply_style_tweaks(styles, custom_styles)
 					end
 				end
 			end
@@ -87,6 +92,35 @@ function HUDTweaker:close()
 	Imgui.close_imgui()
 end
 
+-- Number fields that have held a fraction keep the float input after their value turns whole,
+-- so typing "0" on the way to "0.5" doesn't swap the field to the int input mid-edit.
+local float_fields = setmetatable({}, { __mode = "k" })
+
+local function input_float(label, val)
+	local new_val = Imgui.input_float(label, val, "%g")
+	-- Imgui holds floats in single precision, so a difference this small is rounding, not an edit.
+	if math.abs(new_val - val) <= math.abs(val) * 1e-6 then
+		return val
+	end
+	return new_val
+end
+
+-- Imgui.input_int holds whole numbers only, so a fractional field would lose its fraction just by being shown.
+local function number_input(t, key, val)
+	local float_keys = float_fields[t]
+	if float_keys and float_keys[key] then
+		return input_float
+	elseif val % 1 == 0 then
+		return Imgui.input_int
+	end
+	if not float_keys then
+		float_keys = {}
+		float_fields[t] = float_keys
+	end
+	float_keys[key] = true
+	return input_float
+end
+
 local function table_to_tree(t, prev_path)
 	for key, val in pairs(t) do
 		if Imgui.tree_node(key) then
@@ -98,7 +132,7 @@ local function table_to_tree(t, prev_path)
 			else
 				local input = nil
 				if typeof == "number" then
-					input = Imgui.input_int
+					input = number_input(t, key, val)
 				elseif typeof == "boolean" then
 					input = Imgui.checkbox
 				elseif typeof == "string" then
