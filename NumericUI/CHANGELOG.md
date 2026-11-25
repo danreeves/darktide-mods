@@ -1,6 +1,6 @@
 # NumericUI Changelog
 
-## 26.11.25.1
+## 26.11.25.2
 
 Fixed the game crashing at startup when NumericUI is near the top of the mod load order. Reported by Ch4do.
 
